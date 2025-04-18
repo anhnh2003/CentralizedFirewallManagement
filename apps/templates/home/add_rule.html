@@ -1,0 +1,177 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Dashboard {% endblock %} 
+
+{% block stylesheets %}
+<!-- chartist CSS -->
+<link href="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist-init.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/chartist-plugin-tooltip-master/dist/chartist-plugin-tooltip.css" rel="stylesheet">
+<!-- This page css - Morris CSS -->
+<link href="{{ config.ASSETS_ROOT }}/plugins/c3-master/c3.min.css" rel="stylesheet">
+{% endblock stylesheets %}
+
+{% block content %}
+<style>
+    .form-container {
+        margin: 20px;
+    }
+    .form-row {
+        margin-bottom: 10px;
+    }
+    .is-invalid {
+        border-color: #dc3545;
+    }
+    .error-message {
+        display: none;
+        position: absolute;
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        padding: 5px;
+        border-radius: 5px;
+        z-index: 1000;
+    }
+    .rule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .manual-rule-container {
+        display: none;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="page-breadcrumb">
+    <div class="row align-items-center">
+        <div class="col-md-6 col-8 align-self-center">
+            <h3 class="page-title mb-0 p-0">Dashboard</h3>
+            <div class="d-flex align-items-center">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="#">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        <div class="col-md-6 col-4 align-self-center">
+            <div class="text-end upgrade-btn">
+                <a href="https://appseed.us/support/" class="btn btn-danger d-none d-md-inline-block text-white" target="_blank">Support</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container form-container">
+    <h2>Add New Rule</h2>
+    <form id="rulesForm" method="POST" action="{{ url_for('home_blueprint.add_rule') }}">
+        <input type="hidden" id="errorMessage" value="{{ error_message }}">
+        <div id="rulesContainer"></div>
+        <button type="button" class="btn btn-secondary" id="addRuleButton">Add New Rule</button>
+        <button type="button" class="btn btn-info" id="manualRuleButton">Manual Rule</button>
+        <div class="manual-rule-container" id="manualRuleContainer">
+            <textarea class="form-control" name="manual_rule" placeholder="Enter iptables command"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitButton" disabled>Submit</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let ruleNumber = 1;
+
+    const rulesContainer = document.getElementById('rulesContainer');
+    const manualRuleTextarea = document.querySelector('textarea[name="manual_rule"]');
+    const submitButton = document.getElementById('submitButton');
+
+    // Function to toggle submit button state
+    function toggleSubmitButton() {
+        const hasNormalRules = rulesContainer.querySelectorAll('.form-row').length > 0;
+        const hasManualRule = manualRuleTextarea.value.trim().length > 0;
+
+        if (hasNormalRules || hasManualRule) {
+            submitButton.disabled = false;
+        } else {
+            submitButton.disabled = true;
+        }
+    }
+
+    // Event listener for adding new rules
+    document.getElementById('addRuleButton').addEventListener('click', function () {
+        const newRow = document.createElement('div');
+        newRow.className = 'form-row';
+        newRow.innerHTML = `
+            <div class="rule-header">
+                <span>Rule number ${ruleNumber}</span>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeRule(this)">Delete</button>
+            </div>
+            <div class="col">
+                <select class="form-control" name="chain[]" required>
+                    <option value="INPUT">INPUT</option>
+                    <option value="OUTPUT">OUTPUT</option>
+                    <option value="FORWARD">FORWARD</option>
+                </select>
+            </div>
+            <div class="col">
+                <select class="form-control" name="target[]" required>
+                    <option value="drop">DROP</option>
+                    <option value="accept">ACCEPT</option>
+                    <option value="reject">REJECT</option>
+                    <option value="log">LOG</option>
+                    <option value="return">RETURN</option>
+                </select>
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" name="prot[]" placeholder="Protocol" required>
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" name="source[]" placeholder="Source" required>
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" name="destination[]" placeholder="Destination" required>
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" name="sport[]" placeholder="Source Port">
+            </div>
+            <div class="col">
+                <input type="text" class="form-control" name="dport[]" placeholder="Destination Port">
+            </div>
+        `;
+        rulesContainer.appendChild(newRow);
+        ruleNumber++;
+        toggleSubmitButton();
+    });
+
+    // Event listener for manual rule toggle
+    document.getElementById('manualRuleButton').addEventListener('click', function () {
+        const manualRuleContainer = document.getElementById('manualRuleContainer');
+        manualRuleContainer.style.display = manualRuleContainer.style.display === 'block' ? 'none' : 'block';
+        toggleSubmitButton();
+    });
+
+    // Event listener for manual rule input
+    manualRuleTextarea.addEventListener('input', toggleSubmitButton);
+
+    // Function to remove a rule
+    window.removeRule = function (button) {
+        button.closest('.form-row').remove();
+        ruleNumber--;
+        toggleSubmitButton();
+    };
+
+    // Initial check
+    toggleSubmitButton();
+});
+</script>
+{% endblock content %}
+
+{% block javascripts %}
+<script src="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/chartist-plugin-tooltip-master/dist/chartist-plugin-tooltip.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/d3/d3.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/c3-master/c3.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/js/pages/dashboards/dashboard1.js"></script>
+{% endblock javascripts %}

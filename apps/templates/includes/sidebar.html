@@ -1,0 +1,101 @@
+<aside class="left-sidebar" data-sidebarbg="skin6">
+    <!-- Sidebar scroll-->
+    <div class="scroll-sidebar">
+        <!-- Sidebar navigation-->
+        <nav class="sidebar-nav">
+            <ul id="sidebarnav">
+                <!-- User Profile-->
+                <li class="sidebar-item">
+                    <a class="sidebar-link waves-effect waves-dark sidebar-link" href="/home" aria-expanded="false">
+                        <i class="mdi me-2 mdi-gauge"></i>
+                        <span class="hide-menu">Dashboard</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link has-arrow waves-effect waves-dark" href="javascript:void(0)" aria-expanded="false">
+                        <i class="mdi me-2 mdi-earth"></i>
+                        <span class="hide-menu">Input</span>
+                    </a>
+                    <ul aria-expanded="false" class="collapse first-level">
+                        <li class="sidebar-item">
+                            <a href="/home/input_status" class="sidebar-link">
+                                <i class="mdi mdi-eye"></i>
+                                <span class="hide-menu">View Status</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="/home/add_rule" class="sidebar-link">
+                                <i class="mdi mdi-plus"></i>
+                                <span class="hide-menu">Add Rules</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link has-arrow waves-effect waves-dark" href="javascript:void(0)" aria-expanded="false">
+                        <i class="mdi me-2 mdi-book-open-variant"></i>
+                        <span class="hide-menu">Output</span>
+                    </a>
+                    <ul aria-expanded="false" class="collapse first-level">
+                        <li class="sidebar-item">
+                            <a href="/home/output_status" class="sidebar-link">
+                                <i class="mdi mdi-eye"></i>
+                                <span class="hide-menu">View Status</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="/home/add_rule" class="sidebar-link">
+                                <i class="mdi mdi-plus"></i>
+                                <span class="hide-menu">Add Rules</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link has-arrow waves-effect waves-dark" href="javascript:void(0)" aria-expanded="false">
+                        <i class="mdi me-2 mdi-help-circle"></i>
+                        <span class="hide-menu">Forward</span>
+                    </a>
+                    <ul aria-expanded="false" class="collapse first-level">
+                        <li class="sidebar-item">
+                            <a href="/home/forward_status" class="sidebar-link">
+                                <i class="mdi mdi-eye"></i>
+                                <span class="hide-menu">View Status</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-item">
+                            <a href="/home/add_rule" class="sidebar-link">
+                                <i class="mdi mdi-plus"></i>
+                                <span class="hide-menu">Add Rules</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link waves-effect waves-dark sidebar-link" href="{{ url_for('home_blueprint.view_log') }}" aria-expanded="false">
+                        <i class="mdi mdi-file-document"></i>
+                        <span class="hide-menu">View Log</span>
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link waves-effect waves-dark sidebar-link" href="{{ url_for('home_blueprint.data_visualization') }}" aria-expanded="false">
+                        <i class="mdi mdi-file-document"></i>
+                        <span class="hide-menu">Data Visualization</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        <!-- End Sidebar navigation -->
+    </div>
+    <!-- End Sidebar scroll-->
+    <div class="sidebar-footer">
+        <div class="row">
+            <div class="col-4 link-wrap">
+                <!-- item-->
+                <a href="{{ url_for('authentication_blueprint.logout') }}" class="link" data-toggle="tooltip" title="" data-original-title="Logout">
+                    <i class="mdi mdi-power"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</aside>

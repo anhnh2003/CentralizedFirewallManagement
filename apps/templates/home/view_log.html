@@ -1,0 +1,180 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} View Logs {% endblock %}
+
+{% block stylesheets %}
+<link href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet">
+<style>
+    .dataTables_wrapper {
+        overflow-x: auto;
+    }
+    .filter-form {
+        display: none;
+        margin-top: 20px;
+    }
+    .filter-form input {
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>IPTables Logs</h2>
+    <div class="table-wrapper">
+        <table id="logTable" class="display nowrap" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Hostname</th>
+                    <th>Chain</th>
+                    <th>In Interface</th>
+                    <th>Out Interface</th>
+                    <th>Source IP</th>
+                    <th>Destination IP</th>
+                    <th>Length</th>
+                    <th>TOS</th>
+                    <th>PREC</th>
+                    <th>TTL</th>
+                    <th>ID</th>
+                    <th>Flags</th>
+                    <th>Protocol</th>
+                    <th>Source Port</th>
+                    <th>Destination Port</th>
+                    <th>Window</th>
+                    <th>RES</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in log_entries %}
+                <tr>
+                    <td>{{ entry.timestamp }}</td>
+                    <td>{{ entry.hostname }}</td>
+                    <td>{{ entry.chain }}</td>
+                    <td>{{ entry.in_interface }}</td>
+                    <td>{{ entry.out_interface }}</td>
+                    <td>{{ entry.src_ip }}</td>
+                    <td>{{ entry.dst_ip }}</td>
+                    <td>{{ entry.length }}</td>
+                    <td>{{ entry.tos }}</td>
+                    <td>{{ entry.prec }}</td>
+                    <td>{{ entry.ttl }}</td>
+                    <td>{{ entry.id }}</td>
+                    <td>{{ entry.flags }}</td>
+                    <td>{{ entry.protocol }}</td>
+                    <td>{{ entry.src_port }}</td>
+                    <td>{{ entry.dst_port }}</td>
+                    <td>{{ entry.window }}</td>
+                    <td>{{ entry.res }}</td>
+                    <td>{{ entry.detail }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div>
+        <button id="filterButton">Show Filter Form</button>
+        <div class="filter-form" id="filterForm">
+            <label for="filterTimestamp">Timestamp:</label>
+            <input type="text" id="filterTimestamp" placeholder="Enter timestamp">
+            <label for="filterHostname">Hostname:</label>
+            <input type="text" id="filterHostname" placeholder="Enter hostname">
+            <label for="filterChain">Chain:</label>
+            <input type="text" id="filterChain" placeholder="Enter chain">
+            <label for="filterInInterface">In Interface:</label>
+            <input type="text" id="filterInInterface" placeholder="Enter in interface">
+            <label for="filterOutInterface">Out Interface:</label>
+            <input type="text" id="filterOutInterface" placeholder="Enter out interface">
+            <label for="filterSrcIP">Source IP:</label>
+            <input type="text" id="filterSrcIP" placeholder="Enter source IP">
+            <label for="filterDstIP">Destination IP:</label>
+            <input type="text" id="filterDstIP" placeholder="Enter destination IP">
+            <label for="filterLength">Length:</label>
+            <input type="text" id="filterLength" placeholder="Enter length">
+            <label for="filterTOS">TOS:</label>
+            <input type="text" id="filterTOS" placeholder="Enter TOS">
+            <label for="filterPREC">PREC:</label>
+            <input type="text" id="filterPREC" placeholder="Enter PREC">
+            <label for="filterTTL">TTL:</label>
+            <input type="text" id="filterTTL" placeholder="Enter TTL">
+            <label for="filterID">ID:</label>
+            <input type="text" id="filterID" placeholder="Enter ID">
+            <label for="filterFlags">Flags:</label>
+            <input type="text" id="filterFlags" placeholder="Enter flags">
+            <label for="filterProtocol">Protocol:</label>
+            <input type="text" id="filterProtocol" placeholder="Enter protocol">
+            <label for="filterSrcPort">Source Port:</label>
+            <input type="text" id="filterSrcPort" placeholder="Enter source port">
+            <label for="filterDstPort">Destination Port:</label>
+            <input type="text" id="filterDstPort" placeholder="Enter destination port">
+            <label for="filterWindow">Window:</label>
+            <input type="text" id="filterWindow" placeholder="Enter window">
+            <label for="filterRES">RES:</label>
+            <input type="text" id="filterRES" placeholder="Enter RES">
+            <label for="filterDetail">Detail:</label>
+            <input type="text" id="filterDetail" placeholder="Enter detail">
+            <button id="applyFilterButton">Apply Filter</button>
+        </div>
+        <p id="noResultMessage" style="display:none;">No result found</p>
+    </div>
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+<script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+<script>
+    $(document).ready(function() {
+        var table = $('#logTable').DataTable({
+            "order": [[0, "desc"]],
+            "searching": true,
+            "paging": true,
+            "info": true,
+            "scrollX": true
+        });
+
+        $('#filterButton').on('click', function() {
+            $('#filterForm').toggle();
+        });
+
+        $('#applyFilterButton').on('click', function() {
+            var filterValues = [
+                $('#filterTimestamp').val(),
+                $('#filterHostname').val(),
+                $('#filterChain').val(),
+                $('#filterInInterface').val(),
+                $('#filterOutInterface').val(),
+                $('#filterSrcIP').val(),
+                $('#filterDstIP').val(),
+                $('#filterLength').val(),
+                $('#filterTOS').val(),
+                $('#filterPREC').val(),
+                $('#filterTTL').val(),
+                $('#filterID').val(),
+                $('#filterFlags').val(),
+                $('#filterProtocol').val(),
+                $('#filterSrcPort').val(),
+                $('#filterDstPort').val(),
+                $('#filterWindow').val(),
+                $('#filterRES').val(),
+                $('#filterDetail').val()
+            ];
+
+            var filterString = filterValues.join(' ');
+            table.search(filterString).draw();
+
+            if (table.rows({ filter: 'applied' }).data().length === 0) {
+                $('#noResultMessage').show();
+            } else {
+                $('#noResultMessage').hide();
+            }
+        });
+
+        $('#logTable thead th').on('click', function() {
+            var column = table.column($(this).index());
+            var order = column.order();
+            column.order(order[0][1] === 'asc' ? 'desc' : 'asc').draw();
+        });
+    });
+</script>
+{% endblock javascripts %}
