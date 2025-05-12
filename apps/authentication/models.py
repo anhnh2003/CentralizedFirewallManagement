@@ -1,45 +1,34 @@
 # -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
-
 from flask_login import UserMixin
-
-from apps import login_manager
-
-from apps.authentication.util import hash_pass
+from apps import db, login_manager
+from apps.authentication.util import hash_pass  # Giả sử bạn có hàm hash_pass trong 'utils'
 
 class Users(db.Model, UserMixin):
-
-    __tablename__ = 'Users'
+    __tablename__ = 'users'  # Đảm bảo bảng tên là 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True)
-    email = db.Column(db.String(64), unique=True)
-    password = db.Column(db.LargeBinary)
+    username = db.Column(db.String(255), unique=True, nullable=False)  # Tương ứng với trường 'username'
+    password_hash = db.Column(db.String(255), nullable=False)  # Tương ứng với 'password_hash'
+    role = db.Column(db.Enum('user', 'admin', name='role_enum'), nullable=False)  # ENUM('user', 'admin')
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())  # Tương ứng với 'created_at'
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # Tương ứng với 'updated_at'
 
     def __init__(self, **kwargs):
         for property, value in kwargs.items():
-            # depending on whether value is an iterable or not, we must
-            # unpack it's value (when **kwargs is request.form, some values
-            # will be a 1-element list)
+            # Nếu có giá trị iterable, unpack giá trị đó
             if hasattr(value, '__iter__') and not isinstance(value, str):
-                # the ,= unpack of a singleton fails PEP8 (travis flake8 test)
                 value = value[0]
-
             if property == 'password':
-                value = hash_pass(value)  # we need bytes here (not plain str)
-
+                value = hash_pass(value)  # Giả sử bạn có hàm hash_pass trong 'utils' để băm mật khẩu
             setattr(self, property, value)
 
     def __repr__(self):
-        return str(self.username)
+        return f'<User {self.username}>'
 
-
+# Hàm load người dùng từ session
 @login_manager.user_loader
 def user_loader(id):
-    return Users.query.filter_by(id=id).first()
-
+    return Users.query.get(int(id))
 
 @login_manager.request_loader
 def request_loader(request):

@@ -1,39 +1,32 @@
-# -*- encoding: utf-8 -*-
-"""
-Copyright (c) 2019 - present AppSeed.us
-"""
+# -*- encoding: utf-8 -*- 
+""" Copyright (c) 2019 - present AppSeed.us """
 
 import os
 
 class Config(object):
-
     basedir = os.path.abspath(os.path.dirname(__file__))
-
-    # Set up the App SECRET_KEY
-    # SECRET_KEY = config('SECRET_KEY'  , default='S#perS3crEt_007')
-    SECRET_KEY = os.getenv('SECRET_KEY', 'S#perS3crEt_007')
-
-    # This will create a file in <app> FOLDER
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'db.sqlite3')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False 
-
-    # Assets Management
-    ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/static/assets')    
     
-class ProductionConfig(Config):
-    DEBUG = False
+    # Secret key configuration
+    SECRET_KEY = os.getenv('SECRET_KEY', 'S#perS3crEt_007')
+    
+    # Database configuration (MySQL)
+    SQLALCHEMY_DATABASE_URI = 'mysql://admin:1@localhost/iptables_management'  # Thay 'admin' và '1' với credentials
+    SQLALCHEMY_TRACK_MODIFICATIONS = False  # Tắt tính năng theo dõi thay đổi của SQLAlchemy (giảm tải)
+    
+    # Assets management
+    ASSETS_ROOT = os.getenv('ASSETS_ROOT', '/static/assets')
 
-    # Security
-    SESSION_COOKIE_HTTPONLY = True
+class ProductionConfig(Config):
+    DEBUG = False  # Chạy ở chế độ sản xuất
+    SESSION_COOKIE_HTTPONLY = True  # Bảo mật cookie
     REMEMBER_COOKIE_HTTPONLY = True
-    REMEMBER_COOKIE_DURATION = 3600
+    REMEMBER_COOKIE_DURATION = 3600  # Thời gian giữ phiên làm việc
 
 class DebugConfig(Config):
-    DEBUG = True
+    DEBUG = True  # Chạy ở chế độ debug
 
-
-# Load all possible configurations
+# Load các cấu hình tùy thuộc vào môi trường
 config_dict = {
     'Production': ProductionConfig,
-    'Debug'     : DebugConfig
+    'Debug': DebugConfig
 }
