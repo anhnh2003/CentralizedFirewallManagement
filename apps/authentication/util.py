@@ -21,12 +21,19 @@ def hash_pass(password):
 
 
 
+
 def verify_pass(provided_password, stored_password):
     """Verify a stored password against one provided by user"""
 
     try:
-        # Giả sử mật khẩu đã lưu được lưu dưới dạng base64 (salt + password hash)
-        stored_password = stored_password.decode('ascii')
+        # Kiểm tra nếu stored_password là bytes (cần phải giải mã base64)
+        if isinstance(stored_password, bytes):
+            stored_password = stored_password.decode('ascii')
+
+        # Giả sử mật khẩu đã lưu dưới dạng base64 (salt + password hash)
+        # Nếu mật khẩu đã mã hóa bằng base64, giải mã nó
+        if stored_password.startswith('base64:'):
+            stored_password = base64.b64decode(stored_password[7:]).decode('ascii')
 
         # Tách salt và mật khẩu đã băm
         salt = stored_password[:64]

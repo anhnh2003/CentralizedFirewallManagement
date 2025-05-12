@@ -19,19 +19,29 @@ def load_user(user_id):
 @blueprint.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
-
     if request.method == 'POST' and form.validate_on_submit():
         username = form.username.data
         password = form.password.data
 
+        print(f"Attempting login with username: {username} and password: {password}")  # Debugging line
+
         # Tìm người dùng trong cơ sở dữ liệu MySQL
         user = Users.query.filter_by(username=username).first()
-
-        if user and verify_pass(password, user.password_hash):  # Kiểm tra mật khẩu
-            login_user(user)
-            return redirect(url_for('home_blueprint.default'))  # Chuyển hướng tới trang chủ
+        
+        # Kiểm tra nếu có người dùng và mật khẩu đúng
+        if user:
+            print(f"User found: {user.username}")  # Debugging line
+            if verify_pass(password, user.password_hash):
+                print("Password match successful.")  # Debugging line
+                login_user(user)
+                return redirect(url_for('home_blueprint.default'))  # Chuyển hướng tới trang chủ
+            else:
+                print("Password verification failed.")  # Debugging line
         else:
-            return render_template('accounts/login.html', form=form, msg='Invalid credentials')
+            print("No user found with that username.")  # Debugging line
+
+        # Nếu không thành công, hiển thị thông báo lỗi
+        return render_template('accounts/login.html', form=form, msg='Invalid credentials')
 
     return render_template('accounts/login.html', form=form)
 
