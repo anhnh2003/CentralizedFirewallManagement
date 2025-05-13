@@ -4,7 +4,7 @@ from flask import Flask, redirect, url_for
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from importlib import import_module
-from apps.models import Users
+from apps.authentication.models import Users
 
 
 db = SQLAlchemy()
