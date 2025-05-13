@@ -3,14 +3,10 @@ from flask_login import login_user, logout_user, login_required
 from apps import db, login_manager
 from apps.authentication.forms import LoginForm
 from apps.authentication.models import Users
-from apps.authentication.util import verify_pass  # Giả sử bạn đã có hàm verify_pass
+from apps.authentication.util import verify_pass  
 
 blueprint = Blueprint('authentication_blueprint', __name__)
 
-
-@login_manager.user_loader
-def load_user(user_id):
-    return Users.query.filter_by(username=user_id).first()
 
 @blueprint.route('/login', methods=['GET', 'POST'])
 def login():
@@ -31,7 +27,9 @@ def login():
             # Kiểm tra mật khẩu
             if verify_pass(password, user.password_hash):
                 print("Password match successful.")  # Debugging line
-                login_user(user)  # Đăng nhập người dùng
+                login_user(user) # Đăng nhập người dùng
+                print(user)
+                print("get_id returned:", current_user.get_id())
                 return redirect(url_for('home_blueprint.default'))  # Chuyển hướng tới trang chủ
             else:
                 print("Password verification failed.")  # Debugging line
