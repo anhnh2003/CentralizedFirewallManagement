@@ -15,3 +15,4 @@ Flask-Minify==0.37
 matplotlib==3.10.0
 python-pam
 mysqlclient
+passlib==1.7.4

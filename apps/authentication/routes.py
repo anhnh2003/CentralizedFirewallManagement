@@ -28,22 +28,27 @@ def login():
         # Tìm người dùng trong cơ sở dữ liệu MySQL
         user = Users.query.filter_by(username=username).first()
         
-        # Kiểm tra nếu có người dùng và mật khẩu đúng
+        # Kiểm tra nếu có người dùng
         if user:
             print(f"User found: {user.username}")  # Debugging line
+
+            # Kiểm tra mật khẩu
             if verify_pass(password, user.password_hash):
                 print("Password match successful.")  # Debugging line
-                login_user(user)
+                login_user(user)  # Đăng nhập người dùng
                 return redirect(url_for('home_blueprint.default'))  # Chuyển hướng tới trang chủ
             else:
                 print("Password verification failed.")  # Debugging line
+                print(f"Expected hash: {user.password_hash}")  # In ra hash kỳ vọng
         else:
             print("No user found with that username.")  # Debugging line
 
         # Nếu không thành công, hiển thị thông báo lỗi
         return render_template('accounts/login.html', form=form, msg='Invalid credentials')
 
+    # Render lại form nếu phương thức không phải là POST hoặc không hợp lệ
     return render_template('accounts/login.html', form=form)
+
 
 @blueprint.route('/logout')
 def logout():
