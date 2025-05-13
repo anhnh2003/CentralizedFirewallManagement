@@ -18,7 +18,7 @@ def register_extensions(app):
     login_manager.init_app(app)
 
     # Import tại đây để tránh circular import
-    from apps.models import Users
+    from apps.authentication.models import Users
 
     @login_manager.user_loader
     def load_user(user_id):
