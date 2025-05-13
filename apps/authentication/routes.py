@@ -7,10 +7,6 @@ from apps.authentication.util import verify_pass  # Giả sử bạn đã có h�
 
 blueprint = Blueprint('authentication_blueprint', __name__)
 
-class User:
-    """ User class to interact with Flask-Login """
-    def __init__(self, username):
-        self.id = username
 
 @login_manager.user_loader
 def load_user(user_id):

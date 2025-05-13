@@ -8,7 +8,7 @@ class Users(db.Model, UserMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, nullable=False)  # Tương ứng với trường 'username'
-    password_hash = db.Column(db.String(255), nullable=False)  # Tương ứng với 'password_hash'
+    password_hash = db.Column(db.String(256), nullable=False)  # Tương ứng với 'password_hash'
     role = db.Column(db.Enum('user', 'admin', name='role_enum'), nullable=False)  # ENUM('user', 'admin')
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())  # Tương ứng với 'created_at'
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # Tương ứng với 'updated_at'
@@ -21,7 +21,8 @@ class Users(db.Model, UserMixin):
             if property == 'password':
                 value = hash_pass(value)  # Giả sử bạn có hàm hash_pass trong 'utils' để băm mật khẩu
             setattr(self, property, value)
-
+    def get_id(self):  # Quan trọng cho Flask-Login
+        return str(self.id)
     def __repr__(self):
         return f'<User {self.username}>'
 

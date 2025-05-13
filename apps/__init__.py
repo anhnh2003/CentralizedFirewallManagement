@@ -4,11 +4,15 @@ from flask import Flask, redirect, url_for
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from importlib import import_module
+from apps.models import Users
 
 
 db = SQLAlchemy()
 
 login_manager = LoginManager()
+@login_manager.user_loader
+def load_user(user_id):
+    return Users.query.get(int(user_id))
 # Specify the login view (redirect for unauthorized users)
 login_manager.login_view = 'authentication_blueprint.login'
 login_manager.login_message = 'Please log in to access this page.'
