@@ -1,7 +1,7 @@
 import hashlib
 import secrets
 
-def hash_password(password: str) -> str:
+def hash_pass(password: str) -> str:
     """Tạo password hash với salt ngẫu nhiên (định dạng: salt:hash)"""
     salt = secrets.token_hex(16)  # Tạo salt 16 bytes (32 ký tự hex)
     hash = hashlib.pbkdf2_hmac(
@@ -12,7 +12,7 @@ def hash_password(password: str) -> str:
     ).hex()
     return f"{salt}:{hash}"
 
-def verify_password(password: str, hashed: str) -> bool:
+def verify_pass(password: str, hashed: str) -> bool:
     """Xác thực mật khẩu"""
     try:
         salt, original_hash = hashed.split(':')
