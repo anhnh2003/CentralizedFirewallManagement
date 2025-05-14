@@ -409,7 +409,7 @@ def manage_users():
             username = request.form.get(f'username_{i}')
             password = request.form.get(f'password_{i}')
             role = request.form.get(f'role_{i}')
-            selected_nodes = request.form.getlist(f'nodes_{i}')
+            selected_nodes = request.form.getlist(f'nodes_{i}')  # selected_nodes có thể là rỗng
 
             if Users.query.filter_by(username=username).first():
                 flash(f"Tài khoản {username} đã tồn tại.", 'danger')
@@ -462,7 +462,7 @@ def update_user(user_id):
     user = Users.query.get_or_404(user_id)
     username = request.form.get('username')
     role = request.form.get('role')
-    selected_nodes = request.form.getlist('nodes')
+    selected_nodes = request.form.getlist('nodes')  # selected_nodes có thể là rỗng
 
     # Kiểm tra trùng username
     if username != user.username and Users.query.filter_by(username=username).first():

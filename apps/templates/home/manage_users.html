@@ -68,13 +68,14 @@
                 <label>Chọn các node</label>
                 <div>
                     {% for node in nodes %}
-                    <div>
-                        <input type="checkbox" name="nodes" value="{{ node.id }}">
-                        <label>{{ node.hostname }}</label>
-                    </div>
+                        <div>
+                            <input type="checkbox" name="nodes" value="{{ node.id }}" {% if node.id in selected_node_ids %}checked{% endif %}>
+                            <label>{{ node.hostname }}</label>
+                        </div>
                     {% endfor %}
                 </div>
             </div>
+            
             <button type="submit" class="btn btn-success">Thêm</button>
         </form>
       </div>
