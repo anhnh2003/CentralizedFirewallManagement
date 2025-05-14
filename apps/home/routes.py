@@ -19,7 +19,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]  # Log to the console
 )
 
-sudo_password = '123456'
 
 # ------------ Admin: Thêm user ------------
 @blueprint.route('/add_user', methods=['GET', 'POST'])
@@ -400,7 +399,7 @@ def data_visualization():
 
 
     return render_template('home/data_visualization.html', aggregated_data=aggregated_data_json)
-@home_blueprint.route('/manage_users', methods=['GET', 'POST'])
+@blueprint.route('/manage_users', methods=['GET', 'POST'])
 @login_required
 @role_required('admin')
 def manage_users():
@@ -434,7 +433,7 @@ def manage_users():
     nodes = Nodes.query.all()
     return render_template('home/manage_users.html', users=users, nodes=nodes)
 
-@home_blueprint.route('/delete_user/<int:user_id>', methods=['POST'])
+@blueprint.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('admin')
 def delete_user(user_id):
