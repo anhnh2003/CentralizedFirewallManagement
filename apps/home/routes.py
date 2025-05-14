@@ -415,7 +415,7 @@ def manage_users():
                 flash(f"Tài khoản {username} đã tồn tại.", 'danger')
                 continue
 
-            hashed_password = generate_password_hash(password)
+            hashed_password = hash_pass(password)
             new_user = Users(username=username, password_hash=hashed_password, role=role)
             db.session.add(new_user)
             db.session.commit()
