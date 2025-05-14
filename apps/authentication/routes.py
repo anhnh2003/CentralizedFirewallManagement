@@ -28,15 +28,7 @@ def login():
             if verify_pass(password, user.password_hash):
                 print("Password match successful.")  # Debugging line
                 login_user(user) # Đăng nhập người dùng
-                print(user)
-                print("get_id returned:", current_user.get_id())
                 return redirect(url_for('home_blueprint.default'))  # Chuyển hướng tới trang chủ
-            else:
-                print("Password verification failed.")  # Debugging line
-                print(f"Expected hash: {user.password_hash}")  # In ra hash kỳ vọng
-        else:
-            print("No user found with that username.")  # Debugging line
-
         # Nếu không thành công, hiển thị thông báo lỗi
         return render_template('accounts/login.html', form=form, msg='Invalid credentials')
 

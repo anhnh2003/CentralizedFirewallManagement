@@ -1,0 +1,79 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<h2>Quản lý người dùng</h2>
+<button id="addUserBtn" class="btn btn-primary">Thêm người dùng</button>
+
+<div id="addUserFormsContainer"></div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Tên đăng nhập</th>
+            <th>Vai trò</th>
+            <th>Quản lý các node</th>
+            <th>Hành động</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.id }}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.role }}</td>
+            <td>
+                {% for user_node in user_nodes if user_node.user_id == user.id %}
+                    {{ nodes[user_node.node_id].hostname }} ({{ user_node.role }})
+                {% endfor %}
+            </td>
+            <td>
+                <form action="{{ url_for('home_blueprint.delete_user', user_id=user.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Xóa</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    document.getElementById('addUserBtn').addEventListener('click', function() {
+        const formIndex = document.querySelectorAll('.addUserForm').length;
+        const formHtml = `
+            <form class="addUserForm" method="POST">
+                <h3>Thêm người dùng ${formIndex + 1}</h3>
+                <div class="form-group">
+                    <label for="username_${formIndex}">Tên đăng nhập</label>
+                    <input type="text" id="username_${formIndex}" name="username_${formIndex}" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="password_${formIndex}">Mật khẩu</label>
+                    <input type="password" id="password_${formIndex}" name="password_${formIndex}" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="role_${formIndex}">Vai trò</label>
+                    <select id="role_${formIndex}" name="role_${formIndex}" class="form-control" required>
+                        <option value="user">Người dùng</option>
+                        <option value="admin">Quản trị viên</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Chọn các node</label>
+                    <div>
+                        {% for node in nodes %}
+                        <div>
+                            <input type="checkbox" name="nodes_${formIndex}" value="{{ node.id }}">
+                            <label>{{ node.hostname }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">Tạo người dùng</button>
+            </form>
+            <hr>
+        `;
+        document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', formHtml);
+    });
+</script>
+
+{% endblock %}

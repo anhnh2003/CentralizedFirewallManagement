@@ -25,7 +25,20 @@ class Users(db.Model, UserMixin):
         return str(self.id)
     def __repr__(self):
         return f'<User {self.username}>'
+class Nodes(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    hostname = db.Column(db.String(255), nullable=False)
+    ip_address = db.Column(db.String(15), unique=True, nullable=False)
+    ssh_user = db.Column(db.String(256), nullable=False)
+    ssh_key = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
+class UserNodes(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    node_id = db.Column(db.Integer, db.ForeignKey('nodes.id'), primary_key=True)
+    role = db.Column(db.Enum('manager', 'viewer', name='user_node_role_enum'), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 # Hàm load người dùng từ session
 @login_manager.user_loader
 def user_loader(id):

@@ -11,7 +11,7 @@ from collections import Counter
 import logging
 from apps.home.util import role_required
 from apps.authentication.util import hash_pass, verify_pass
-from apps.authentication.models import Users
+from apps.authentication.models import Users, Nodes, UserNodes
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,  # Log messages of level DEBUG and above
@@ -400,6 +400,52 @@ def data_visualization():
 
 
     return render_template('home/data_visualization.html', aggregated_data=aggregated_data_json)
+@home_blueprint.route('/manage_users', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def manage_users():
+    if request.method == 'POST':
+        num_forms = len([key for key in request.form.keys() if key.startswith('username_')])
+        for i in range(num_forms):
+            username = request.form.get(f'username_{i}')
+            password = request.form.get(f'password_{i}')
+            role = request.form.get(f'role_{i}')
+            selected_nodes = request.form.getlist(f'nodes_{i}')
 
+            if Users.query.filter_by(username=username).first():
+                flash(f"Tài khoản {username} đã tồn tại.", 'danger')
+                continue
 
+            hashed_password = generate_password_hash(password)
+            new_user = Users(username=username, password_hash=hashed_password, role=role)
+            db.session.add(new_user)
+            db.session.commit()
+
+            for node_id in selected_nodes:
+                user_node = UserNodes(user_id=new_user.id, node_id=node_id, role='manager')
+                db.session.add(user_node)
+            db.session.commit()
+
+            flash(f"Đã tạo tài khoản {username}.", 'success')
+
+        return redirect(url_for('home_blueprint.manage_users'))
+
+    users = Users.query.all()
+    nodes = Nodes.query.all()
+    return render_template('home/manage_users.html', users=users, nodes=nodes)
+
+@home_blueprint.route('/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete_user(user_id):
+    user = Users.query.get_or_404(user_id)
+
+    if user.username == current_user.username:
+        flash("Bạn không thể xóa tài khoản của chính mình.", 'danger')
+        return redirect(url_for('home_blueprint.manage_users'))
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"Đã xóa tài khoản {user.username}.", 'success')
+    return redirect(url_for('home_blueprint.manage_users'))
 
