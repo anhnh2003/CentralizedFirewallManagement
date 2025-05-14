@@ -487,15 +487,16 @@ def update_user(user_id):
     db.session.commit()
 
     # Cập nhật mối quan hệ người dùng và node
-    existing_user_nodes = UserNodes.query.filter_by(user_id=user.id).all()
-    for user_node in existing_user_nodes:
-        if user_node.node_id not in map(int, selected_nodes):
-            db.session.delete(user_node)
-    for node_id in selected_nodes:
-        if not UserNodes.query.filter_by(user_id=user.id, node_id=node_id).first():
-            user_node = UserNodes(user_id=user.id, node_id=node_id, role='manager')
-            db.session.add(user_node)
-    db.session.commit()
+    if selected_nodes and selected_nodes[0] != 'None':
+        existing_user_nodes = UserNodes.query.filter_by(user_id=user.id).all()
+        for user_node in existing_user_nodes:
+            if user_node.node_id not in map(int, selected_nodes):
+                db.session.delete(user_node)
+        for node_id in selected_nodes:
+            if not UserNodes.query.filter_by(user_id=user.id, node_id=node_id).first():
+                user_node = UserNodes(user_id=user.id, node_id=node_id, role='manager')
+                db.session.add(user_node)
+        db.session.commit()
 
     flash(f"Đã cập nhật tài khoản {user.username}.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))

@@ -75,6 +75,7 @@
             <div class="form-group">
                 <label>Chọn các node</label>
                 <div>
+                    <input type="checkbox" name="nodes" value="None" style="display:none;">
                     {% for node in nodes %}
                     <div>
                         <input type="checkbox" name="nodes" value="{{ node.id }}" id="node_{{ node.id }}">
@@ -83,6 +84,7 @@
                     {% endfor %}
                 </div>
             </div>
+            
             <button type="submit" class="btn btn-success">Cập nhật</button>
         </form>
       </div>
