@@ -2,7 +2,7 @@
 from apps.home import blueprint
 from apps import db
 from flask import render_template, request, flash, redirect, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 from jinja2 import TemplateNotFound
 import subprocess
 import re
@@ -10,7 +10,7 @@ import html
 from collections import Counter
 import logging
 from apps.home.util import role_required
-from apps.authentication.util import hash_pass, verify_pass
+from apps.authentication.util import hash_pass
 from apps.authentication.models import Users, Nodes, UserNodes
 # Configure logging
 logging.basicConfig(

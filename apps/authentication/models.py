@@ -19,7 +19,7 @@ class Users(db.Model, UserMixin):
             if hasattr(value, '__iter__') and not isinstance(value, str):
                 value = value[0]
             if property == 'password':
-                value = hash_pass(value)  # Giả sử bạn có hàm hash_pass trong 'utils' để băm mật khẩu
+                value = hash_pass(value)  # Giả sử bạn có hàm hash_pass trong 'util' để băm mật khẩu
             setattr(self, property, value)
     def get_id(self):  # Quan trọng cho Flask-Login
         return str(self.id)
@@ -32,7 +32,7 @@ class Nodes(db.Model):
     ssh_user = db.Column(db.String(256), nullable=False)
     ssh_key = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    updated_at = db.Column()
 
 class UserNodes(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
