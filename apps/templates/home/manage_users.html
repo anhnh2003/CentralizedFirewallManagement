@@ -1,8 +1,11 @@
 {% extends "layouts/base.html" %}
 {% block content %}
 <h2>Quản lý người dùng</h2>
+
+<!-- Nút Thêm Người Dùng -->
 <button id="addUserBtn" class="btn btn-primary">Thêm người dùng</button>
 
+<!-- Các form sẽ được hiển thị khi nhấn nút thêm người dùng -->
 <div id="addUserFormsContainer"></div>
 
 <table class="table">
@@ -33,7 +36,10 @@
                 </span>
             </td>
             <td>
+                <!-- Nút Sửa -->
                 <button class="btn btn-warning editBtn" data-id="{{ user.id }}">Sửa</button>
+
+                <!-- Nút Xóa -->
                 <form action="{{ url_for('home_blueprint.delete_user', user_id=user.id) }}" method="POST" style="display:inline;">
                     <button type="submit" class="btn btn-danger">Xóa</button>
                 </form>
@@ -86,12 +92,15 @@
 </div>
 
 <script>
+    // Khi nhấn vào nút "Sửa"
     document.querySelectorAll('.editBtn').forEach(button => {
         button.addEventListener('click', function() {
             const userId = this.getAttribute('data-id');
+            // Gọi API để lấy thông tin người dùng
             fetch(`/get_user_data/${userId}`)
                 .then(response => response.json())
                 .then(data => {
+                    // Cập nhật modal với thông tin người dùng
                     document.getElementById('userId').value = data.id;
                     document.getElementById('username').value = data.username;
                     document.getElementById('role').value = data.role;
@@ -103,22 +112,40 @@
         });
     });
 
-    document.getElementById('editForm').addEventListener('submit', function(event) {
-        event.preventDefault();
-        const formData = new FormData(this);
-        fetch('/update_user', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Cập nhật thành công');
-                location.reload();
-            } else {
-                alert('Cập nhật thất bại');
-            }
-        });
+    // Khi nhấn nút "Thêm Người Dùng"
+    document.getElementById('addUserBtn').addEventListener('click', function() {
+        const formHtml = `
+            <form class="add-user-form" method="POST">
+                <div class="form-group">
+                    <label for="username">Tên đăng nhập</label>
+                    <input type="text" class="form-control" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input type="password" class="form-control" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Vai trò</label>
+                    <select class="form-control" name="role" required>
+                        <option value="user">Người dùng</option>
+                        <option value="admin">Quản trị viên</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Chọn các node</label>
+                    <div>
+                        {% for node in nodes %}
+                        <div>
+                            <input type="checkbox" name="nodes" value="{{ node.id }}">
+                            <label>{{ node.hostname }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">Thêm</button>
+            </form>
+        `;
+        document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', formHtml);
     });
 </script>
 
