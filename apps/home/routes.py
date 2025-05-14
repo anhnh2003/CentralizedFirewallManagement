@@ -1,17 +1,17 @@
 # -*- encoding: utf-8 -*-
 from apps.home import blueprint
+from apps import db
 from flask import render_template, request, flash, redirect, url_for
 from flask_login import login_required
 from jinja2 import TemplateNotFound
 import subprocess
 import re
-import shlex
 import html
-import matplotlib.pyplot as plt
 from collections import Counter
-import os
 import logging
-
+from apps.home.util import role_required
+from apps.authentication.util import hash_pass, verify_pass
+from apps.authentication.models import Users
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,  # Log messages of level DEBUG and above
@@ -20,6 +20,39 @@ logging.basicConfig(
 )
 
 sudo_password = '123456'
+
+# ------------ Admin: Thêm user ------------
+@blueprint.route('/add_user', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def add_user():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        role      = request.form.get('role', 'user')
+
+        # Validate
+        if not username or not password:
+            flash('Username và password là bắt buộc.', 'warning')
+            return redirect(url_for('home_blueprint.add_user'))
+
+        if Users.query.filter_by(username=username).first():
+            flash('Username đã tồn tại.', 'warning')
+            return redirect(url_for('home_blueprint.add_user'))
+
+        # Hash mật khẩu và lưu vào DB
+        pwd_hash = hash_pass(password)
+        new_user = Users(username=username,
+                         password_hash=pwd_hash,
+                         role=role,  )
+        db.session.add(new_user)
+        db.session.commit()
+
+        flash(f'Đã thêm user "{username}" với role "{role}".', 'success')
+        return redirect(url_for('home_blueprint.add_user'))
+
+    # GET: hiển thị form
+    return render_template('home/add_user.html')
 @blueprint.route('/')
 @login_required
 def default():

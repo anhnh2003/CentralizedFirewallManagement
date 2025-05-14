@@ -11,7 +11,7 @@ class Users(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)  # Tương ứng với 'password_hash'
     role = db.Column(db.Enum('user', 'admin', name='role_enum'), nullable=False)  # ENUM('user', 'admin')
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())  # Tương ứng với 'created_at'
-    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())  # Tương ứng với 'updated_at'
+    updated_at = db.Column(db.DateTime)  # Tương ứng với 'updated_at'
 
     def __init__(self, **kwargs):
         for property, value in kwargs.items():
