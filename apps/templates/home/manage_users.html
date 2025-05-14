@@ -19,15 +19,22 @@
         {% for user in users %}
         <tr>
             <td>{{ user.id }}</td>
-            <td>{{ user.username }}</td>
-            <td>{{ user.role }}</td>
             <td>
-                {% for user_node in user_nodes if user_node.user_id == user.id %}
-                    {{ nodes[user_node.node_id].hostname }} ({{ user_node.role }})
-                {% endfor %}
+                <span class="editable" data-field="username" data-id="{{ user.id }}">{{ user.username }}</span>
             </td>
             <td>
-                <form action="{{ url_for('home_blueprint.delete_user', user_id=user.id) }}" method="POST">
+                <span class="editable" data-field="role" data-id="{{ user.id }}">{{ user.role }}</span>
+            </td>
+            <td>
+                <span class="editable" data-field="nodes" data-id="{{ user.id }}">
+                    {% for user_node in user_nodes if user_node.user_id == user.id %}
+                        {{ nodes[user_node.node_id].hostname }} ({{ user_node.role }})
+                    {% endfor %}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-warning editBtn" data-id="{{ user.id }}">Sửa</button>
+                <form action="{{ url_for('home_blueprint.delete_user', user_id=user.id) }}" method="POST" style="display:inline;">
                     <button type="submit" class="btn btn-danger">Xóa</button>
                 </form>
             </td>
@@ -36,44 +43,82 @@
     </tbody>
 </table>
 
-<script>
-    document.getElementById('addUserBtn').addEventListener('click', function() {
-        const formIndex = document.querySelectorAll('.addUserForm').length;
-        const formHtml = `
-            <form class="addUserForm" method="POST">
-                <h3>Thêm người dùng ${formIndex + 1}</h3>
-                <div class="form-group">
-                    <label for="username_${formIndex}">Tên đăng nhập</label>
-                    <input type="text" id="username_${formIndex}" name="username_${formIndex}" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="password_${formIndex}">Mật khẩu</label>
-                    <input type="password" id="password_${formIndex}" name="password_${formIndex}" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="role_${formIndex}">Vai trò</label>
-                    <select id="role_${formIndex}" name="role_${formIndex}" class="form-control" required>
-                        <option value="user">Người dùng</option>
-                        <option value="admin">Quản trị viên</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Chọn các node</label>
+<!-- Modal -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editModalLabel">Chỉnh sửa người dùng</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Đóng">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm" method="POST">
+            <input type="hidden" id="userId" name="user_id">
+            <div class="form-group">
+                <label for="username">Tên đăng nhập</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="role">Vai trò</label>
+                <select class="form-control" id="role" name="role" required>
+                    <option value="user">Người dùng</option>
+                    <option value="admin">Quản trị viên</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Chọn các node</label>
+                <div>
+                    {% for node in nodes %}
                     <div>
-                        {% for node in nodes %}
-                        <div>
-                            <input type="checkbox" name="nodes_${formIndex}" value="{{ node.id }}">
-                            <label>{{ node.hostname }}</label>
-                        </div>
-                        {% endfor %}
+                        <input type="checkbox" name="nodes" value="{{ node.id }}">
+                        <label>{{ node.hostname }}</label>
                     </div>
+                    {% endfor %}
                 </div>
-                <button type="submit" class="btn btn-success">Tạo người dùng</button>
-            </form>
-            <hr>
-        `;
-        document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', formHtml);
-    });
-</script>
+            </div>
+            <button type="submit" class="btn btn-success">Cập nhật</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
-{% endblock %}
+<script>
+    document.querySelectorAll('.editBtn').forEach(button => {
+        button.addEventListener('click', function() {
+            const userId = this.getAttribute('data-id');
+            fetch(`/get_user_data/${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('userId').value = data.id;
+                    document.getElementById('username').value = data.username;
+                    document.getElementById('role').value = data.role;
+                    data.nodes.forEach(nodeId => {
+                        document.querySelector(`input[name="nodes"][value="${nodeId}"]`).checked = true;
+                    });
+                    $('#editModal').modal('show');
+                });
+        });
+    });
+
+    document.getElementById('editForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+        fetch('/update_user', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Cập nhật thành công');
+                location.reload();
+            } else {
+                alert('Cập nhật thất bại');
+            }
+        });
+    });
+</script
+::contentReference[oaicite:0]{index=0}

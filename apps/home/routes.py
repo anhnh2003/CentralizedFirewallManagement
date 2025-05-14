@@ -447,4 +447,32 @@ def delete_user(user_id):
     db.session.commit()
     flash(f"Đã xóa tài khoản {user.username}.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
+@blueprint.route('/update_user/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def update_user(user_id):
+    user = Users.query.get_or_404(user_id)
+    username = request.form.get('username')
+    role = request.form.get('role')
+    selected_nodes = request.form.getlist('nodes')
 
+    if username != user.username and Users.query.filter_by(username=username).first():
+        flash(f"Tài khoản {username} đã tồn tại.", 'danger')
+        return redirect(url_for('home_blueprint.manage_users'))
+
+    user.username = username
+    user.role = role
+    db.session.commit()
+
+    existing_user_nodes = UserNodes.query.filter_by(user_id=user.id).all()
+    for user_node in existing_user_nodes:
+        if user_node.node_id not in map(int, selected_nodes):
+            db.session.delete(user_node)
+    for node_id in selected_nodes:
+        if not UserNodes.query.filter_by(user_id=user.id, node_id=node_id).first():
+            user_node = UserNodes(user_id=user.id, node_id=node_id, role='manager')
+            db.session.add(user_node)
+    db.session.commit()
+
+    flash(f"Đã cập nhật tài khoản {user.username}.", 'success')
+    return redirect(url_for('home_blueprint.manage_users'))
