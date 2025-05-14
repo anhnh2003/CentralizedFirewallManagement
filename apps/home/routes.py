@@ -399,6 +399,19 @@ def data_visualization():
 
 
     return render_template('home/data_visualization.html', aggregated_data=aggregated_data_json)
+@blueprint.route('/get_user_data/<int:user_id>', methods=['GET'])
+@login_required
+@role_required('admin')
+def get_user_data(user_id):
+    user = Users.query.get_or_404(user_id)
+    nodes = [user_node.node_id for user_node in user.user_nodes]
+    return jsonify({
+        'id': user.id,
+        'username': user.username,
+        'role': user.role,
+        'nodes': nodes
+    })
+# Hiển thị và xử lý người dùng
 @blueprint.route('/manage_users', methods=['GET', 'POST'])
 @login_required
 @role_required('admin')
@@ -409,17 +422,20 @@ def manage_users():
             username = request.form.get(f'username_{i}')
             password = request.form.get(f'password_{i}')
             role = request.form.get(f'role_{i}')
-            selected_nodes = request.form.getlist(f'nodes_{i}')  # selected_nodes có thể là rỗng
-
+            selected_nodes = request.form.getlist(f'nodes_{i}')
+            
+            # Kiểm tra xem tài khoản đã tồn tại chưa
             if Users.query.filter_by(username=username).first():
                 flash(f"Tài khoản {username} đã tồn tại.", 'danger')
                 continue
-
+            
+            # Mã hóa mật khẩu
             hashed_password = hash_pass(password)
             new_user = Users(username=username, password_hash=hashed_password, role=role)
             db.session.add(new_user)
             db.session.commit()
-
+            
+            # Thêm mối quan hệ người dùng và node
             for node_id in selected_nodes:
                 user_node = UserNodes(user_id=new_user.id, node_id=node_id, role='manager')
                 db.session.add(user_node)
@@ -429,32 +445,30 @@ def manage_users():
 
         return redirect(url_for('home_blueprint.manage_users'))
 
+    # Lấy danh sách người dùng và nodes
     users = Users.query.all()
     nodes = Nodes.query.all()
     return render_template('home/manage_users.html', users=users, nodes=nodes)
+
+
+# Xóa người dùng
 @blueprint.route('/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('admin')
 def delete_user(user_id):
     user = Users.query.get_or_404(user_id)
 
-    # Kiểm tra xem admin có cố gắng xóa chính tài khoản của mình không
     if user.username == current_user.username:
         flash("Bạn không thể xóa tài khoản của chính mình.", 'danger')
         return redirect(url_for('home_blueprint.manage_users'))
 
-    password = request.form.get('password')
-
-    # Kiểm tra mật khẩu của admin
-    if not current_user.check_password(password):  # Đảm bảo phương thức check_password tồn tại
-        flash("Mật khẩu không đúng. Không thể xóa tài khoản.", 'danger')
-        return redirect(url_for('home_blueprint.manage_users'))
-
-    # Xóa người dùng
     db.session.delete(user)
     db.session.commit()
     flash(f"Đã xóa tài khoản {user.username}.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
+
+
+# Cập nhật thông tin người dùng
 @blueprint.route('/update_user/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('admin')
@@ -462,30 +476,26 @@ def update_user(user_id):
     user = Users.query.get_or_404(user_id)
     username = request.form.get('username')
     role = request.form.get('role')
-    selected_nodes = request.form.getlist('nodes')  # selected_nodes có thể là rỗng
+    selected_nodes = request.form.getlist('nodes')
 
-    # Kiểm tra trùng username
     if username != user.username and Users.query.filter_by(username=username).first():
         flash(f"Tài khoản {username} đã tồn tại.", 'danger')
         return redirect(url_for('home_blueprint.manage_users'))
 
-    # Cập nhật thông tin người dùng
     user.username = username
     user.role = role
     db.session.commit()
 
-    # Xóa các node không được chọn
+    # Cập nhật mối quan hệ người dùng và node
     existing_user_nodes = UserNodes.query.filter_by(user_id=user.id).all()
     for user_node in existing_user_nodes:
         if user_node.node_id not in map(int, selected_nodes):
             db.session.delete(user_node)
-
-    # Thêm các node mới
     for node_id in selected_nodes:
         if not UserNodes.query.filter_by(user_id=user.id, node_id=node_id).first():
             user_node = UserNodes(user_id=user.id, node_id=node_id, role='manager')
             db.session.add(user_node)
-    
     db.session.commit()
+
     flash(f"Đã cập nhật tài khoản {user.username}.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
