@@ -3,145 +3,146 @@
 {% block content %}
 <h2>Quản lý người dùng</h2>
 
-<!-- Modal Thêm Người Dùng -->
-<button id="addUserBtn" class="btn btn-primary">Thêm người dùng</button>
+<!-- Nút Thêm Người Dùng -->
+<button id="addUserBtn" class="btn btn-primary mb-3">Thêm người dùng</button>
 <div id="addUserFormsContainer"></div>
 
-<script>
-    document.getElementById('addUserBtn').addEventListener('click', function() {
-        const formHtml = `
-            <form class="add-user-form" method="POST" action="{{ url_for('home_blueprint.manage_users') }}">
-                <div class="form-group">
-                    <label for="username">Tên đăng nhập</label>
-                    <input type="text" class="form-control" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Mật khẩu</label>
-                    <input type="password" class="form-control" name="password" required>
-                </div>
-                <div class="form-group">
-                    <label for="role">Vai trò</label>
-                    <select class="form-control" name="role" required>
-                        <option value="user">Người dùng</option>
-                        <option value="admin">Quản trị viên</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Chọn các node</label>
-                    <div>
-                        {% for node in nodes %}
-                        <div>
-                            <input type="checkbox" name="nodes" value="{{ node.id }}">
-                            <label>{{ node.hostname }}</label>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-success">Thêm</button>
-            </form>
-        `;
-        document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', formHtml);
-    });
-</script>
+<!-- Danh sách người dùng -->
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Username</th>
+      <th>Role</th>
+      <th>Nodes</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ u.username }}</td>
+      <td>{{ u.role }}</td>
+      <td>
+        {% for un in u.user_nodes %}
+          {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+      </td>
+      <td>
+        <button class="btn btn-sm btn-warning editBtn" data-id="{{ u.id }}">Sửa</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 
 <!-- Modal sửa người dùng -->
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editModalLabel">Chỉnh sửa người dùng</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Đóng">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editModalLabel">Chỉnh sửa người dùng</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Đóng">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm" method="POST" action="">
+          <div class="form-group">
+            <label for="edit_username">Tên đăng nhập</label>
+            <input type="text" class="form-control" id="edit_username" name="username" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_role">Vai trò</label>
+            <select class="form-control" id="edit_role" name="role" required>
+              <option value="user">Người dùng</option>
+              <option value="admin">Quản trị viên</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Chọn các node</label>
+            <div>
+              {% for node in nodes %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="node_{{ node.id }}" name="nodes" value="{{ node.id }}">
+                <label class="form-check-label" for="node_{{ node.id }}">{{ node.hostname }}</label>
+              </div>
+              {% endfor %}
             </div>
-            <div class="modal-body">
-                <form id="editForm" method="POST" action="{{ url_for('home_blueprint.update_user', user_id=user.id) }}">
-                    <div class="form-group">
-                        <label for="username">Tên đăng nhập</label>
-                        <input type="text" class="form-control" id="username" name="username" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="role">Vai trò</label>
-                        <select class="form-control" id="role" name="role" required>
-                            <option value="user">Người dùng</option>
-                            <option value="admin">Quản trị viên</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Chọn các node</label>
-                        <div>
-                            {% for node in nodes %}
-                            <div>
-                                <input type="checkbox" name="nodes" value="{{ node.id }}">
-                                <label>{{ node.hostname }}</label>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-success">Cập nhật</button>
-                </form>
-            </div>
-        </div>
+          </div>
+          <button type="submit" class="btn btn-success">Cập nhật</button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 
-
 <script>
-    // Mở Modal Chỉnh sửa người dùng
-    document.querySelectorAll('.editBtn').forEach(button => {
-        button.addEventListener('click', function() {
-            const userId = this.getAttribute('data-id');
-            // Gọi API để lấy thông tin người dùng
-            fetch(`/get_user_data/${userId}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Cập nhật modal với thông tin người dùng
-                    document.getElementById('userId').value = data.id;
-                    document.getElementById('username').value = data.username;
-                    document.getElementById('role').value = data.role;
-                    data.nodes.forEach(nodeId => {
-                        document.querySelector(`#node_${nodeId}`).checked = true;
-                    });
-                    $('#editModal').modal('show');
-                });
+// Template URL dùng để replace ID
+const updateUserUrlTemplate = "{{ url_for('home_blueprint.update_user', user_id=0) }}";
+
+// Hàm mở modal sửa
+document.querySelectorAll('.editBtn').forEach(button => {
+  button.addEventListener('click', function() {
+    const userId = this.getAttribute('data-id');
+    fetch(`/get_user_data/${userId}`)
+      .then(response => response.json())
+      .then(data => {
+        // Cập nhật action của form
+        const form = document.getElementById('editForm');
+        form.action = updateUserUrlTemplate.replace('/0', `/${userId}`);
+
+        // Đổ dữ liệu vào form
+        document.getElementById('edit_username').value = data.username;
+        document.getElementById('edit_role').value = data.role;
+        // Reset trước khi check lại
+        data.nodes.forEach(nodeId => {
+          const chk = document.querySelector(`#node_${nodeId}`);
+          if (chk) chk.checked = true;
         });
-    });
+        $('#editModal').modal('show');
+      })
+      .catch(err => console.error(err));
+  });
+});
 
-    // Thêm người dùng
-    document.getElementById('addUserBtn').addEventListener('click', function() {
-        const formHtml = `
-            <form class="add-user-form" method="POST">
-                <div class="form-group">
-                    <label for="username">Tên đăng nhập</label>
-                    <input type="text" class="form-control" name="username" required>
-                </div>
-                <div class="form-group">
-                    <label for="password">Mật khẩu</label>
-                    <input type="password" class="form-control" name="password" required>
-                </div>
-                <div class="form-group">
-                    <label for="role">Vai trò</label>
-                    <select class="form-control" name="role" required>
-                        <option value="user">Người dùng</option>
-                        <option value="admin">Quản trị viên</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Chọn các node</label>
-                    <div>
-                        {% for node in nodes %}
-                        <div>
-                            <input type="checkbox" name="nodes" value="{{ node.id }}">
-                            <label>{{ node.hostname }}</label>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-success">Thêm</button>
-            </form>
-        `;
-        document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', formHtml);
-    });
+// Thêm form "Thêm người dùng" động
+let addFormCount = 0;
+document.getElementById('addUserBtn').addEventListener('click', function() {
+  const i = addFormCount++;
+  let formHtml = `
+  <form class="add-user-form border p-3 mb-3" method="POST" action="{{ url_for('home_blueprint.manage_users') }}">
+    <h5>Người dùng ${i+1}</h5>
+    <div class="form-group">
+      <label for="username_${i}">Tên đăng nhập</label>
+      <input type="text" class="form-control" id="username_${i}" name="username_${i}" required>
+    </div>
+    <div class="form-group">
+      <label for="password_${i}">Mật khẩu</label>
+      <input type="password" class="form-control" id="password_${i}" name="password_${i}" required>
+    </div>
+    <div class="form-group">
+      <label for="role_${i}">Vai trò</label>
+      <select class="form-control" id="role_${i}" name="role_${i}" required>
+        <option value="user">Người dùng</option>
+        <option value="admin">Quản trị viên</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Chọn các node</label>
+      <div>
+        {% for node in nodes %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="add_${i}_node_{{ node.id }}" name="nodes_{{ i }}" value="{{ node.id }}">
+          <label class="form-check-label" for="add_${i}_node_{{ node.id }}">{{ node.hostname }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <button type="submit" class="btn btn-success">Thêm</button>
+  </form>`;
+  document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', formHtml);
+});
 </script>
-
 {% endblock %}
