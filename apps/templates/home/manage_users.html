@@ -3,12 +3,12 @@
 {% block content %}
 <h2>Quản lý người dùng</h2>
 
-<!-- Nút Thêm Người Dùng -->
+<!-- Nút Thêm Người Dùng động -->
 <button id="addUserBtn" class="btn btn-primary mb-3">Thêm người dùng</button>
 <div id="addUserFormsContainer"></div>
 
 <!-- Danh sách người dùng -->
-<table class="table table-bordered">
+<table class="table table-striped table-bordered">
   <thead>
     <tr>
       <th>ID</th>
@@ -30,14 +30,22 @@
         {% endfor %}
       </td>
       <td>
+        <!-- Sửa -->
         <button class="btn btn-sm btn-warning editBtn" data-id="{{ u.id }}">Sửa</button>
+        <!-- Xóa -->
+        <form method="POST"
+              action="{{ url_for('home_blueprint.delete_user', user_id=u.id) }}"
+              style="display:inline;"
+              onsubmit="return confirm('Bạn có chắc muốn xóa tài khoản {{ u.username }}?');">
+          <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+        </form>
       </td>
     </tr>
     {% endfor %}
   </tbody>
 </table>
 
-<!-- Modal sửa người dùng -->
+<!-- Modal Sửa Người Dùng -->
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
@@ -48,6 +56,7 @@
         </button>
       </div>
       <div class="modal-body">
+        <!-- action sẽ được JS gán động -->
         <form id="editForm" method="POST" action="">
           <div class="form-group">
             <label for="edit_username">Tên đăng nhập</label>
@@ -65,8 +74,11 @@
             <div>
               {% for node in nodes %}
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="node_{{ node.id }}" name="nodes" value="{{ node.id }}">
-                <label class="form-check-label" for="node_{{ node.id }}">{{ node.hostname }}</label>
+                <input class="form-check-input" type="checkbox"
+                       id="node_{{ node.id }}" name="nodes" value="{{ node.id }}">
+                <label class="form-check-label" for="node_{{ node.id }}">
+                  {{ node.hostname }}
+                </label>
               </div>
               {% endfor %}
             </div>
@@ -79,43 +91,50 @@
 </div>
 
 <script>
-// Template URL dùng để replace ID
+// Lấy template URL với user_id=0, sẽ replace sau
 const updateUserUrlTemplate = "{{ url_for('home_blueprint.update_user', user_id=0) }}";
 
-// Hàm mở modal sửa
-document.querySelectorAll('.editBtn').forEach(button => {
-  button.addEventListener('click', function() {
-    const userId = this.getAttribute('data-id');
+
+// 1) Xử lý nút Sửa
+document.querySelectorAll('.editBtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const userId = btn.getAttribute('data-id');
     fetch(`/get_user_data/${userId}`)
-      .then(response => response.json())
+      .then(r => r.json())
       .then(data => {
-        // Cập nhật action của form
+        // Gán action cho form
         const form = document.getElementById('editForm');
         form.action = updateUserUrlTemplate.replace('/0', `/${userId}`);
 
-        // Đổ dữ liệu vào form
+        // Đặt lại input
         document.getElementById('edit_username').value = data.username;
         document.getElementById('edit_role').value = data.role;
-        // Reset trước khi check lại
-        data.nodes.forEach(nodeId => {
-          const chk = document.querySelector(`#node_${nodeId}`);
-          if (chk) chk.checked = true;
+
+        // Reset tất cả checkbox
+        document.querySelectorAll('#editForm input[type="checkbox"]').forEach(ch => ch.checked = false);
+        // Check theo data
+        data.nodes.forEach(id => {
+          const ch = document.getElementById(`node_${id}`);
+          if (ch) ch.checked = true;
         });
+
+        // Show modal
         $('#editModal').modal('show');
       })
-      .catch(err => console.error(err));
+      .catch(console.error);
   });
 });
 
-// Thêm form "Thêm người dùng" động
+
+// 2) Xử lý nút Thêm người dùng động
 let addFormCount = 0;
-document.getElementById('addUserBtn').addEventListener('click', function() {
+document.getElementById('addUserBtn').addEventListener('click', () => {
   const i = addFormCount++;
-  let formHtml = `
+  const html = `
   <form class="add-user-form border p-3 mb-3" method="POST" action="{{ url_for('home_blueprint.manage_users') }}">
     <h5>Người dùng ${i+1}</h5>
     <div class="form-group">
-      <label for="username_${i}">Tên đăng nhập</label>
+      <label for="username_${i}">Username</label>
       <input type="text" class="form-control" id="username_${i}" name="username_${i}" required>
     </div>
     <div class="form-group">
@@ -134,15 +153,18 @@ document.getElementById('addUserBtn').addEventListener('click', function() {
       <div>
         {% for node in nodes %}
         <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="add_${i}_node_{{ node.id }}" name="nodes_{{ i }}" value="{{ node.id }}">
-          <label class="form-check-label" for="add_${i}_node_{{ node.id }}">{{ node.hostname }}</label>
+          <input class="form-check-input" type="checkbox"
+                 id="add_${i}_node_{{ node.id }}" name="nodes_${i}" value="{{ node.id }}">
+          <label class="form-check-label" for="add_${i}_node_{{ node.id }}">
+            {{ node.hostname }}
+          </label>
         </div>
         {% endfor %}
       </div>
     </div>
     <button type="submit" class="btn btn-success">Thêm</button>
   </form>`;
-  document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', formHtml);
+  document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', html);
 });
 </script>
 {% endblock %}
