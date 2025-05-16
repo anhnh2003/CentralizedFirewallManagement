@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 from apps.home import blueprint
 from apps import db
-from flask import render_template, request, flash, redirect, url_for
+from flask import render_template, request, flash, redirect, url_for, redirect, jsonify
 from flask_login import login_required, current_user
 from jinja2 import TemplateNotFound
 import subprocess
