@@ -14,19 +14,13 @@ def login():
     if request.method == 'POST' and form.validate_on_submit():
         username = form.username.data
         password = form.password.data
-
-        print(f"Attempting login with username: {username} and password: {password}")  # Debugging line
-
         # Tìm người dùng trong cơ sở dữ liệu MySQL
         user = Users.query.filter_by(username=username).first()
         
         # Kiểm tra nếu có người dùng
         if user:
-            print(f"User found: {user.username}")  # Debugging line
-
             # Kiểm tra mật khẩu
             if verify_pass(password, user.password_hash):
-                print("Password match successful.")  # Debugging line
                 login_user(user) # Đăng nhập người dùng
                 return redirect(url_for('home_blueprint.default'))  # Chuyển hướng tới trang chủ
         # Nếu không thành công, hiển thị thông báo lỗi
@@ -34,8 +28,6 @@ def login():
 
     # Render lại form nếu phương thức không phải là POST hoặc không hợp lệ
     return render_template('accounts/login.html', form=form)
-
-
 @blueprint.route('/logout')
 def logout():
     logout_user()

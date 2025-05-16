@@ -371,59 +371,6 @@ def data_visualization():
 @role_required('admin')
 def manage_users():
     if request.method == 'POST':
-        # Kiểm tra số lượng các form đã được gửi
-        num_forms = len([key for key in request.form.keys() if key.startswith('username_')])
-        for i in range(num_forms):
-            username = request.form.get(f'username_{i}')
-            password = request.form.get(f'password_{i}')
-            role = request.form.get(f'role_{i}')
-            selected_nodes = request.form.getlist(f'nodes_{i}')
-
-            # Kiểm tra username đã tồn tại chưa
-            if Users.query.filter_by(username=username).first():
-                flash(f"Tài khoản {username} đã tồn tại.", 'danger')
-                continue
-
-            hashed_password = hash_pass(password)
-            new_user = Users(username=username, password_hash=hashed_password, role=role)
-            db.session.add(new_user)
-            db.session.commit()
-
-            # Thêm quyền cho các node
-            for node_id in selected_nodes:
-                user_node = UserNodes(user_id=new_user.id, node_id=node_id, role='manager')
-                db.session.add(user_node)
-            db.session.commit()
-
-            flash(f"Đã tạo tài khoản {username}.", 'success')
-
-        return redirect(url_for('home_blueprint.manage_users'))
-
-    users = Users.query.all()
-    nodes = Nodes.query.all()
-    return render_template('home/manage_users.html', users=users, nodes=nodes)
-
-# Xóa người dùng
-@blueprint.route('/delete_user/<int:user_id>', methods=['POST'])
-@login_required
-@role_required('admin')
-def delete_user(user_id):
-    user = Users.query.get_or_404(user_id)
-
-    if user.username == current_user.username:
-        flash("Bạn không thể xóa tài khoản của chính mình.", 'danger')
-        return redirect(url_for('home_blueprint.manage_users'))
-
-    db.session.delete(user)
-    db.session.commit()
-    flash(f"Đã xóa tài khoản {user.username}.", 'success')
-    return redirect(url_for('home_blueprint.manage_users'))
-# 1. Route trả về JSON data user
-@blueprint.route('/manage_users', methods=['GET', 'POST'])
-@login_required
-@role_required('admin')
-def manage_users():
-    if request.method == 'POST':
         # Check the number of forms submitted
         num_forms = len([key for key in request.form.keys() if key.startswith('username_')])
         for i in range(num_forms):
