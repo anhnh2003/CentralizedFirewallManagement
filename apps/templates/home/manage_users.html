@@ -49,7 +49,7 @@
               <form method="POST"
                     action="{{ url_for('home_blueprint.delete_user', user_id=u.id) }}"
                     style="display:inline;"
-                    onsubmit="return confirm('Delete account {{ u.username }}?');">
+                    onsubmit="return confirm('Are you sure to delete account with username {{ u.username }}?');">
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
               </form>
             </td>

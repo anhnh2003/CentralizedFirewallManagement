@@ -18,40 +18,6 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s',  # Log message format
     handlers=[logging.StreamHandler()]  # Log to the console
 )
-
-
-# ------------ Admin: Thêm user ------------
-@blueprint.route('/add_user', methods=['GET', 'POST'])
-@login_required
-@role_required('admin')
-def add_user():
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        role      = request.form.get('role', 'user')
-
-        # Validate
-        if not username or not password:
-            flash('Username và password là bắt buộc.', 'warning')
-            return redirect(url_for('home_blueprint.add_user'))
-
-        if Users.query.filter_by(username=username).first():
-            flash('Username đã tồn tại.', 'warning')
-            return redirect(url_for('home_blueprint.add_user'))
-
-        # Hash mật khẩu và lưu vào DB
-        pwd_hash = hash_pass(password)
-        new_user = Users(username=username,
-                         password_hash=pwd_hash,
-                         role=role,  )
-        db.session.add(new_user)
-        db.session.commit()
-
-        flash(f'Đã thêm user "{username}" với role "{role}".', 'success')
-        return redirect(url_for('home_blueprint.add_user'))
-
-    # GET: hiển thị form
-    return render_template('home/add_user.html')
 @blueprint.route('/')
 @login_required
 def default():
@@ -453,12 +419,66 @@ def delete_user(user_id):
     flash(f"Đã xóa tài khoản {user.username}.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
 # 1. Route trả về JSON data user
+@blueprint.route('/manage_users', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def manage_users():
+    if request.method == 'POST':
+        # Check the number of forms submitted
+        num_forms = len([key for key in request.form.keys() if key.startswith('username_')])
+        for i in range(num_forms):
+            username = request.form.get(f'username_{i}')
+            password = request.form.get(f'password_{i}')
+            role = request.form.get(f'role_{i}')
+            selected_nodes = request.form.getlist(f'nodes_{i}')
+
+            # Check if the username already exists
+            if Users.query.filter_by(username=username).first():
+                flash(f"The account {username} already exists.", 'danger')
+                continue
+
+            hashed_password = hash_pass(password)
+            new_user = Users(username=username, password_hash=hashed_password, role=role)
+            db.session.add(new_user)
+            db.session.commit()
+
+            # Add permissions for the selected nodes
+            for node_id in selected_nodes:
+                user_node = UserNodes(user_id=new_user.id, node_id=node_id, role='manager')
+                db.session.add(user_node)
+            db.session.commit()
+
+            flash(f"Account {username} has been created.", 'success')
+
+        return redirect(url_for('home_blueprint.manage_users'))
+
+    users = Users.query.all()
+    nodes = Nodes.query.all()
+    return render_template('home/manage_users.html', users=users, nodes=nodes)
+
+# Delete user
+@blueprint.route('/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete_user(user_id):
+    user = Users.query.get_or_404(user_id)
+
+    if user.username == current_user.username:
+        flash("You cannot delete your own account.", 'danger')
+        return redirect(url_for('home_blueprint.manage_users'))
+
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"Account {user.username} has been deleted.", 'success')
+    return redirect(url_for('home_blueprint.manage_users'))
+
+# 1. Route to return user data as JSON
 @blueprint.route('/get_user_data/<int:user_id>')
 @login_required
 @role_required('admin')
 def get_user_data(user_id):
     user = Users.query.get_or_404(user_id)
-    # danh sách node_id mà user đang có quyền
+    # List of node IDs that the user has access to
     node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=user.id)]
     return jsonify({
         'id': user.id,
@@ -466,7 +486,8 @@ def get_user_data(user_id):
         'role': user.role,
         'nodes': node_ids
     })
-# 2. Route cập nhật user
+
+# 2. Route to update user
 @blueprint.route('/update_user/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('admin')
@@ -477,21 +498,21 @@ def update_user(user_id):
     role = request.form.get('role')
     selected_nodes = list(map(int, request.form.getlist('nodes')))
 
-    # username tồn tại?
+    # Does the username already exist?
     if username != user.username and Users.query.filter_by(username=username).first():
-        flash(f"Tài khoản {username} đã tồn tại.", 'danger')
+        flash(f"The account {username} already exists.", 'danger')
         return redirect(url_for('home_blueprint.manage_users'))
 
     user.username = username
     user.role = role
 
-    # nếu admin nhập mật khẩu mới thì hash và cập nhật
+    # If admin entered a new password, hash it and update
     if password:
         user.password_hash = hash_pass(password)
 
     db.session.commit()
 
-    # sync nodes: xóa node không chọn, thêm node mới
+    # Sync nodes: remove unselected nodes, add new nodes
     existing = {un.node_id for un in UserNodes.query.filter_by(user_id=user.id)}
     to_remove = existing - set(selected_nodes)
     to_add    = set(selected_nodes) - existing
@@ -506,5 +527,5 @@ def update_user(user_id):
         db.session.add(UserNodes(user_id=user.id, node_id=nid, role='manager'))
 
     db.session.commit()
-    flash(f"Đã cập nhật tài khoản {user.username}.", 'success')
+    flash(f"Account {user.username} has been updated.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
