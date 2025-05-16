@@ -4,11 +4,11 @@ from PIL import Image, ImageDraw, ImageFont
 width, height = 148, 19
 
 # Background color (CSS hex code) and text color
-background_color = "#1e88e5"
+
 text_color = "white"
 
 # Create a new image with the specified background color
-image = Image.new("RGB", (width, height), background_color)
+image = Image.new("RGBA", (width, height), (0,0,0,0))
 
 # Initialize ImageDraw object to add text
 draw = ImageDraw.Draw(image)
@@ -17,7 +17,7 @@ draw = ImageDraw.Draw(image)
 font = ImageFont.load_default()
 
 # Text to display
-text = "IPTABLES"
+text = "FIREWALL_MANAGE"
 
 # Stretch the text horizontally by a scaling factor
 scaling_factor = 1.5  # Increase width by 1.5 times
@@ -34,13 +34,12 @@ text_width *= scaling_factor
 text_position = ((width - text_width) // 2, (height - text_height) // 2)
 
 # Use a scaled font size to fit the stretched width
-new_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size=int(font.size * scaling_factor))
-
+new_font = ImageFont.load_default()
 # Add text to the image
 draw.text(text_position, text, font=new_font, fill=text_color)
 
 # Save the image
-image.save("iptables_image_stretched.png")
+image.save("iptables_image_stretched.png", "PNG")
 
 # Optionally, display the image
 image.show()
