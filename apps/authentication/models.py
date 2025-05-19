@@ -34,13 +34,13 @@ class Nodes(db.Model):
     ssh_key = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column()
-    # Thêm relationship để truy cập thông tin Node liên quan
-    node = db.relationship('Nodes', backref='user_nodes', lazy=True)
 class UserNodes(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     node_id = db.Column(db.Integer, db.ForeignKey('nodes.id'), primary_key=True)
     role = db.Column(db.Enum('manager', 'viewer', name='user_node_role_enum'), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    # Chỉ định rõ ràng primaryjoin cho relationship 'node'
+    node = db.relationship('Nodes', foreign_keys=[node_id], backref='user_nodes', lazy=True)
 # Hàm load người dùng từ session
 @login_manager.user_loader
 def user_loader(id):
