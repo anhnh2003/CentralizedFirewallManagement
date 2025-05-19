@@ -51,7 +51,15 @@
         {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
       {% endfor %}
     </td>
-    <td>…</td>
+    <td>
+      <button class="btn btn-sm btn-warning editBtn" data-id="{{ u.id }}">Edit</button>
+      <form method="POST"
+            action="{{ url_for('home_blueprint.delete_user', user_id=u.id) }}"
+            style="display:inline;"
+            onsubmit="return confirm('Are you sure to delete account with username {{ u.username }}?');">
+        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </td>
   </tr>
   {% endfor %}
 </tbody>
