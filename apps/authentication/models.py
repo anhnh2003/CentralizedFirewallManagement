@@ -12,7 +12,8 @@ class Users(db.Model, UserMixin):
     role = db.Column(db.Enum('user', 'admin', name='role_enum'), nullable=False)  # ENUM('user', 'admin')
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())  # Tương ứng với 'created_at'
     updated_at = db.Column(db.DateTime)  # Tương ứng với 'updated_at'
-
+    # Thêm relationship để truy cập UserNodes liên quan
+    user_nodes = db.relationship('UserNodes', backref='user', lazy=True)
     def __init__(self, **kwargs):
         for property, value in kwargs.items():
             # Nếu có giá trị iterable, unpack giá trị đó
