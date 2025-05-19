@@ -1,7 +1,6 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-  <!-- Push content out of sidebar and add padding -->
   <style>
     .page-content {
       margin-left: 0px; /* Adjust according to the actual width of the sidebar */
@@ -17,57 +16,53 @@
   <div class="page-content">
     <h2 class="mb-4">User Management</h2>
 
-    <!-- Add User Button -->
     <button id="addUserBtn" type="button" class="btn btn-primary mb-3">Add User</button>
     <div id="addUserFormsContainer"></div>
 
-    <!-- User List Table -->
     <div class="table-responsive">
       <table class="table table-striped table-bordered">
-        <!-- Table header -->
-<thead>
-  <tr>
-    <th>ID</th>
-    <th>Username</th>
-    <th>Role</th>
-    <th>Managed Nodes</th>
-    <th>Viewed Nodes</th>
-    <th>Actions</th>
-  </tr>
-</thead>
-<tbody>
-  {% for u in users %}
-  <tr>
-    <td>{{ u.id }}</td>
-    <td>{{ u.username }}</td>
-    <td>{{ u.role }}</td>
-    <td>
-      {% for un in u.user_nodes if un.role=='manager' %}
-        {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
-      {% endfor %}
-    </td>
-    <td>
-      {% for un in u.user_nodes if un.role=='viewer' %}
-        {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
-      {% endfor %}
-    </td>
-    <td>
-      <button class="btn btn-sm btn-warning editBtn" data-id="{{ u.id }}">Edit</button>
-      <form method="POST"
-            action="{{ url_for('home_blueprint.delete_user', user_id=u.id) }}"
-            style="display:inline;"
-            onsubmit="return confirm('Are you sure to delete account with username {{ u.username }}?');">
-        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-      </form>
-    </td>
-  </tr>
-  {% endfor %}
-</tbody>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Managed Nodes</th>
+            <th>Viewed Nodes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.role }}</td>
+            <td>
+              {% for un in u.user_nodes if un.role=='manager' %}
+                {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              {% for un in u.user_nodes if un.role=='viewer' %}
+                {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              <button class="btn btn-sm btn-warning editBtn" data-id="{{ u.id }}">Edit</button>
+              <form method="POST"
+                    action="{{ url_for('home_blueprint.delete_user', user_id=u.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Are you sure to delete account with username {{ u.username }}?');">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Edit User Modal -->
   <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -100,23 +95,43 @@
                 <option value="admin">admin</option>
               </select>
             </div>
+
             <div class="form-group">
-              <label>Nodes</label>
+              <label>Managed Nodes</label>
               <div>
                 {% for node in nodes %}
                 <div class="form-check">
                   <input class="form-check-input"
                          type="checkbox"
-                         id="node_{{ node.id }}"
-                         name="nodes"
+                         id="man_edit_{{ node.id }}"
+                         name="managers"
                          value="{{ node.id }}">
-                  <label class="form-check-label" for="node_{{ node.id }}">
+                  <label class="form-check-label" for="man_edit_{{ node.id }}">
                     {{ node.hostname }}
                   </label>
                 </div>
                 {% endfor %}
               </div>
             </div>
+
+            <div class="form-group">
+              <label>Viewed Nodes</label>
+              <div>
+                {% for node in nodes %}
+                <div class="form-check">
+                  <input class="form-check-input"
+                         type="checkbox"
+                         id="view_edit_{{ node.id }}"
+                         name="viewers"
+                         value="{{ node.id }}">
+                  <label class="form-check-label" for="view_edit_{{ node.id }}">
+                    {{ node.hostname }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
           </div>
           <div class="modal-footer">
             <button type="button"
@@ -131,61 +146,60 @@
     </div>
   </div>
 
-  <!-- JS for button handling -->
   <script>
     const getUserDataUrlTpl = "{{ url_for('home_blueprint.get_user_data', user_id=0) }}";
-    const updateUserUrlTpl  = "{{ url_for('home_blueprint.update_user',  user_id=0) }}";
+    const updateUserUrlTpl   = "{{ url_for('home_blueprint.update_user',   user_id=0) }}";
 
     // Edit user
     document.querySelectorAll('.editBtn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const uid = btn.dataset.id;
-    fetch(getUserDataUrlTpl.replace('/0', '/' + uid))
-      .then(r => r.json())
-      .then(data => {
-        const form = document.getElementById('editForm');
-        form.action = updateUserUrlTpl.replace('/0', '/' + uid);
-        document.getElementById('edit_username').value = data.username;
-        document.getElementById('edit_password').value = '';
-        document.getElementById('edit_role').value = data.role;
+      btn.addEventListener('click', () => {
+        const uid = btn.dataset.id;
+        fetch(getUserDataUrlTpl.replace('/0', '/' + uid))
+          .then(r => r.json())
+          .then(data => {
+            const form = document.getElementById('editForm');
+            form.action = updateUserUrlTpl.replace('/0', '/' + uid);
+            document.getElementById('edit_username').value = data.username;
+            document.getElementById('edit_password').value = '';
+            document.getElementById('edit_role').value = data.role;
 
-        // Reset all manager checkboxes
-        document.querySelectorAll('#editForm input[name="managers"]').forEach(ch => ch.checked = false);
+            // Reset all manager checkboxes in edit form
+            document.querySelectorAll('#editForm input[name="managers"]').forEach(ch => ch.checked = false);
 
-        // Check manager checkboxes based on data.managers
-        if (data.managers) {
-          data.managers.forEach(nodeId => {
-            const managerCheckbox = document.getElementById('man_' + nodeId);
-            if (managerCheckbox) {
-              managerCheckbox.checked = true;
+            // Check manager checkboxes in edit form based on data.managers
+            if (data.managers) {
+              data.managers.forEach(nodeId => {
+                const managerCheckbox = document.getElementById('man_edit_' + nodeId);
+                if (managerCheckbox) {
+                  managerCheckbox.checked = true;
+                }
+              });
+            } else {
+              console.warn('Trường "managers" không tồn tại hoặc là undefined trong dữ liệu trả về.');
             }
-          });
-        } else {
-          console.warn('Trường "managers" không tồn tại hoặc là undefined trong dữ liệu trả về.');
-        }
 
-        // Reset all viewer checkboxes
-        document.querySelectorAll('#editForm input[name="viewers"]').forEach(ch => ch.checked = false);
+            // Reset all viewer checkboxes in edit form
+            document.querySelectorAll('#editForm input[name="viewers"]').forEach(ch => ch.checked = false);
 
-        // Check viewer checkboxes based on data.viewers
-        if (data.viewers) {
-          data.viewers.forEach(nodeId => {
-            const viewerCheckbox = document.getElementById('view_' + nodeId);
-            if (viewerCheckbox) {
-              viewerCheckbox.checked = true;
+            // Check viewer checkboxes in edit form based on data.viewers
+            if (data.viewers) {
+              data.viewers.forEach(nodeId => {
+                const viewerCheckbox = document.getElementById('view_edit_' + nodeId);
+                if (viewerCheckbox) {
+                  viewerCheckbox.checked = true;
+                }
+              });
+            } else {
+              console.warn('Trường "viewers" không tồn tại hoặc là undefined trong dữ liệu trả về.');
             }
-          });
-        } else {
-          console.warn('Trường "viewers" không tồn tại hoặc là undefined trong dữ liệu trả về.');
-        }
 
-        $('#editModal').modal('show');
-      })
-      .catch(error => {
-        console.error('Lỗi khi lấy dữ liệu người dùng:', error);
+            $('#editModal').modal('show');
+          })
+          .catch(error => {
+            console.error('Lỗi khi lấy dữ liệu người dùng:', error);
+          });
       });
-  });
-});
+    });
 
     // Dynamically add user
     let addFormCount = 0;
@@ -214,37 +228,28 @@
             </select>
           </div>
           <div class="form-group">
-    <label>Viewers</label>
-    {% for node in nodes %}
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox"
-             id="view_{{node.id}}" name="viewers" value="{{node.id}}">
-      <label for="view_{{node.id}}">{{node.hostname}}</label>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="form-group">
-    <label>Managers</label>
-    {% for node in nodes %}
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox"
-             id="man_{{node.id}}" name="managers" value="{{node.id}}">
-      <label for="man_{{node.id}}">{{node.hostname}}</label>
-    </div>
-    {% endfor %}
-  </div>
+            <label>Viewers</label>
+            {% for node in nodes %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox"
+                     id="view_{{node.id}}" name="viewers" value="{{node.id}}">
+              <label for="view_{{node.id}}">{{node.hostname}}</label>
+            </div>
+            {% endfor %}
+          </div>
+          <div class="form-group">
+            <label>Managers</label>
+            {% for node in nodes %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox"
+                     id="man_{{node.id}}" name="managers" value="{{node.id}}">
+              <label for="man_{{node.id}}">{{node.hostname}}</label>
+            </div>
+            {% endfor %}
+          </div>
           <button type="submit" class="btn btn-success">Add</button>
         </form>`;
       document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', html);
-    });
-  </script>
-  <script>
-    // trong JS fill dữ liệu:
-    data.viewers.forEach(id=>{
-      document.getElementById('view_'+id).checked = true;
-    });
-    data.managers.forEach(id=>{
-      document.getElementById('man_'+id).checked = true;
     });
   </script>
 {% endblock %}
