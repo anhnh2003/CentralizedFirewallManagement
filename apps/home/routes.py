@@ -326,8 +326,9 @@ def delete_user(user_id):
 @role_required('admin')
 def get_user_data(user_id):
     u = Users.query.get_or_404(user_id)
-    mans = [un.node_id for un in u.user_nodes if un.role=='manager']
-    vies = [un.node_id for un in u.user_nodes if un.role=='viewer']
+    un = UserNodes.query.get_or_404(user_id)
+    mans = [row.node_id for row in un if row.role=='manager']
+    vies = [un.node_id for row in un if row.role=='viewer']
     return jsonify({
       'id': u.id,
       'username': u.username,
