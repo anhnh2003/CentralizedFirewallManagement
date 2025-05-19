@@ -278,7 +278,8 @@ def manage_users():
             username = request.form.get(f'username_{i}')
             password = request.form.get(f'password_{i}')
             role = request.form.get(f'role_{i}')
-            selected_nodes = request.form.getlist(f'nodes_{i}')
+            managers = request.form.getlist(f'managers_{i}') # Lấy danh sách managers
+            viewers = request.form.getlist(f'viewers_{i}')   # Lấy danh sách viewers
 
             # Check if the username already exists
             if Users.query.filter_by(username=username).first():
@@ -291,8 +292,11 @@ def manage_users():
             db.session.commit()
 
             # Add permissions for the selected nodes
-            for node_id in selected_nodes:
+            for node_id in managers:
                 user_node = UserNodes(user_id=new_user.id, node_id=node_id, role='manager')
+                db.session.add(user_node)
+            for node_id in viewers:
+                user_node = UserNodes(user_id=new_user.id, node_id=node_id, role='viewer')
                 db.session.add(user_node)
             db.session.commit()
 
@@ -300,7 +304,10 @@ def manage_users():
 
         return redirect(url_for('home_blueprint.manage_users'))
 
-    users = Users.query.all()
+    # Khi method là GET, tải users với eager loading cho user_nodes và node
+    users = Users.query.options(
+        joinedload(Users.user_nodes).joinedload(UserNodes.node)
+    ).all()
     nodes = Nodes.query.all()
     return render_template('home/manage_users.html', users=users, nodes=nodes)
 
