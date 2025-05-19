@@ -326,17 +326,19 @@ def delete_user(user_id):
 @role_required('admin')
 def get_user_data(user_id):
     u = Users.query.get_or_404(user_id)
-    un = UserNodes.query.get_or_404(user_id)
-    mans = [row.node_id for row in un if row.role=='manager']
-    vies = [un.node_id for row in un if row.role=='viewer']
-    return jsonify({
-      'id': u.id,
-      'username': u.username,
-      'role': u.role,
-      'managers': mans,
-      'viewers': vies
-    })
+    # Lấy tất cả các bản ghi UserNodes liên quan đến user_id
+    user_nodes = UserNodes.query.filter_by(user_id=user_id).all()
 
+    mans = [row.node_id for row in user_nodes if row.role == 'manager']
+    vies = [row.node_id for row in user_nodes if row.role == 'viewer']
+
+    return jsonify({
+        'id': u.id,
+        'username': u.username,
+        'role': u.role,
+        'managers': mans,
+        'viewers': vies
+    })
 @blueprint.route('/update_user/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('admin')
