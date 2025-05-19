@@ -138,28 +138,54 @@
 
     // Edit user
     document.querySelectorAll('.editBtn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const uid = btn.dataset.id;
-        fetch(getUserDataUrlTpl.replace('/0', '/' + uid))
-          .then(r => r.json())
-          .then(data => {
-            const form = document.getElementById('editForm');
-            form.action = updateUserUrlTpl.replace('/0', '/' + uid);
-            document.getElementById('edit_username').value = data.username;
-            document.getElementById('edit_password').value = '';
-            document.getElementById('edit_role').value = data.role;
-            // reset all
-            document.querySelectorAll('#editForm input[type="checkbox"]').forEach(ch => ch.checked = false);
-            // check according to the data
-            data.nodes.forEach(nid => {
-              const ch = document.getElementById('node_' + nid);
-              if (ch) ch.checked = true;
-            });
-            $('#editModal').modal('show');
-          })
-          .catch(console.error);
+  btn.addEventListener('click', () => {
+    const uid = btn.dataset.id;
+    fetch(getUserDataUrlTpl.replace('/0', '/' + uid))
+      .then(r => r.json())
+      .then(data => {
+        const form = document.getElementById('editForm');
+        form.action = updateUserUrlTpl.replace('/0', '/' + uid);
+        document.getElementById('edit_username').value = data.username;
+        document.getElementById('edit_password').value = '';
+        document.getElementById('edit_role').value = data.role;
+
+        // Reset all manager checkboxes
+        document.querySelectorAll('#editForm input[name="managers"]').forEach(ch => ch.checked = false);
+
+        // Check manager checkboxes based on data.managers
+        if (data.managers) {
+          data.managers.forEach(nodeId => {
+            const managerCheckbox = document.getElementById('man_' + nodeId);
+            if (managerCheckbox) {
+              managerCheckbox.checked = true;
+            }
+          });
+        } else {
+          console.warn('Trường "managers" không tồn tại hoặc là undefined trong dữ liệu trả về.');
+        }
+
+        // Reset all viewer checkboxes
+        document.querySelectorAll('#editForm input[name="viewers"]').forEach(ch => ch.checked = false);
+
+        // Check viewer checkboxes based on data.viewers
+        if (data.viewers) {
+          data.viewers.forEach(nodeId => {
+            const viewerCheckbox = document.getElementById('view_' + nodeId);
+            if (viewerCheckbox) {
+              viewerCheckbox.checked = true;
+            }
+          });
+        } else {
+          console.warn('Trường "viewers" không tồn tại hoặc là undefined trong dữ liệu trả về.');
+        }
+
+        $('#editModal').modal('show');
+      })
+      .catch(error => {
+        console.error('Lỗi khi lấy dữ liệu người dùng:', error);
       });
-    });
+  });
+});
 
     // Dynamically add user
     let addFormCount = 0;
