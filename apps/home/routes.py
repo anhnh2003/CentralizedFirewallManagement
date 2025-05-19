@@ -267,6 +267,7 @@ def data_visualization():
 
     return render_template('home/data_visualization.html', aggregated_data=aggregated_data_json)
 # Hiển thị và xử lý người dùng
+from sqlalchemy.orm import joinedload
 @blueprint.route('/manage_users', methods=['GET', 'POST'])
 @login_required
 @role_required('admin')
