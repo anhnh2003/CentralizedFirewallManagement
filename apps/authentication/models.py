@@ -34,7 +34,8 @@ class Nodes(db.Model):
     ssh_key = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column()
-
+    # Thêm relationship để truy cập thông tin Node liên quan
+    node = db.relationship('Nodes', backref='user_nodes', lazy=True)
 class UserNodes(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
     node_id = db.Column(db.Integer, db.ForeignKey('nodes.id'), primary_key=True)
