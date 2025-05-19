@@ -24,38 +24,37 @@
     <!-- User List Table -->
     <div class="table-responsive">
       <table class="table table-striped table-bordered">
-        <thead class="thead-light">
-          <tr>
-            <th>ID</th>
-            <th>Username</th>
-            <th>Role</th>
-            <th>Nodes</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for u in users %}
-          <tr>
-            <td>{{ u.id }}</td>
-            <td>{{ u.username }}</td>
-            <td>{{ u.role }}</td>
-            <td>
-              {% for un in u.user_nodes %}
-                {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
-              {% endfor %}
-            </td>
-            <td>
-              <button class="btn btn-sm btn-warning editBtn" data-id="{{ u.id }}">Edit</button>
-              <form method="POST"
-                    action="{{ url_for('home_blueprint.delete_user', user_id=u.id) }}"
-                    style="display:inline;"
-                    onsubmit="return confirm('Are you sure to delete account with username {{ u.username }}?');">
-                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
+        <!-- Table header -->
+<thead>
+  <tr>
+    <th>ID</th>
+    <th>Username</th>
+    <th>Role</th>
+    <th>Managed Nodes</th>
+    <th>Viewed Nodes</th>
+    <th>Actions</th>
+  </tr>
+</thead>
+<tbody>
+  {% for u in users %}
+  <tr>
+    <td>{{ u.id }}</td>
+    <td>{{ u.username }}</td>
+    <td>{{ u.role }}</td>
+    <td>
+      {% for un in u.user_nodes if un.role=='manager' %}
+        {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </td>
+    <td>
+      {% for un in u.user_nodes if un.role=='viewer' %}
+        {{ un.node.hostname }}{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </td>
+    <td>…</td>
+  </tr>
+  {% endfor %}
+</tbody>
       </table>
     </div>
   </div>
@@ -181,26 +180,37 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Nodes</label>
-            <div>
-              {% for node in nodes %}
-              <div class="form-check">
-                <input class="form-check-input"
-                       type="checkbox"
-                       id="add_${i}_node_{{ node.id }}"
-                       name="nodes_${i}"
-                       value="{{ node.id }}">
-                <label class="form-check-label"
-                       for="add_${i}_node_{{ node.id }}">
-                  {{ node.hostname }}
-                </label>
-              </div>
-              {% endfor %}
-            </div>
-          </div>
+    <label>Viewers</label>
+    {% for node in nodes %}
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox"
+             id="view_{{node.id}}" name="viewers" value="{{node.id}}">
+      <label for="view_{{node.id}}">{{node.hostname}}</label>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="form-group">
+    <label>Managers</label>
+    {% for node in nodes %}
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox"
+             id="man_{{node.id}}" name="managers" value="{{node.id}}">
+      <label for="man_{{node.id}}">{{node.hostname}}</label>
+    </div>
+    {% endfor %}
+  </div>
           <button type="submit" class="btn btn-success">Add</button>
         </form>`;
       document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', html);
+    });
+  </script>
+  <script>
+    // trong JS fill dữ liệu:
+    data.viewers.forEach(id=>{
+      document.getElementById('view_'+id).checked = true;
+    });
+    data.managers.forEach(id=>{
+      document.getElementById('man_'+id).checked = true;
     });
   </script>
 {% endblock %}

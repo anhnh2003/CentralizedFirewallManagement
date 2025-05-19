@@ -4,7 +4,7 @@ from apps import db
 from flask import render_template, request, flash, redirect, url_for, redirect, jsonify
 from flask_login import login_required, current_user
 from jinja2 import TemplateNotFound
-import subprocess
+import subprocess, tempfile, os, stat
 import re
 import html
 from collections import Counter
@@ -325,62 +325,55 @@ def delete_user(user_id):
 @login_required
 @role_required('admin')
 def get_user_data(user_id):
-    user = Users.query.get_or_404(user_id)
-    # List of node IDs that the user has access to
-    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=user.id)]
+    u = Users.query.get_or_404(user_id)
+    mans = [un.node_id for un in u.user_nodes if un.role=='manager']
+    vies = [un.node_id for un in u.user_nodes if un.role=='viewer']
     return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'role': user.role,
-        'nodes': node_ids
+      'id': u.id,
+      'username': u.username,
+      'role': u.role,
+      'managers': mans,
+      'viewers': vies
     })
 
-# 2. Route to update user
 @blueprint.route('/update_user/<int:user_id>', methods=['POST'])
 @login_required
 @role_required('admin')
 def update_user(user_id):
-    user = Users.query.get_or_404(user_id)
-    username = request.form.get('username').strip()
-    password = request.form.get('password', '').strip()
-    role = request.form.get('role')
-    selected_nodes = list(map(int, request.form.getlist('nodes')))
+    u = Users.query.get_or_404(user_id)
+    username = request.form['username'].strip()
+    password = request.form.get('password','').strip()
+    role     = request.form['role']
+    mans     = list(map(int, request.form.getlist('managers')))
+    vies     = list(map(int, request.form.getlist('viewers')))
 
-    # Does the username already exist?
-    if username != user.username and Users.query.filter_by(username=username).first():
-        flash(f"The account {username} already exists.", 'danger')
+    if username!=u.username and Users.query.filter_by(username=username).first():
+        flash("Username exists.", 'danger')
         return redirect(url_for('home_blueprint.manage_users'))
 
-    user.username = username
-    user.role = role
-
-    # If admin entered a new password, hash it and update
+    u.username = username
+    u.role     = role
     if password:
-        user.password_hash = hash_pass(password)
-
+        u.password_hash = hash_pass(password)
     db.session.commit()
 
-    # Sync nodes: remove unselected nodes, add new nodes
-    existing = {un.node_id for un in UserNodes.query.filter_by(user_id=user.id)}
-    to_remove = existing - set(selected_nodes)
-    to_add    = set(selected_nodes) - existing
-
-    if to_remove:
-        UserNodes.query.filter(
-            UserNodes.user_id==user.id,
-            UserNodes.node_id.in_(to_remove)
-        ).delete(synchronize_session=False)
-
-    for nid in to_add:
-        db.session.add(UserNodes(user_id=user.id, node_id=nid, role='manager'))
-
+    # Xoá tất cả quan hệ cũ
+    UserNodes.query.filter_by(user_id=u.id).delete()
+    # Thêm lại viewer trước
+    for nid in vies:
+        db.session.add(UserNodes(user_id=u.id, node_id=nid, role='viewer'))
+    # Thêm manager (manager override viewer nếu trùng)
+    for nid in mans:
+        # nếu nid đã có ở viewer sẽ thành manager
+        existing = UserNodes.query.filter_by(user_id=u.id, node_id=nid).first()
+        if existing:
+            existing.role='manager'
+        else:
+            db.session.add(UserNodes(user_id=u.id, node_id=nid, role='manager'))
     db.session.commit()
-    flash(f"Account {user.username} has been updated.", 'success')
+
+    flash("Account updated.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
-from flask import (
-    Blueprint, render_template, request, redirect,
-    url_for, flash, jsonify
-)
 # Quản lý Nodes (GET hiển thị, POST thêm mới)
 @blueprint.route('/manage_nodes', methods=['GET', 'POST'])
 @login_required
@@ -394,7 +387,8 @@ def manage_nodes():
             ip_address = request.form.get(f'ip_address_{i}').strip()
             ssh_user   = request.form.get(f'ssh_user_{i}').strip()
             ssh_key    = request.form.get(f'ssh_key_{i}', '').strip()
-            managers   = request.form.getlist(f'managers_{i}')
+            viewers = list(map(int, request.form.getlist('viewers_{}'.format(i))))
+            managers = list(map(int, request.form.getlist('managers_{}'.format(i))))
 
             # Kiểm tra trùng hostname / ip
             if Nodes.query.filter_by(hostname=hostname).first():
@@ -413,9 +407,9 @@ def manage_nodes():
 
             # Gán managers
             for uid in managers:
-                db.session.add(UserNodes(user_id=int(uid),
-                                         node_id=node.id,
-                                         role='manager'))
+                db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
+            for uid in viewers:
+                db.session.add(UserNodes(user_id=uid, node_id=node.id, role='viewer'))
             db.session.commit()
             flash(f"Đã tạo Node '{hostname}'.", 'success')
 
@@ -466,8 +460,14 @@ def update_node(node_id):
     ip_address = request.form.get('ip_address').strip()
     ssh_user   = request.form.get('ssh_user').strip()
     ssh_key    = request.form.get('ssh_key', '').strip()
-    managers   = list(map(int, request.form.getlist('managers')))
-
+    viewers = list(map(int, request.form.getlist('viewers')))
+    managers= list(map(int, request.form.getlist('managers')))
+    UserNodes.query.filter_by(node_id=node.id).delete()
+    for uid in viewers:
+        db.session.add(UserNodes(user_id=uid, node_id=node.id, role='viewer'))
+    for uid in managers:
+        db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
+    db.session.commit()
     # Kiểm tra trùng
     if hostname != node.hostname and Nodes.query.filter_by(hostname=hostname).first():
         flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
@@ -502,21 +502,36 @@ def update_node(node_id):
     return redirect(url_for('home_blueprint.manage_nodes'))
 def run_ssh_on_node(node, cmd):
     """
-    Chạy lệnh cmd trên node qua SSH.
-    node.ssh_key: đường dẫn tới private key
-    node.ssh_user, node.ip_address
+    Chạy lệnh cmd qua SSH trên node. node.ssh_key có thể là:
+    - Đường dẫn tới file private key
+    - Hoặc chính nội dung key (bắt đầu bằng '-----BEGIN')
     """
+    # Tạo file tạm nếu cần
+    if node.ssh_key.strip().startswith('-----BEGIN'):
+        tf = tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.pem')
+        tf.write(node.ssh_key)
+        tf.close()
+        os.chmod(tf.name, stat.S_IRUSR)   # 0400
+        key_path = tf.name
+        remove_after = True
+    else:
+        key_path = node.ssh_key
+        remove_after = False
+
     ssh_cmd = (
-        f"ssh -i {node.ssh_key} "
-        f"-o StrictHostKeyChecking=no "
-        f"{node.ssh_user}@{node.ip_address} "
-        f"\"{cmd}\""
+      f"ssh -i {key_path} "
+      "-o StrictHostKeyChecking=no "
+      f"{node.ssh_user}@{node.ip_address} "
+      f"\"{cmd}\""
     )
     res = subprocess.run(
         ssh_cmd, shell=True,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         universal_newlines=True
     )
+    if remove_after:
+        try: os.remove(key_path)
+        except: pass
     return res
 # --- Manage Rules ---
 #function to add rule to the INPUT chain in iptables
