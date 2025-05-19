@@ -192,68 +192,52 @@ def validate_iptables_command(command):
 @blueprint.route('/add_rule', methods=['GET', 'POST'])
 @login_required
 def add_rule():
-    error_message = ""
+    # chỉ các node mà user có role='manager'
+    mgr_entries = UserNodes.query.filter_by(user_id=current_user.id, role='manager').all()
+    node_ids    = [un.node_id for un in mgr_entries]
+    nodes       = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
+
     if request.method == 'POST':
-        manual_rule = request.form.get('manual_rule')
-        if manual_rule:
-            if validate_iptables_command(manual_rule):
-                try:
-                    command = f"echo {sudo_password} | {manual_rule}"
-                    subprocess.run(command, shell=True, check=True)
-                    flash('Rule added successfully!', 'success')
-                except subprocess.CalledProcessError as e:
-                    error_message = e.stderr.decode('utf-8') if e.stderr else str(e)
-                    flash(f"An error occurred while adding the rule: {error_message}", 'danger')
-            else:
-                error_message = 'Invalid iptables command.'
-                flash(error_message, 'danger')
+        selected = list(map(int, request.form.getlist('node_ids')))
+        # kiểm tra permission
+        if not selected or any(nid not in node_ids for nid in selected):
+            flash('Bạn không có quyền thêm rule trên một hoặc nhiều node đã chọn.', 'danger')
             return redirect(url_for('home_blueprint.add_rule'))
 
-        chains = request.form.getlist('chain[]')
-        targets = request.form.getlist('target[]')
-        prots = request.form.getlist('prot[]')
-        sources = request.form.getlist('source[]')
-        destinations = request.form.getlist('destination[]')
-        sports = request.form.getlist('sport[]')
-        dports = request.form.getlist('dport[]')
-
-        if not chains and not manual_rule:
-            flash('Please fill out either the Normal Rule form or the Manual Rule form.', 'danger')
-            return redirect(url_for('home_blueprint.add_rule'))
-
-        for chain, target, prot, source, destination, sport, dport in zip(chains, targets, prots, sources, destinations, sports, dports):
-            # Sanitize inputs to prevent XSS, SQLi, etc.
-            chain = sanitize_input(chain)
-            target = sanitize_input(target).upper()
-            prot = sanitize_input(prot)
-            source = sanitize_input(source)
-            destination = sanitize_input(destination)
-            sport = sanitize_input(sport)
-            dport = sanitize_input(dport)
-            #craft the command based on the empty fields
-            command = "echo {} | sudo -S iptables -A {} -j {} -p {} -s {} -d {} {} {}".format(
-                sudo_password, chain, target, prot, source, destination, 
-                f'--sport {sport}' if sport else '', f'--dport {dport}' if dport else ''
-            )
-
-            # Add the rule to iptables
-            try:
-                result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, check=True)
-            
-                if result.stderr:
-                    error_message = result.stderr.decode('utf-8')
-                    flash(f"An error occurred while adding the rule: {error_message}", 'danger')
-                    return redirect(url_for('home_blueprint.add_rule'))
-            except subprocess.CalledProcessError as e:
-                error_message = e.stderr.decode('utf-8')
-                flash(f"An error occurred while adding the rule: {error_message}", 'danger')
+        manual = request.form.get('manual_rule','').strip()
+        cmds = []
+        if manual:
+            if not validate_iptables_command(manual):
+                flash('Lệnh iptables không hợp lệ.', 'danger')
                 return redirect(url_for('home_blueprint.add_rule'))
+            cmds = [manual]
+        else:
+            chains  = request.form.getlist('chain[]')
+            targets = request.form.getlist('target[]')
+            prots   = request.form.getlist('prot[]')
+            srcs    = request.form.getlist('source[]')
+            dsts    = request.form.getlist('destination[]')
+            sports  = request.form.getlist('sport[]')
+            dports  = request.form.getlist('dport[]')
+            for c,t,p,src,dst,sp,dp in zip(chains, targets, prots, srcs, dsts, sports, dports):
+                cmd = f"iptables -A {c} -p {p} -s {src} -d {dst} -j {t}"
+                if sp: cmd += f" --sport {sp}"
+                if dp: cmd += f" --dport {dp}"
+                cmds.append(cmd)
 
-        #show a success message
-        flash('Rule added successfully!', 'success')
-        return redirect(url_for(f'home_blueprint.{chain.lower()}_status'))
+        # thực thi qua SSH
+        for nid in selected:
+            node = next(n for n in nodes if n.id==nid)
+            for cmd in cmds:
+                res = run_ssh_on_node(node, cmd)
+                if res.returncode != 0:
+                    flash(f"Lỗi trên node {node.hostname}: {res.stderr}", 'danger')
+                    return redirect(url_for('home_blueprint.add_rule'))
 
-    return render_template('home/add_rule.html', error_message=error_message)
+        flash('Thêm rule thành công!', 'success')
+        return redirect(url_for('home_blueprint.view_status'))
+
+    return render_template('home/add_rules.html', nodes=nodes)
 
 def sanitize_input(input_value):
     # Implement input sanitization logic here
@@ -675,8 +659,11 @@ def add_rule():
 @login_required
 @role_required('admin', 'user')
 def view_status():
-    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=current_user.id)]
-    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
+    # cả manager & viewer đều xem được
+    entries = UserNodes.query.filter_by(user_id=current_user.id).all()
+    node_ids = [un.node_id for un in entries]
+    nodes    = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
+
     status = {}
     for node in nodes:
         status[node.id] = {}
@@ -686,9 +673,8 @@ def view_status():
             if res.returncode == 0:
                 status[node.id][chain] = parse_iptables_output(res.stdout)
             else:
-                status[node.id][chain] = [[ 'ERR', res.stderr, '', '', '', '', '', '', '' ]]
+                status[node.id][chain] = [[ 'ERR', res.stderr ]]
     return render_template('home/view_status.html', nodes=nodes, status=status)
-
 
 @blueprint.route('/delete_rule')
 @login_required
@@ -698,20 +684,28 @@ def delete_rule():
     URL params: node_id, chain, rule_number
     """
     try:
-        nid = int(request.args.get('node_id'))
-        chain = request.args.get('chain', '').upper()
-        rn = int(request.args.get('rule_number'))
+        nid    = int(request.args.get('node_id'))
+        chain  = request.args.get('chain','').upper()
+        rn     = int(request.args.get('rule_number'))
     except:
-        flash('Invalid parameters', 'danger')
+        flash('Tham số không hợp lệ.', 'danger')
+        return redirect(url_for('home_blueprint.view_status'))
+
+    # kiểm tra chỉ manager mới được delete
+    if not UserNodes.query.filter_by(
+            user_id=current_user.id,
+            node_id=nid,
+            role='manager'
+        ).first():
+        flash('Bạn không có quyền xóa rule trên node này.', 'danger')
         return redirect(url_for('home_blueprint.view_status'))
 
     node = Nodes.query.get_or_404(nid)
-    # không xoá nếu rule đầu tiên là LOG? Bạn có thể tuỳ chỉnh
-    # Thực thi xoá
     cmd = f"iptables -D {chain} {rn}"
     res = run_ssh_on_node(node, cmd)
     if res.returncode != 0:
-        flash(f"Error deleting on {node.hostname}: {res.stderr}", 'danger')
+        flash(f"Lỗi xóa trên {node.hostname}: {res.stderr}", 'danger')
     else:
-        flash('Rule deleted successfully.', 'success')
+        flash('Xóa rule thành công.', 'success')
+
     return redirect(url_for('home_blueprint.view_status'))

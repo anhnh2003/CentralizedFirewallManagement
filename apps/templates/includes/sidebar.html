@@ -106,29 +106,30 @@
               <span class="hide-menu">Manage Nodes</span>
             </a>
           </li>
-          <li class="sidebar-item">
-            <a class="sidebar-link has-arrow waves-effect waves-dark" href="#"
-               aria-expanded="false">
-              <i class="mdi mdi-shield-fire"></i>
-              <span class="hide-menu">Manage Rules</span>
-            </a>
-            <ul aria-expanded="false" class="collapse first-level">
-              <li class="sidebar-item">
-                <a href="{{ url_for('home_blueprint.add_rule') }}"
-                   class="sidebar-link">
-                  <i class="mdi mdi-plus-box"></i>
-                  <span class="hide-menu">Add Rules</span>
-                </a>
-              </li>
-              <li class="sidebar-item">
-                <a href="{{ url_for('home_blueprint.view_status') }}"
-                   class="sidebar-link">
-                  <i class="mdi mdi-eye"></i>
-                  <span class="hide-menu">View Status</span>
-                </a>
-              </li>
-            </ul>
-          </li>
+          {% set mgr_nodes = current_user.user_nodes 
+            | selectattr('role','equalto','manager') | list %}
+       <li class="sidebar-item">
+         <a class="sidebar-link has-arrow waves-effect waves-dark" href="#" aria-expanded="false">
+           <i class="mdi mdi-shield-fire"></i>
+           <span class="hide-menu">Manage Rules</span>
+         </a>
+         <ul aria-expanded="false" class="collapse first-level">
+           {% if mgr_nodes %}
+           <li class="sidebar-item">
+             <a href="{{ url_for('home_blueprint.add_rule') }}" class="sidebar-link">
+               <i class="mdi mdi-plus-box"></i>
+               <span class="hide-menu">Add Rules</span>
+             </a>
+           </li>
+           {% endif %}
+           <li class="sidebar-item">
+             <a href="{{ url_for('home_blueprint.view_status') }}" class="sidebar-link">
+               <i class="mdi mdi-eye"></i>
+               <span class="hide-menu">View Status</span>
+             </a>
+           </li>
+         </ul>
+       </li>
           {% endif %}
         </ul>
       </nav>
