@@ -386,28 +386,28 @@ def update_user(user_id):
 
     flash("Account updated.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
-# Quản lý Nodes (GET hiển thị, POST thêm mới)
+# Manage Nodes (GET displays, POST adds new)
 @blueprint.route('/manage_nodes', methods=['GET', 'POST'])
 @login_required
 @role_required('admin')
 def manage_nodes():
     if request.method == 'POST':
-        # Đếm số form thêm
+        # Count the number of add forms
         num = len([k for k in request.form.keys() if k.startswith('hostname_')])
         for i in range(num):
-            hostname   = request.form.get(f'hostname_{i}').strip()
+            hostname    = request.form.get(f'hostname_{i}').strip()
             ip_address = request.form.get(f'ip_address_{i}').strip()
-            ssh_user   = request.form.get(f'ssh_user_{i}').strip()
-            ssh_key    = request.form.get(f'ssh_key_{i}', '').strip()
+            ssh_user    = request.form.get(f'ssh_user_{i}').strip()
+            ssh_key     = request.form.get(f'ssh_key_{i}', '').strip()
             viewers = list(map(int, request.form.getlist('viewers_{}'.format(i))))
             managers = list(map(int, request.form.getlist('managers_{}'.format(i))))
 
-            # Kiểm tra trùng hostname / ip
+            # Check for duplicate hostname / ip
             if Nodes.query.filter_by(hostname=hostname).first():
-                flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
+                flash(f"Hostname '{hostname}' already exists.", 'danger')
                 continue
             if Nodes.query.filter_by(ip_address=ip_address).first():
-                flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
+                flash(f"IP '{ip_address}' already exists.", 'danger')
                 continue
 
             node = Nodes(hostname=hostname,
@@ -417,13 +417,13 @@ def manage_nodes():
             db.session.add(node)
             db.session.commit()
 
-            # Gán managers
+            # Assign managers
             for uid in managers:
                 db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
             for uid in viewers:
                 db.session.add(UserNodes(user_id=uid, node_id=node.id, role='viewer'))
             db.session.commit()
-            flash(f"Đã tạo Node '{hostname}'.", 'success')
+            flash(f"Created Node '{hostname}'.", 'success')
 
         return redirect(url_for('home_blueprint.manage_nodes'))
 
@@ -432,21 +432,21 @@ def manage_nodes():
     return render_template('home/manage_nodes.html', nodes=nodes, users=users)
 
 
-# Xóa Node
+# Delete Node
 @blueprint.route('/delete_node/<int:node_id>', methods=['POST'])
 @login_required
 @role_required('admin')
 def delete_node(node_id):
     node = Nodes.query.get_or_404(node_id)
-    # Xóa user_nodes liên quan
+    # Delete related user_nodes
     UserNodes.query.filter_by(node_id=node_id).delete()
     db.session.delete(node)
     db.session.commit()
-    flash(f"Đã xóa Node '{node.hostname}'.", 'success')
+    flash(f"Deleted Node '{node.hostname}'.", 'success')
     return redirect(url_for('home_blueprint.manage_nodes'))
 
 
-# Lấy data Node (JSON) cho modal edit
+# Get Node data (JSON) for edit modal
 @blueprint.route('/get_node_data/<int:node_id>')
 @login_required
 @role_required('admin')
@@ -462,16 +462,16 @@ def get_node_data(node_id):
     })
 
 
-# Cập nhật Node
+# Update Node
 @blueprint.route('/update_node/<int:node_id>', methods=['POST'])
 @login_required
 @role_required('admin')
 def update_node(node_id):
     node = Nodes.query.get_or_404(node_id)
-    hostname   = request.form.get('hostname').strip()
+    hostname    = request.form.get('hostname').strip()
     ip_address = request.form.get('ip_address').strip()
-    ssh_user   = request.form.get('ssh_user').strip()
-    ssh_key    = request.form.get('ssh_key', '').strip()
+    ssh_user    = request.form.get('ssh_user').strip()
+    ssh_key     = request.form.get('ssh_key', '').strip()
     viewers = list(map(int, request.form.getlist('viewers')))
     managers= list(map(int, request.form.getlist('managers')))
     UserNodes.query.filter_by(node_id=node.id).delete()
@@ -480,22 +480,22 @@ def update_node(node_id):
     for uid in managers:
         db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
     db.session.commit()
-    # Kiểm tra trùng
+    # Check for duplicates
     if hostname != node.hostname and Nodes.query.filter_by(hostname=hostname).first():
-        flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
+        flash(f"Hostname '{hostname}' already exists.", 'danger')
         return redirect(url_for('home_blueprint.manage_nodes'))
     if ip_address != node.ip_address and Nodes.query.filter_by(ip_address=ip_address).first():
-        flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
+        flash(f"IP '{ip_address}' already exists.", 'danger')
         return redirect(url_for('home_blueprint.manage_nodes'))
 
-    # Cập nhật
-    node.hostname   = hostname
+    # Update
+    node.hostname    = hostname
     node.ip_address = ip_address
-    node.ssh_user   = ssh_user
-    node.ssh_key    = ssh_key
+    node.ssh_user    = ssh_user
+    node.ssh_key     = ssh_key
     db.session.commit()
 
-    # Đồng bộ managers
+    # Synchronize managers
     existing = {un.user_id for un in UserNodes.query.filter_by(node_id=node.id)}
     to_remove = existing - set(managers)
     to_add    = set(managers) - existing
@@ -510,15 +510,15 @@ def update_node(node_id):
         db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
 
     db.session.commit()
-    flash(f"Đã cập nhật Node '{node.hostname}'.", 'success')
+    flash(f"Updated Node '{node.hostname}'.", 'success')
     return redirect(url_for('home_blueprint.manage_nodes'))
 def run_ssh_on_node(node, cmd):
     """
-    Chạy lệnh cmd qua SSH trên node. node.ssh_key có thể là:
-    - Đường dẫn tới file private key
-    - Hoặc chính nội dung key (bắt đầu bằng '-----BEGIN')
+    Runs command cmd via SSH on the node. node.ssh_key can be:
+    - Path to the private key file
+    - Or the key content itself (starts with '-----BEGIN')
     """
-    # Tạo file tạm nếu cần
+    # Create a temporary file if needed
     if node.ssh_key.strip().startswith('-----BEGIN'):
         tf = tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.pem')
         tf.write(node.ssh_key)
@@ -531,10 +531,10 @@ def run_ssh_on_node(node, cmd):
         remove_after = False
 
     ssh_cmd = (
-      f"ssh -i {key_path} "
-      "-o StrictHostKeyChecking=no "
-      f"{node.ssh_user}@{node.ip_address} "
-      f"\"{cmd}\""
+        f"ssh -i {key_path} "
+        "-o StrictHostKeyChecking=no "
+        f"{node.ssh_user}@{node.ip_address} "
+        f"\"{cmd}\""
     )
     res = subprocess.run(
         ssh_cmd, shell=True,
@@ -550,23 +550,23 @@ def run_ssh_on_node(node, cmd):
 @blueprint.route('/add_rule', methods=['GET', 'POST'])
 @login_required
 def add_rule():
-    # chỉ các node mà user có role='manager'
+    # only nodes where the user has role='manager'
     mgr_entries = UserNodes.query.filter_by(user_id=current_user.id, role='manager').all()
     node_ids    = [un.node_id for un in mgr_entries]
     nodes       = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
 
     if request.method == 'POST':
         selected = list(map(int, request.form.getlist('node_ids')))
-        # kiểm tra permission
+        # permission check
         if not selected or any(nid not in node_ids for nid in selected):
-            flash('Bạn không có quyền thêm rule trên một hoặc nhiều node đã chọn.', 'danger')
+            flash('You do not have permission to add rules on one or more selected nodes.', 'danger')
             return redirect(url_for('home_blueprint.add_rule'))
 
         manual = request.form.get('manual_rule','').strip()
         cmds = []
         if manual:
             if not validate_iptables_command(manual):
-                flash('Lệnh iptables không hợp lệ.', 'danger')
+                flash('Invalid iptables command.', 'danger')
                 return redirect(url_for('home_blueprint.add_rule'))
             cmds = [manual]
         else:
@@ -583,16 +583,16 @@ def add_rule():
                 if dp: cmd += f" --dport {dp}"
                 cmds.append(cmd)
 
-        # thực thi qua SSH
+        # execute via SSH
         for nid in selected:
             node = next(n for n in nodes if n.id==nid)
             for cmd in cmds:
                 res = run_ssh_on_node(node, cmd)
                 if res.returncode != 0:
-                    flash(f"Lỗi trên node {node.hostname}: {res.stderr}", 'danger')
+                    flash(f"Error on node {node.hostname}: {res.stderr}", 'danger')
                     return redirect(url_for('home_blueprint.add_rule'))
 
-        flash('Thêm rule thành công!', 'success')
+        flash('Rules added successfully!', 'success')
         return redirect(url_for('home_blueprint.view_status'))
 
     return render_template('home/add_rules.html', nodes=nodes)
@@ -601,7 +601,7 @@ def add_rule():
 @login_required
 @role_required('admin', 'user')
 def view_status():
-    # cả manager & viewer đều xem được
+    # both manager & viewer can view
     entries = UserNodes.query.filter_by(user_id=current_user.id).all()
     node_ids = [un.node_id for un in entries]
     nodes    = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
@@ -626,28 +626,28 @@ def delete_rule():
     URL params: node_id, chain, rule_number
     """
     try:
-        nid    = int(request.args.get('node_id'))
-        chain  = request.args.get('chain','').upper()
-        rn     = int(request.args.get('rule_number'))
+        nid     = int(request.args.get('node_id'))
+        chain   = request.args.get('chain','').upper()
+        rn      = int(request.args.get('rule_number'))
     except:
-        flash('Tham số không hợp lệ.', 'danger')
+        flash('Invalid parameters.', 'danger')
         return redirect(url_for('home_blueprint.view_status'))
 
-    # kiểm tra chỉ manager mới được delete
+    # check if only manager can delete
     if not UserNodes.query.filter_by(
             user_id=current_user.id,
             node_id=nid,
             role='manager'
         ).first():
-        flash('Bạn không có quyền xóa rule trên node này.', 'danger')
+        flash('You do not have permission to delete rules on this node.', 'danger')
         return redirect(url_for('home_blueprint.view_status'))
 
     node = Nodes.query.get_or_404(nid)
     cmd = f"iptables -D {chain} {rn}"
     res = run_ssh_on_node(node, cmd)
     if res.returncode != 0:
-        flash(f"Lỗi xóa trên {node.hostname}: {res.stderr}", 'danger')
+        flash(f"Error deleting on {node.hostname}: {res.stderr}", 'danger')
     else:
-        flash('Xóa rule thành công.', 'success')
+        flash('Rule deleted successfully.', 'success')
 
     return redirect(url_for('home_blueprint.view_status'))
