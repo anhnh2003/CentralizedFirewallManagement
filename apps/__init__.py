@@ -35,9 +35,9 @@ def create_app(config):
 
     register_extensions(app)
     register_blueprints(app)
-    # XÓA ĐOẠN NÀY
-    # @app.route('/')
-    # def default():
-    #     return redirect(url_for('authentication_blueprint.login'))
+
+    @app.route('/')
+    def default():
+        return redirect(url_for('authentication_blueprint.login'))
 
     return app
