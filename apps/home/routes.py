@@ -353,17 +353,23 @@ def get_user_data(user_id):
 def update_user(user_id):
     u = Users.query.get_or_404(user_id)
     username = request.form['username'].strip()
-    password = request.form.get('password','').strip()
-    role     = request.form['role']
-    mans     = list(map(int, request.form.getlist('managers')))
-    vies     = list(map(int, request.form.getlist('viewers')))
+    password = request.form.get('password', '').strip()
+    role = request.form['role']
+    mans = list(map(int, request.form.getlist('managers')))
+    vies = list(map(int, request.form.getlist('viewers')))
 
-    if username!=u.username and Users.query.filter_by(username=username).first():
+    if username != u.username and Users.query.filter_by(username=username).first():
         flash("Username exists.", 'danger')
         return redirect(url_for('home_blueprint.manage_users'))
 
+    # Kiểm tra xem có node nào được chọn đồng thời ở cả managers và viewers không
+    common_nodes = set(mans) & set(vies)
+    if common_nodes:
+        flash(f"Node(s) {', '.join(map(str, common_nodes))} cannot be both managed and viewed.", 'danger')
+        return redirect(url_for('home_blueprint.manage_users'))
+
     u.username = username
-    u.role     = role
+    u.role = role
     if password:
         u.password_hash = hash_pass(password)
     db.session.commit()
@@ -373,14 +379,9 @@ def update_user(user_id):
     # Thêm lại viewer trước
     for nid in vies:
         db.session.add(UserNodes(user_id=u.id, node_id=nid, role='viewer'))
-    # Thêm manager (manager override viewer nếu trùng)
+    # Thêm manager
     for nid in mans:
-        # nếu nid đã có ở viewer sẽ thành manager
-        existing = UserNodes.query.filter_by(user_id=u.id, node_id=nid).first()
-        if existing:
-            existing.role='manager'
-        else:
-            db.session.add(UserNodes(user_id=u.id, node_id=nid, role='manager'))
+        db.session.add(UserNodes(user_id=u.id, node_id=nid, role='manager'))
     db.session.commit()
 
     flash("Account updated.", 'success')
