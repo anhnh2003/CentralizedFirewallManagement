@@ -476,3 +476,242 @@ def update_user(user_id):
     db.session.commit()
     flash(f"Account {user.username} has been updated.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
+from flask import (
+    Blueprint, render_template, request, redirect,
+    url_for, flash, jsonify
+)
+# Quản lý Nodes (GET hiển thị, POST thêm mới)
+@blueprint.route('/manage_nodes', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def manage_nodes():
+    if request.method == 'POST':
+        # Đếm số form thêm
+        num = len([k for k in request.form.keys() if k.startswith('hostname_')])
+        for i in range(num):
+            hostname   = request.form.get(f'hostname_{i}').strip()
+            ip_address = request.form.get(f'ip_address_{i}').strip()
+            ssh_user   = request.form.get(f'ssh_user_{i}').strip()
+            ssh_key    = request.form.get(f'ssh_key_{i}', '').strip()
+            managers   = request.form.getlist(f'managers_{i}')
+
+            # Kiểm tra trùng hostname / ip
+            if Nodes.query.filter_by(hostname=hostname).first():
+                flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
+                continue
+            if Nodes.query.filter_by(ip_address=ip_address).first():
+                flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
+                continue
+
+            node = Nodes(hostname=hostname,
+                         ip_address=ip_address,
+                         ssh_user=ssh_user,
+                         ssh_key=ssh_key)
+            db.session.add(node)
+            db.session.commit()
+
+            # Gán managers
+            for uid in managers:
+                db.session.add(UserNodes(user_id=int(uid),
+                                         node_id=node.id,
+                                         role='manager'))
+            db.session.commit()
+            flash(f"Đã tạo Node '{hostname}'.", 'success')
+
+        return redirect(url_for('home_blueprint.manage_nodes'))
+
+    nodes = Nodes.query.all()
+    users = Users.query.all()
+    return render_template('home/manage_nodes.html', nodes=nodes, users=users)
+
+
+# Xóa Node
+@blueprint.route('/delete_node/<int:node_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def delete_node(node_id):
+    node = Nodes.query.get_or_404(node_id)
+    # Xóa user_nodes liên quan
+    UserNodes.query.filter_by(node_id=node_id).delete()
+    db.session.delete(node)
+    db.session.commit()
+    flash(f"Đã xóa Node '{node.hostname}'.", 'success')
+    return redirect(url_for('home_blueprint.manage_nodes'))
+
+
+# Lấy data Node (JSON) cho modal edit
+@blueprint.route('/get_node_data/<int:node_id>')
+@login_required
+@role_required('admin')
+def get_node_data(node_id):
+    node = Nodes.query.get_or_404(node_id)
+    managers = [un.user_id for un in UserNodes.query.filter_by(node_id=node_id)]
+    return jsonify({
+        'hostname': node.hostname,
+        'ip_address': node.ip_address,
+        'ssh_user': node.ssh_user,
+        'ssh_key': node.ssh_key,
+        'managers': managers
+    })
+
+
+# Cập nhật Node
+@blueprint.route('/update_node/<int:node_id>', methods=['POST'])
+@login_required
+@role_required('admin')
+def update_node(node_id):
+    node = Nodes.query.get_or_404(node_id)
+    hostname   = request.form.get('hostname').strip()
+    ip_address = request.form.get('ip_address').strip()
+    ssh_user   = request.form.get('ssh_user').strip()
+    ssh_key    = request.form.get('ssh_key', '').strip()
+    managers   = list(map(int, request.form.getlist('managers')))
+
+    # Kiểm tra trùng
+    if hostname != node.hostname and Nodes.query.filter_by(hostname=hostname).first():
+        flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
+        return redirect(url_for('home_blueprint.manage_nodes'))
+    if ip_address != node.ip_address and Nodes.query.filter_by(ip_address=ip_address).first():
+        flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
+        return redirect(url_for('home_blueprint.manage_nodes'))
+
+    # Cập nhật
+    node.hostname   = hostname
+    node.ip_address = ip_address
+    node.ssh_user   = ssh_user
+    node.ssh_key    = ssh_key
+    db.session.commit()
+
+    # Đồng bộ managers
+    existing = {un.user_id for un in UserNodes.query.filter_by(node_id=node.id)}
+    to_remove = existing - set(managers)
+    to_add    = set(managers) - existing
+
+    if to_remove:
+        UserNodes.query.filter(
+            UserNodes.node_id==node.id,
+            UserNodes.user_id.in_(to_remove)
+        ).delete(synchronize_session=False)
+
+    for uid in to_add:
+        db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
+
+    db.session.commit()
+    flash(f"Đã cập nhật Node '{node.hostname}'.", 'success')
+    return redirect(url_for('home_blueprint.manage_nodes'))
+def run_ssh_on_node(node, cmd):
+    """
+    Chạy lệnh cmd trên node qua SSH.
+    node.ssh_key: đường dẫn tới private key
+    node.ssh_user, node.ip_address
+    """
+    ssh_cmd = (
+        f"ssh -i {node.ssh_key} "
+        f"-o StrictHostKeyChecking=no "
+        f"{node.ssh_user}@{node.ip_address} "
+        f"\"{cmd}\""
+    )
+    res = subprocess.run(
+        ssh_cmd, shell=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        universal_newlines=True
+    )
+    return res
+# --- Manage Rules ---
+@blueprint.route('/add_rule', methods=['GET','POST'])
+@login_required
+@role_required('admin', 'user')
+def add_rule():
+    # chỉ lấy nodes mà current_user có role=manager
+    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=current_user.id)]
+    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
+
+    if request.method == 'POST':
+        selected = list(map(int, request.form.getlist('node_ids')))
+        if not selected:
+            flash('Bạn phải chọn ít nhất một node.', 'danger')
+            return redirect(url_for('home_blueprint.add_rule'))
+
+        manual = request.form.get('manual_rule', '').strip()
+        cmds = []
+
+        if manual:
+            if not validate_iptables_command(manual):
+                flash('Lệnh iptables không hợp lệ.', 'danger')
+                return redirect(url_for('home_blueprint.add_rule'))
+            cmds = [manual]
+        else:
+            chains  = request.form.getlist('chain[]')
+            targets = request.form.getlist('target[]')
+            prots   = request.form.getlist('prot[]')
+            srcs    = request.form.getlist('source[]')
+            dsts    = request.form.getlist('destination[]')
+            sports  = request.form.getlist('sport[]')
+            dports  = request.form.getlist('dport[]')
+            for c,t,p,src,dst,sp,dp in zip(chains,targets,prots,srcs,dsts,sports,dports):
+                cmd = f"iptables -A {c} -p {p} -s {src} -d {dst} -j {t}"
+                if sp: cmd += f" --sport {sp}"
+                if dp: cmd += f" --dport {dp}"
+                cmds.append(cmd)
+
+        # Thực thi trên từng node
+        for nid in selected:
+            node = next((n for n in nodes if n.id==nid), None)
+            if not node:
+                continue
+            for cmd in cmds:
+                res = run_ssh_on_node(node, cmd)
+                if res.returncode != 0:
+                    flash(f"{node.hostname}: {res.stderr}", 'danger')
+                    return redirect(url_for('home_blueprint.add_rule'))
+
+        flash('Rules added successfully!', 'success')
+        return redirect(url_for('home_blueprint.view_status'))
+
+    return render_template('home/add_rules.html', nodes=nodes)
+
+
+@blueprint.route('/view_status')
+@login_required
+@role_required('admin', 'user')
+def view_status():
+    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=current_user.id)]
+    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
+    status = {}
+    for node in nodes:
+        status[node.id] = {}
+        for chain in ['INPUT','OUTPUT','FORWARD']:
+            cmd = f"iptables -L {chain} --line-numbers"
+            res = run_ssh_on_node(node, cmd)
+            if res.returncode == 0:
+                status[node.id][chain] = parse_iptables_output(res.stdout)
+            else:
+                status[node.id][chain] = [[ 'ERR', res.stderr, '', '', '', '', '', '', '' ]]
+    return render_template('home/view_status.html', nodes=nodes, status=status)
+
+
+@blueprint.route('/delete_rule')
+@login_required
+@role_required('admin', 'user')
+def delete_rule():
+    """
+    URL params: node_id, chain, rule_number
+    """
+    try:
+        nid = int(request.args.get('node_id'))
+        chain = request.args.get('chain', '').upper()
+        rn = int(request.args.get('rule_number'))
+    except:
+        flash('Invalid parameters', 'danger')
+        return redirect(url_for('home_blueprint.view_status'))
+
+    node = Nodes.query.get_or_404(nid)
+    # không xoá nếu rule đầu tiên là LOG? Bạn có thể tuỳ chỉnh
+    # Thực thi xoá
+    cmd = f"iptables -D {chain} {rn}"
+    res = run_ssh_on_node(node, cmd)
+    if res.returncode != 0:
+        flash(f"Error deleting on {node.hostname}: {res.stderr}", 'danger')
+    else:
+        flash('Rule deleted successfully.', 'success')
+    return redirect(url_for('home_blueprint.view_status'))

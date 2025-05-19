@@ -1,0 +1,27 @@
+{% extends "layouts/base.html" %}
+{% block content %}
+<style>.page-content{margin-left:240px;padding:2rem;} .node-block{margin-bottom:2rem;}</style>
+<div class="page-content">
+  <h2 class="mb-4">View Rules Status</h2>
+
+  {% for node in nodes %}
+  <div class="node-block">
+    <h4>{{ node.hostname }} ({{ node.ip_address }})</h4>
+    {% for chain in ['INPUT','OUTPUT','FORWARD'] %}
+    <h5>{{ chain }} chain</h5>
+    <table class="table table-sm table-bordered">
+      <thead><tr><th>#</th><th>Target</th><th>Prot</th><th>Opt</th><th>Src</th><th>Dst</th><th>Spt</th><th>Dpt</th><th>Detail</th></tr></thead>
+      <tbody>
+        {% for row in status[node.id][chain] %}
+        <tr>
+          {% for col in row %}<td>{{ col }}</td>{% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,199 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+  <style>
+    .page-content {
+      margin-left: 240px; /* điều chỉnh theo sidebar */
+      padding: 2rem;
+      background: #fff;
+    }
+    .add-node-form {
+      background: #f7f7f7;
+      border-radius: 4px;
+    }
+  </style>
+
+  <div class="page-content">
+    <h2 class="mb-4">Quản lý Nodes</h2>
+
+    <!-- Nút Thêm Node động -->
+    <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Thêm Node</button>
+    <div id="addNodeFormsContainer"></div>
+
+    <!-- Bảng danh sách Nodes -->
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered">
+        <thead class="thead-light">
+          <tr>
+            <th>ID</th>
+            <th>Hostname</th>
+            <th>IP Address</th>
+            <th>SSH User</th>
+            <th>Managers</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for n in nodes %}
+          <tr>
+            <td>{{ n.id }}</td>
+            <td>{{ n.hostname }}</td>
+            <td>{{ n.ip_address }}</td>
+            <td>{{ n.ssh_user }}</td>
+            <td>
+              {% for un in n.user_nodes %}
+                {{ un.user.username }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Sửa</button>
+              <form method="POST"
+                    action="{{ url_for('home_blueprint.delete_node', node_id=n.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Xóa Node {{ n.hostname }}?');">
+                <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Sửa Node -->
+  <div class="modal fade" id="editNodeModal" tabindex="-1" aria-labelledby="editNodeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form id="editNodeForm" method="POST" action="">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editNodeModalLabel">Chỉnh sửa Node</h5>
+            <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="edit_hostname">Hostname</label>
+              <input type="text" class="form-control" id="edit_hostname" name="hostname" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_ip">IP Address</label>
+              <input type="text" class="form-control" id="edit_ip" name="ip_address" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_ssh_user">SSH User</label>
+              <input type="text" class="form-control" id="edit_ssh_user" name="ssh_user" required>
+            </div>
+            <div class="form-group">
+              <label for="edit_ssh_key">SSH Key</label>
+              <textarea class="form-control" id="edit_ssh_key" name="ssh_key" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Managers</label>
+              <div>
+                {% for u in users %}
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox"
+                         id="manager_{{ u.id }}" name="managers" value="{{ u.id }}">
+                  <label class="form-check-label" for="manager_{{ u.id }}">
+                    {{ u.username }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary"
+                    data-dismiss="modal" data-bs-dismiss="modal">Hủy</button>
+            <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- JS -->
+  <script>
+    const getNodeDataUrlTpl    = "{{ url_for('home_blueprint.get_node_data',   node_id=0) }}";
+    const updateNodeUrlTpl     = "{{ url_for('home_blueprint.update_node',      node_id=0) }}";
+
+    // Sửa Node
+    document.querySelectorAll('.editNodeBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nid = btn.dataset.id;
+        fetch(getNodeDataUrlTpl.replace('/0','/'+nid))
+          .then(r => r.json())
+          .then(data => {
+            const form = document.getElementById('editNodeForm');
+            form.action = updateNodeUrlTpl.replace('/0','/'+nid);
+
+            document.getElementById('edit_hostname').value = data.hostname;
+            document.getElementById('edit_ip').value       = data.ip_address;
+            document.getElementById('edit_ssh_user').value = data.ssh_user;
+            document.getElementById('edit_ssh_key').value  = data.ssh_key || '';
+
+            // Reset & fill managers
+            document.querySelectorAll('#editNodeForm input[type="checkbox"]').forEach(ch=>ch.checked=false);
+            data.managers.forEach(uid => {
+              const ch = document.getElementById('manager_'+uid);
+              if (ch) ch.checked = true;
+            });
+
+            $('#editNodeModal').modal('show');
+          })
+          .catch(console.error);
+      });
+    });
+
+    // Thêm Node động
+    let addNodeCount = 0;
+    document.getElementById('addNodeBtn').addEventListener('click', () => {
+      const i = addNodeCount++;
+      let html = `
+        <form class="add-node-form border p-3 mb-3"
+              method="POST"
+              action="{{ url_for('home_blueprint.manage_nodes') }}">
+          <h5>Node ${i+1}</h5>
+          <div class="form-group">
+            <label for="hostname_${i}">Hostname</label>
+            <input type="text" class="form-control"
+                   id="hostname_${i}" name="hostname_${i}" required>
+          </div>
+          <div class="form-group">
+            <label for="ip_address_${i}">IP Address</label>
+            <input type="text" class="form-control"
+                   id="ip_address_${i}" name="ip_address_${i}" required>
+          </div>
+          <div class="form-group">
+            <label for="ssh_user_${i}">SSH User</label>
+            <input type="text" class="form-control"
+                   id="ssh_user_${i}" name="ssh_user_${i}" required>
+          </div>
+          <div class="form-group">
+            <label for="ssh_key_${i}">SSH Key</label>
+            <textarea class="form-control"
+                      id="ssh_key_${i}" name="ssh_key_${i}" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Managers</label>
+            <div>
+              {% for u in users %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox"
+                       id="add_${i}_manager_{{ u.id }}"
+                       name="managers_${i}" value="{{ u.id }}">
+                <label class="form-check-label" for="add_${i}_manager_{{ u.id }}">
+                  {{ u.username }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <button type="submit" class="btn btn-success">Thêm</button>
+        </form>`;
+      document.getElementById('addNodeFormsContainer').insertAdjacentHTML('beforeend', html);
+    });
+  </script>
+{% endblock %}
