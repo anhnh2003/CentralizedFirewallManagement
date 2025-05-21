@@ -146,6 +146,9 @@
     </div>
   </div>
 
+  {# Hidden div để lưu trữ dữ liệu users dưới dạng JSON #}
+  <div id="allUsersData" style="display:none;">{{ users | tojson }}</div>
+
   <script>
     const getNodeDataUrlTpl   = "{{ url_for('home_blueprint.get_node_data',   node_id=0) }}";
     const updateNodeUrlTpl    = "{{ url_for('home_blueprint.update_node',    node_id=0) }}";
@@ -153,7 +156,8 @@
     let addNodeCount = 0;
 
     // Truyền dữ liệu users từ Flask sang JavaScript
-    const allUsers = {{ users | tojson }};
+    // Đọc dữ liệu từ hidden div và phân tích cú pháp JSON
+    const allUsers = JSON.parse(document.getElementById('allUsersData').textContent);
 
     // Hàm thiết lập loại trừ lẫn nhau cho checkbox manager/viewer
     function setupNodeCheckboxListeners(formElement) {
@@ -249,6 +253,7 @@
     // Thêm Node Động
     document.getElementById('addNodeBtn').addEventListener('click', () => {
       const i = addNodeCount++;
+      // Sử dụng biến allUsers đã được truyền từ Flask
       const managersHtml = createUserCheckboxesHtml(`add_node_${i}`, 'managers', allUsers);
       const viewersHtml = createUserCheckboxesHtml(`add_node_${i}`, 'viewers', allUsers);
 
