@@ -28,10 +28,8 @@
 
   <div class="page-content">
     <h2 class="mb-4">Quản lý Nodes</h2>
-    {# CHỈ HIỂN THỊ NÚT "THÊM NODE" NẾU LÀ ADMIN #}
-    {% if current_user.role == 'admin' %}
+
     <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Thêm Node</button>
-    {% endif %}
     <div id="addNodeFormsContainer"></div>
 
     <div class="table-responsive">
@@ -64,8 +62,6 @@
                 {{ un.user.username }}{% if not loop.last %}, {% endif %}
               {% endfor %}
             </td>
-            {# CHỈ HIỂN THỊ NẾU LÀ ADMIN #}
-    {% if current_user.role == 'admin' %}
             <td>
               <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Sửa</button>
               <form method="POST"
@@ -75,7 +71,6 @@
                 <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
               </form>
             </td>
-            {% endif %}
           </tr>
           {% endfor %}
         </tbody>
@@ -115,12 +110,11 @@
             <div class="form-group">
               <label>Người quản lý</label>
               <div>
-                {# Phần này vẫn dùng Jinja2 để render tĩnh cho modal edit #}
                 {% for u in users %}
                 <div class="form-check">
                   <input class="form-check-input node-manager-checkbox" type="checkbox"
-                             id="edit_manager_user_{{ u.id }}" name="managers" value="{{ u.id }}">
-                  <label class="form-check-label" for="edit_manager_user_{{ u.id }}">
+                         id="edit_manager_{{ u.id }}" name="managers" value="{{ u.id }}">
+                  <label class="form-check-label" for="edit_manager_{{ u.id }}">
                     {{ u.username }}
                   </label>
                 </div>
@@ -130,12 +124,11 @@
             <div class="form-group">
               <label>Người xem</label>
               <div>
-                {# Phần này vẫn dùng Jinja2 để render tĩnh cho modal edit #}
                 {% for u in users %}
                 <div class="form-check">
                   <input class="form-check-input node-viewer-checkbox" type="checkbox"
-                             id="edit_viewer_user_{{ u.id }}" name="viewers" value="{{ u.id }}">
-                  <label class="form-check-label" for="edit_viewer_user_{{ u.id }}">
+                         id="edit_viewer_{{ u.id }}" name="viewers" value="{{ u.id }}">
+                  <label class="form-check-label" for="edit_viewer_{{ u.id }}">
                     {{ u.username }}
                   </label>
                 </div>
@@ -160,33 +153,26 @@
     let addNodeCount = 0;
 
     // Hàm thiết lập loại trừ lẫn nhau cho checkbox manager/viewer
-    // Chấp nhận một đối số `container` để chỉ định phạm vi tìm kiếm checkbox
-    function setupNodeCheckboxListeners(container) {
-      // Đảm bảo container tồn tại và là một phần tử DOM
-      if (!container || !container.querySelectorAll) {
-        console.error("Invalid container provided to setupNodeCheckboxListeners.");
-        return;
-      }
+    function setupNodeCheckboxListeners(formElement) {
+      const managedCheckboxes = formElement.querySelectorAll('.node-manager-checkbox');
+      const viewedCheckboxes = formElement.querySelectorAll('.node-viewer-checkbox');
 
-      const managerCheckboxes = container.querySelectorAll('.node-manager-checkbox');
-      const viewerCheckboxes = container.querySelectorAll('.node-viewer-checkbox');
-
-      managerCheckboxes.forEach(managerCheckbox => {
+      managedCheckboxes.forEach(managerCheckbox => {
         managerCheckbox.addEventListener('change', function() {
-          const userId = this.value; // Lấy ID của người dùng từ value của checkbox
-          // Tìm checkbox người xem tương ứng cho cùng một người dùng
-          const correspondingViewerCheckbox = container.querySelector(`.node-viewer-checkbox[value="${userId}"]`);
+          const userId = this.value;
+          // Tìm checkbox viewer tương ứng trong cùng một form
+          const correspondingViewerCheckbox = formElement.querySelector(`[id$="_viewer_${userId}"]`);
           if (this.checked && correspondingViewerCheckbox) {
             correspondingViewerCheckbox.checked = false;
           }
         });
       });
 
-      viewerCheckboxes.forEach(viewerCheckbox => {
+      viewedCheckboxes.forEach(viewerCheckbox => {
         viewerCheckbox.addEventListener('change', function() {
-          const userId = this.value; // Lấy ID của người dùng từ value của checkbox
-          // Tìm checkbox người quản lý tương ứng cho cùng một người dùng
-          const correspondingManagerCheckbox = container.querySelector(`.node-manager-checkbox[value="${userId}"]`);
+          const userId = this.value;
+          // Tìm checkbox manager tương ứng trong cùng một form
+          const correspondingManagerCheckbox = formElement.querySelector(`[id$="_manager_${userId}"]`);
           if (this.checked && correspondingManagerCheckbox) {
             correspondingManagerCheckbox.checked = false;
           }
@@ -205,7 +191,7 @@
             form.action = updateNodeUrlTpl.replace('/0','/'+nid);
 
             document.getElementById('edit_hostname').value = data.hostname;
-            document.getElementById('edit_ip').value       = data.ip_address;
+            document.getElementById('edit_ip').value      = data.ip_address;
             document.getElementById('edit_ssh_user').value = data.ssh_user;
             document.getElementById('edit_password').value = ''; // Mật khẩu không được lưu, xóa nó
 
@@ -216,7 +202,7 @@
             // Điền người quản lý
             if (data.managers) {
               data.managers.forEach(uid => {
-                const ch = document.getElementById('edit_manager_user_' + uid);
+                const ch = document.getElementById('edit_manager_' + uid);
                 if (ch) ch.checked = true;
               });
             }
@@ -224,14 +210,14 @@
             // Điền người xem
             if (data.viewers) {
               data.viewers.forEach(uid => {
-                const ch = document.getElementById('edit_viewer_user_' + uid);
+                const ch = document.getElementById('edit_viewer_' + uid);
                 if (ch) ch.checked = true;
               });
             }
 
             $('#editNodeModal').modal('show');
             // Thiết lập lắng nghe cho form modal sửa sau khi nội dung được tải
-            setupNodeCheckboxListeners(form); // Truyền form làm container
+            setupNodeCheckboxListeners(form);
           })
           .catch(error => {
             console.error('Lỗi khi lấy dữ liệu node:', error);
@@ -242,33 +228,6 @@
     // Thêm Node Động
     document.getElementById('addNodeBtn').addEventListener('click', () => {
       const i = addNodeCount++;
-      // Tạo HTML cho các checkbox người dùng trực tiếp bằng Jinja2
-      // Lưu ý: Jinja2 sẽ xử lý phần này trên server, trước khi JS chạy
-      const managersHtml = `
-        {% for u in users %}
-        <div class="form-check">
-          <input class="form-check-input node-manager-checkbox" type="checkbox"
-                     id="add_node_${i}_manager_user_{{ u.id }}"
-                     name="managers_${i}" value="{{ u.id }}">
-          <label class="form-check-label" for="add_node_${i}_manager_user_{{ u.id }}">
-            {{ u.username }}
-          </label>
-        </div>
-        {% endfor %}
-      `;
-      const viewersHtml = `
-        {% for u in users %}
-        <div class="form-check">
-          <input class="form-check-input node-viewer-checkbox" type="checkbox"
-                     id="add_node_${i}_viewer_user_{{ u.id }}"
-                     name="viewers_${i}" value="{{ u.id }}">
-          <label class="form-check-label" for="add_node_${i}_viewer_user_{{ u.id }}">
-            {{ u.username }}
-          </label>
-        </div>
-        {% endfor %}
-      `;
-
       const html = `
         <form class="add-node-form border p-3 mb-3"
               method="POST"
@@ -299,14 +258,32 @@
           </div>
           <div class="form-group">
             <label>Người quản lý</label>
-            <div class="manager-checkbox-group"> {# Thêm một class bao bọc để dễ dàng tìm kiếm #}
-              ${managersHtml}
+            <div>
+              {% for u in users %}
+              <div class="form-check">
+                <input class="form-check-input node-manager-checkbox" type="checkbox"
+                       id="add_node_${i}_manager_${u.id}"
+                       name="managers_${i}" value="{{ u.id }}">
+                <label class="form-check-label" for="add_node_${i}_manager_${u.id}">
+                  {{ u.username }}
+                </label>
+              </div>
+              {% endfor %}
             </div>
           </div>
           <div class="form-group">
             <label>Người xem</label>
-            <div class="viewer-checkbox-group"> {# Thêm một class bao bọc để dễ dàng tìm kiếm #}
-              ${viewersHtml}
+            <div>
+              {% for u in users %}
+              <div class="form-check">
+                <input class="form-check-input node-viewer-checkbox" type="checkbox"
+                       id="add_node_${i}_viewer_${u.id}"
+                       name="viewers_${i}" value="{{ u.id }}">
+                <label class="form-check-label" for="add_node_${i}_viewer_${u.id}">
+                  {{ u.username }}
+                </label>
+              </div>
+              {% endfor %}
             </div>
           </div>
           <button type="submit" class="btn btn-success">Thêm</button>
@@ -314,7 +291,7 @@
       addNodeFormsContainer.insertAdjacentHTML('beforeend', html);
       // Thiết lập lắng nghe cho form vừa thêm
       const newForm = addNodeFormsContainer.lastElementChild;
-      setupNodeCheckboxListeners(newForm); // Truyền form mới làm container
+      setupNodeCheckboxListeners(newForm);
     });
   </script>
 {% endblock %}
