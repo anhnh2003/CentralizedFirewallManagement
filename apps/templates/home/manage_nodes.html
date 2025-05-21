@@ -30,7 +30,7 @@
     <h2 class="mb-4">Quản lý Nodes</h2>
 
     {# CHỈ HIỂN THỊ NÚT "THÊM NODE" NẾU LÀ ADMIN #}
-    {% if current_user_role == 'admin' %}
+    {% if current_user.role == 'admin' %}
     <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Thêm Node</button>
     {% endif %}
     <div id="addNodeFormsContainer"></div>
