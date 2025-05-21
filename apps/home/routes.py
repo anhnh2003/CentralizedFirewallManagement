@@ -386,52 +386,174 @@ def update_user(user_id):
 
     flash("Account updated.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
-# Manage Nodes (GET displays, POST adds new)
+# Helper function to run ssh-copy-id
+def run_ssh_copy_id(user, ip, password):
+    """
+    Thực thi lệnh ssh-copy-id với mật khẩu.
+    Trả về (True, "Thông báo thành công") hoặc (False, "Thông báo lỗi").
+    """
+    # Tạo một script expect tạm thời để tự động nhập mật khẩu
+    expect_script_content = f"""
+#!/usr/bin/expect -f
+set timeout 20
+spawn ssh-copy-id {user}@{ip}
+expect {{
+    "(yes/no)?" {{ send "yes\\r"; exp_continue }}
+    "password:" {{ send "{password}\\r" }}
+    "Password:" {{ send "{password}\\r" }}
+    "All keys were already added" {{ puts "All keys were already added"; exit 0 }}
+    timeout {{ puts "Timeout occurred"; exit 1 }}
+    eof {{ puts "EOF reached"; exit 1 }}
+}}
+expect eof
+"""
+    tf = tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.exp')
+    tf.write(expect_script_content)
+    tf.close()
+    os.chmod(tf.name, stat.S_IXUSR | stat.S_IRUSR) # Cấp quyền thực thi và đọc
+
+    try:
+        result = subprocess.run(
+            [tf.name],
+            capture_output=True,
+            text=True,
+            check=False # Không raise exception cho mã thoát khác 0
+        )
+        # Kiểm tra các thông báo thành công từ ssh-copy-id
+        if "Number of key(s) added: 1" in result.stdout or "All keys were already added" in result.stdout:
+            return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
+        else:
+            return False, f"ssh-copy-id thất bại: {result.stderr.strip() or result.stdout.strip()}"
+    except Exception as e:
+        return False, f"Lỗi khi thực thi script ssh-copy-id: {e}"
+    finally:
+        if os.path.exists(tf.name):
+            os.remove(tf.name) # Dọn dẹp script tạm thời
+
+
+# Helper function to generate SSH keys
+def generate_ssh_keys():
+    """
+    Tạo cặp khóa SSH private và public (~/.ssh/id_rsa và ~/.ssh/id_rsa.pub).
+    Trả về (True, "Thông báo thành công") hoặc (False, "Thông báo lỗi").
+    """
+    ssh_dir = os.path.expanduser("~/.ssh")
+    private_key_path = os.path.join(ssh_dir, "id_rsa")
+    public_key_path = os.path.join(ssh_dir, "id_rsa.pub")
+
+    if os.path.exists(private_key_path) and os.path.exists(public_key_path):
+        return True, "SSH keys đã tồn tại."
+
+    os.makedirs(ssh_dir, exist_ok=True) # Đảm bảo thư mục ~/.ssh tồn tại
+
+    try:
+        # Tạo SSH keys không có passphrase cho mục đích tự động hóa
+        # -t rsa: loại khóa
+        # -b 4096: độ dài khóa
+        # -f: tên file đầu ra
+        # -N "": không có passphrase
+        result = subprocess.run(
+            ["ssh-keygen", "-t", "rsa", "-b", "4096", "-f", private_key_path, "-N", ""],
+            capture_output=True,
+            text=True,
+            check=True # Raise exception cho mã thoát khác 0
+        )
+        os.chmod(private_key_path, stat.S_IRUSR) # Đặt quyền 0400 cho private key
+        return True, f"SSH keys đã được tạo thành công: {private_key_path}, {public_key_path}"
+    except subprocess.CalledProcessError as e:
+        return False, f"Không thể tạo SSH keys: {e.stderr.strip()}"
+    except Exception as e:
+        return False, f"Một lỗi không mong muốn đã xảy ra trong quá trình tạo khóa: {e}"
+
+
 @blueprint.route('/manage_nodes', methods=['GET', 'POST'])
 @login_required
-@role_required('admin')
+@role_required('admin') # Đảm bảo bạn đã định nghĩa role_required decorator
 def manage_nodes():
     if request.method == 'POST':
-        # Count the number of add forms
-        num = len([k for k in request.form.keys() if k.startswith('hostname_')])
-        for i in range(num):
-            hostname    = request.form.get(f'hostname_{i}').strip()
-            ip_address = request.form.get(f'ip_address_{i}').strip()
-            ssh_user    = request.form.get(f'ssh_user_{i}').strip()
-            ssh_key     = request.form.get(f'ssh_key_{i}', '').strip()
-            viewers = list(map(int, request.form.getlist('viewers_{}'.format(i))))
-            managers = list(map(int, request.form.getlist('managers_{}'.format(i))))
+        # --- Kiểm tra và Tạo SSH Keys nếu chưa tồn tại ---
+        key_gen_success, key_gen_message = generate_ssh_keys()
+        if not key_gen_success:
+            flash(f"Lỗi thiết lập SSH key cục bộ: {key_gen_message}. Không thể thêm/cập nhật node.", 'danger')
+            return redirect(url_for('home_blueprint.manage_nodes'))
+        else:
+            flash(key_gen_message, 'info') # Thông báo về việc tạo/tồn tại khóa
 
-            # Check for duplicate hostname / ip
+        local_ssh_public_key_path = os.path.expanduser("~/.ssh/id_rsa.pub")
+
+        # Đếm số lượng form thêm
+        num_forms = len([key for key in request.form.keys() if key.startswith('hostname_')])
+        for i in range(num_forms):
+            hostname = request.form.get(f'hostname_{i}').strip()
+            ip_address = request.form.get(f'ip_address_{i}').strip()
+            ssh_user = request.form.get(f'ssh_user_{i}').strip()
+            password = request.form.get(f'password_{i}', '').strip() # Lấy mật khẩu từ trường 'password'
+
+            # Lấy người quản lý và người xem đã chọn cho node này
+            # Lưu ý: Tên trong HTML là managers_{i} và viewers_{i}
+            managers_for_node = list(map(int, request.form.getlist(f'managers_{i}')))
+            viewers_for_node = list(map(int, request.form.getlist(f'viewers_{i}')))
+
+            # Backend Check: Node không thể vừa là người quản lý vừa là người xem bởi cùng một người dùng
+            common_users = set(managers_for_node) & set(viewers_for_node)
+            if common_users:
+                # Lấy tên người dùng để thông báo lỗi rõ ràng hơn
+                common_usernames = [u.username for u in Users.query.filter(Users.id.in_(list(common_users))).all()]
+                flash(f"Node '{hostname}': Người dùng '{', '.join(common_usernames)}' không thể vừa là người quản lý vừa là người xem cho node này.", 'danger')
+                continue # Bỏ qua node này và tiếp tục với form tiếp theo
+
+            # Kiểm tra trùng lặp hostname / ip
             if Nodes.query.filter_by(hostname=hostname).first():
-                flash(f"Hostname '{hostname}' already exists.", 'danger')
+                flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
                 continue
             if Nodes.query.filter_by(ip_address=ip_address).first():
-                flash(f"IP '{ip_address}' already exists.", 'danger')
+                flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
                 continue
 
+            # --- Logic Sao chép SSH Key ---
+            public_key_content = None # Sẽ lưu nội dung public key vào đây
+
+            # Chỉ thử ssh-copy-id nếu mật khẩu được cung cấp VÀ public key tồn tại cục bộ
+            if password and os.path.exists(local_ssh_public_key_path):
+                flash(f"Đang cố gắng sao chép SSH key đến {ssh_user}@{ip_address}...", 'info')
+                success, message = run_ssh_copy_id(ssh_user, ip_address, password)
+                if success:
+                    flash(f"SSH key đã được sao chép đến {ssh_user}@{ip_address}: {message}", 'success')
+                    with open(local_ssh_public_key_path, 'r') as f:
+                        public_key_content = f.read().strip() # Đọc nội dung public key
+                else:
+                    flash(f"Không thể sao chép SSH key đến {ssh_user}@{ip_address}: {message}", 'danger')
+                    # Nếu ssh-copy-id thất bại, không thêm node này
+                    continue
+            elif not password:
+                flash(f"Không có mật khẩu được cung cấp để thiết lập SSH key cho {hostname}. Giả sử key đã được thiết lập hoặc sẽ được thực hiện thủ công.", 'warning')
+            # Không cần kiểm tra os.path.exists(local_ssh_public_key_path) ở đây nữa vì đã kiểm tra ở đầu hàm POST
+
+            # Lưu node, trường ssh_key sẽ là nội dung public key hoặc None/rỗng
             node = Nodes(hostname=hostname,
                          ip_address=ip_address,
                          ssh_user=ssh_user,
-                         ssh_key=ssh_key)
+                         ssh_key=public_key_content) # Lưu nội dung public key
             db.session.add(node)
-            db.session.commit()
+            db.session.commit() # Commit ở đây để lấy node.id
 
-            # Assign managers
-            for uid in managers:
+            # Gán người quản lý và người xem cho node vừa tạo
+            for uid in managers_for_node:
                 db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
-            for uid in viewers:
+            for uid in viewers_for_node:
                 db.session.add(UserNodes(user_id=uid, node_id=node.id, role='viewer'))
             db.session.commit()
-            flash(f"Created Node '{hostname}'.", 'success')
+
+            flash(f"Đã tạo Node '{hostname}'.", 'success')
 
         return redirect(url_for('home_blueprint.manage_nodes'))
 
-    nodes = Nodes.query.all()
-    users = Users.query.all()
+    # GET request: Tải nodes với eager loading cho user_nodes và user
+    nodes = Nodes.query.options(
+        joinedload(Nodes.user_nodes).joinedload(UserNodes.user)
+    ).all()
+    users = Users.query.all() # Cần tất cả người dùng cho các form
     return render_template('home/manage_nodes.html', nodes=nodes, users=users)
-
-
 # Delete Node
 @blueprint.route('/delete_node/<int:node_id>', methods=['POST'])
 @login_required
@@ -451,66 +573,90 @@ def delete_node(node_id):
 @login_required
 @role_required('admin')
 def get_node_data(node_id):
-    node = Nodes.query.get_or_404(node_id)
-    managers = [un.user_id for un in UserNodes.query.filter_by(node_id=node_id)]
+    node = Nodes.query.options(
+        joinedload(Nodes.user_nodes)
+    ).get_or_404(node_id)
+
+    managers = [un.user_id for un in node.user_nodes if un.role == 'manager']
+    viewers = [un.user_id for un in node.user_nodes if un.role == 'viewer']
+
     return jsonify({
+        'id': node.id,
         'hostname': node.hostname,
         'ip_address': node.ip_address,
         'ssh_user': node.ssh_user,
-        'ssh_key': node.ssh_key,
-        'managers': managers
+        'managers': managers,
+        'viewers': viewers
     })
-
-
 # Update Node
 @blueprint.route('/update_node/<int:node_id>', methods=['POST'])
 @login_required
 @role_required('admin')
 def update_node(node_id):
     node = Nodes.query.get_or_404(node_id)
-    hostname    = request.form.get('hostname').strip()
-    ip_address = request.form.get('ip_address').strip()
-    ssh_user    = request.form.get('ssh_user').strip()
-    ssh_key     = request.form.get('ssh_key', '').strip()
+    hostname = request.form['hostname'].strip()
+    ip_address = request.form['ip_address'].strip()
+    ssh_user = request.form['ssh_user'].strip()
+    password = request.form.get('password', '').strip() # Lấy mật khẩu để cập nhật key tiềm năng
+
+    managers = list(map(int, request.form.getlist('managers')))
     viewers = list(map(int, request.form.getlist('viewers')))
-    managers= list(map(int, request.form.getlist('managers')))
-    UserNodes.query.filter_by(node_id=node.id).delete()
-    for uid in viewers:
-        db.session.add(UserNodes(user_id=uid, node_id=node.id, role='viewer'))
+
+    # Backend Check: Node không thể vừa là người quản lý vừa là người xem bởi cùng một người dùng
+    common_users = set(managers) & set(viewers)
+    if common_users:
+        common_usernames = [u.username for u in Users.query.filter(Users.id.in_(list(common_users))).all()]
+        flash(f"Node '{hostname}': Người dùng '{', '.join(common_usernames)}' không thể vừa là người quản lý vừa là người xem cho node này.", 'danger')
+        return redirect(url_for('home_blueprint.manage_nodes'))
+
+    # Kiểm tra trùng lặp hostname / ip (loại trừ node hiện tại)
+    if Nodes.query.filter(Nodes.hostname == hostname, Nodes.id != node_id).first():
+        flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
+        return redirect(url_for('home_blueprint.manage_nodes'))
+    if Nodes.query.filter(Nodes.ip_address == ip_address, Nodes.id != node_id).first():
+        flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
+        return redirect(url_for('home_blueprint.manage_nodes'))
+
+    # --- SSH Key Update Logic ---
+    # Kiểm tra và Tạo SSH Keys nếu chưa tồn tại trước khi cố gắng sao chép
+    key_gen_success, key_gen_message = generate_ssh_keys()
+    if not key_gen_success:
+        flash(f"Lỗi thiết lập SSH key cục bộ: {key_gen_message}. Không thể cập nhật node.", 'danger')
+        return redirect(url_for('home_blueprint.manage_nodes'))
+    else:
+        flash(key_gen_message, 'info') # Thông báo về việc tạo/tồn tại khóa
+
+    # Chỉ thử ssh-copy-id nếu mật khẩu được cung cấp VÀ public key tồn tại cục bộ
+    local_ssh_public_key_path = os.path.expanduser("~/.ssh/id_rsa.pub")
+    if password and os.path.exists(local_ssh_public_key_path):
+        flash(f"Đang cố gắng sao chép SSH key đến {ssh_user}@{ip_address}...", 'info')
+        success, message = run_ssh_copy_id(ssh_user, ip_address, password)
+        if success:
+            flash(f"SSH key đã được sao chép đến {ssh_user}@{ip_address}: {message}", 'success')
+        else:
+            flash(f"Không thể sao chép SSH key đến {ssh_user}@{ip_address}: {message}", 'danger')
+            # Nếu ssh-copy-id thất bại, chúng ta không cập nhật node.ssh_key
+            # và sẽ giữ nguyên giá trị cũ (hoặc None nếu trước đó là None)
+    elif not password:
+        flash(f"Không có mật khẩu được cung cấp để thiết lập SSH key cho {hostname}. Giả sử key đã được thiết lập hoặc sẽ được thực hiện thủ công.", 'warning')
+    # Không cần kiểm tra os.path.exists(local_ssh_public_key_path) ở đây nữa vì đã kiểm tra ở đầu hàm POST và update
+
+
+    node.hostname = hostname
+    node.ip_address = ip_address
+    node.ssh_user = ssh_user
+    # node.ssh_key = public_key_content_to_store # Bỏ dòng này
+    db.session.commit()
+
+    # Cập nhật quan hệ UserNodes
+    UserNodes.query.filter_by(node_id=node.id).delete() # Xóa tất cả quan hệ hiện có cho node này
     for uid in managers:
         db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
-    db.session.commit()
-    # Check for duplicates
-    if hostname != node.hostname and Nodes.query.filter_by(hostname=hostname).first():
-        flash(f"Hostname '{hostname}' already exists.", 'danger')
-        return redirect(url_for('home_blueprint.manage_nodes'))
-    if ip_address != node.ip_address and Nodes.query.filter_by(ip_address=ip_address).first():
-        flash(f"IP '{ip_address}' already exists.", 'danger')
-        return redirect(url_for('home_blueprint.manage_nodes'))
-
-    # Update
-    node.hostname    = hostname
-    node.ip_address = ip_address
-    node.ssh_user    = ssh_user
-    node.ssh_key     = ssh_key
+    for uid in viewers:
+        db.session.add(UserNodes(user_id=uid, node_id=node.id, role='viewer'))
     db.session.commit()
 
-    # Synchronize managers
-    existing = {un.user_id for un in UserNodes.query.filter_by(node_id=node.id)}
-    to_remove = existing - set(managers)
-    to_add    = set(managers) - existing
-
-    if to_remove:
-        UserNodes.query.filter(
-            UserNodes.node_id==node.id,
-            UserNodes.user_id.in_(to_remove)
-        ).delete(synchronize_session=False)
-
-    for uid in to_add:
-        db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
-
-    db.session.commit()
-    flash(f"Updated Node '{node.hostname}'.", 'success')
+    flash(f"Node '{hostname}' đã được cập nhật.", 'success')
     return redirect(url_for('home_blueprint.manage_nodes'))
 def run_ssh_on_node(node, cmd):
     """
