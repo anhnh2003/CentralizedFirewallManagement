@@ -110,7 +110,8 @@
             <div class="form-group">
               <label>Người quản lý</label>
               <div>
-                {% for u in users %} {# This loop is fine as it's rendered server-side #}
+                {# Phần này vẫn dùng Jinja2 để render tĩnh cho modal edit #}
+                {% for u in users %}
                 <div class="form-check">
                   <input class="form-check-input node-manager-checkbox" type="checkbox"
                          id="edit_manager_{{ u.id }}" name="managers" value="{{ u.id }}">
@@ -124,7 +125,8 @@
             <div class="form-group">
               <label>Người xem</label>
               <div>
-                {% for u in users %} {# This loop is fine as it's rendered server-side #}
+                {# Phần này vẫn dùng Jinja2 để render tĩnh cho modal edit #}
+                {% for u in users %}
                 <div class="form-check">
                   <input class="form-check-input node-viewer-checkbox" type="checkbox"
                          id="edit_viewer_{{ u.id }}" name="viewers" value="{{ u.id }}">
@@ -146,18 +148,11 @@
     </div>
   </div>
 
-  {# Hidden div để lưu trữ dữ liệu users dưới dạng JSON #}
-  <div id="allUsersData" style="display:none;">{{ users | tojson }}</div>
-
   <script>
     const getNodeDataUrlTpl   = "{{ url_for('home_blueprint.get_node_data',   node_id=0) }}";
     const updateNodeUrlTpl    = "{{ url_for('home_blueprint.update_node',    node_id=0) }}";
     const addNodeFormsContainer = document.getElementById('addNodeFormsContainer');
     let addNodeCount = 0;
-
-    // Truyền dữ liệu users từ Flask sang JavaScript
-    // Đọc dữ liệu từ hidden div và phân tích cú pháp JSON
-    const allUsers = JSON.parse(document.getElementById('allUsersData').textContent);
 
     // Hàm thiết lập loại trừ lẫn nhau cho checkbox manager/viewer
     function setupNodeCheckboxListeners(formElement) {
@@ -168,7 +163,8 @@
         managerCheckbox.addEventListener('change', function() {
           const userId = this.value;
           // Tìm checkbox viewer tương ứng trong cùng một form
-          const correspondingViewerCheckbox = formElement.querySelector(`[id$="_viewer_${userId}"]`);
+          // Sử dụng querySelector với thuộc tính name để tìm chính xác hơn
+          const correspondingViewerCheckbox = formElement.querySelector(`input[type="checkbox"][name*="viewers_"][value="${userId}"]`);
           if (this.checked && correspondingViewerCheckbox) {
             correspondingViewerCheckbox.checked = false;
           }
@@ -179,7 +175,7 @@
         viewerCheckbox.addEventListener('change', function() {
           const userId = this.value;
           // Tìm checkbox manager tương ứng trong cùng một form
-          const correspondingManagerCheckbox = formElement.querySelector(`[id$="_manager_${userId}"]`);
+          const correspondingManagerCheckbox = formElement.querySelector(`input[type="checkbox"][name*="managers_"][value="${userId}"]`);
           if (this.checked && correspondingManagerCheckbox) {
             correspondingManagerCheckbox.checked = false;
           }
@@ -232,30 +228,35 @@
       });
     });
 
-    // Hàm tạo HTML cho các checkbox người dùng (Manager/Viewer)
-    function createUserCheckboxesHtml(formIdPrefix, inputName, usersList) {
-        let html = '';
-        usersList.forEach(user => {
-            html += `
-                <div class="form-check">
-                    <input class="form-check-input node-${inputName}-checkbox" type="checkbox"
-                           id="${formIdPrefix}_${inputName}_${user.id}"
-                           name="${inputName}_${addNodeCount}" value="${user.id}">
-                    <label class="form-check-label" for="${formIdPrefix}_${inputName}_${user.id}">
-                        ${user.username}
-                    </label>
-                </div>
-            `;
-        });
-        return html;
-    }
-
     // Thêm Node Động
     document.getElementById('addNodeBtn').addEventListener('click', () => {
       const i = addNodeCount++;
-      // Sử dụng biến allUsers đã được truyền từ Flask
-      const managersHtml = createUserCheckboxesHtml(`add_node_${i}`, 'managers', allUsers);
-      const viewersHtml = createUserCheckboxesHtml(`add_node_${i}`, 'viewers', allUsers);
+      // Tạo HTML cho các checkbox người dùng trực tiếp bằng Jinja2
+      // Lưu ý: Jinja2 sẽ xử lý phần này trên server, trước khi JS chạy
+      const managersHtml = `
+        {% for u in users %}
+        <div class="form-check">
+          <input class="form-check-input node-manager-checkbox" type="checkbox"
+                 id="add_node_${i}_manager_{{ u.id }}"
+                 name="managers_${i}" value="{{ u.id }}">
+          <label class="form-check-label" for="add_node_${i}_manager_{{ u.id }}">
+            {{ u.username }}
+          </label>
+        </div>
+        {% endfor %}
+      `;
+      const viewersHtml = `
+        {% for u in users %}
+        <div class="form-check">
+          <input class="form-check-input node-viewer-checkbox" type="checkbox"
+                 id="add_node_${i}_viewer_{{ u.id }}"
+                 name="viewers_${i}" value="{{ u.id }}">
+          <label class="form-check-label" for="add_node_${i}_viewer_{{ u.id }}">
+            {{ u.username }}
+          </label>
+        </div>
+        {% endfor %}
+      `;
 
       const html = `
         <form class="add-node-form border p-3 mb-3"
