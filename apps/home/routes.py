@@ -660,22 +660,9 @@ def update_node(node_id):
     return redirect(url_for('home_blueprint.manage_nodes'))
 def run_ssh_on_node(node, cmd):
     """
-    Runs command cmd via SSH on the node. node.ssh_key can be:
-    - Path to the private key file
-    - Or the key content itself (starts with '-----BEGIN')
+    Chạy cmd qua SSH trên node, dùng private key tại ~/.ssh/id_rsa
     """
-    # Create a temporary file if needed
-    if node.ssh_key.strip().startswith('-----BEGIN'):
-        tf = tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.pem')
-        tf.write(node.ssh_key)
-        tf.close()
-        os.chmod(tf.name, stat.S_IRUSR)   # 0400
-        key_path = tf.name
-        remove_after = True
-    else:
-        key_path = node.ssh_key
-        remove_after = False
-
+    key_path = os.path.expanduser("~/.ssh/id_rsa")
     ssh_cmd = (
         f"ssh -i {key_path} "
         "-o StrictHostKeyChecking=no "
@@ -687,9 +674,6 @@ def run_ssh_on_node(node, cmd):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         universal_newlines=True
     )
-    if remove_after:
-        try: os.remove(key_path)
-        except: pass
     return res
 # --- Manage Rules ---
 #function to add rule to the INPUT chain in iptables
