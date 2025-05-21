@@ -160,33 +160,30 @@
     let addNodeCount = 0;
 
     // Hàm thiết lập loại trừ lẫn nhau cho checkbox manager/viewer
-    function setupNodeCheckboxListeners(formElement) {
-      const managedCheckboxes = formElement.querySelectorAll('.node-manager-checkbox');
-      const viewedCheckboxes = formElement.querySelectorAll('.node-viewer-checkbox');
+    function setupNodeCheckboxListeners() {
+    const managedCheckboxes = document.querySelectorAll('.managed-node-checkbox');
+    const viewedCheckboxes = document.querySelectorAll('.viewed-node-checkbox');
 
-      managedCheckboxes.forEach(managerCheckbox => {
-        managerCheckbox.addEventListener('change', function() {
-          const userId = this.value;
-          // Tìm checkbox viewer tương ứng trong cùng một form
-          // Sử dụng querySelector với thuộc tính name để tìm chính xác hơn
-          const correspondingViewerCheckbox = formElement.querySelector(`input[type="checkbox"][name*="viewers_"][value="${userId}"]`);
-          if (this.checked && correspondingViewerCheckbox) {
-            correspondingViewerCheckbox.checked = false;
-          }
-        });
+    managedCheckboxes.forEach(managedCheckbox => {
+      managedCheckbox.addEventListener('change', function() {
+        const nodeId = this.value;
+        const correspondingViewerCheckbox = document.getElementById(`view_edit_${nodeId}`);
+        if (this.checked && correspondingViewerCheckbox) {
+          correspondingViewerCheckbox.checked = false;
+        }
       });
+    });
 
-      viewedCheckboxes.forEach(viewerCheckbox => {
-        viewerCheckbox.addEventListener('change', function() {
-          const userId = this.value;
-          // Tìm checkbox manager tương ứng trong cùng một form
-          const correspondingManagerCheckbox = formElement.querySelector(`input[type="checkbox"][name*="managers_"][value="${userId}"]`);
-          if (this.checked && correspondingManagerCheckbox) {
-            correspondingManagerCheckbox.checked = false;
-          }
-        });
+    viewedCheckboxes.forEach(viewedCheckbox => {
+      viewedCheckbox.addEventListener('change', function() {
+        const nodeId = this.value;
+        const correspondingManagerCheckbox = document.getElementById(`man_edit_${nodeId}`);
+        if (this.checked && correspondingManagerCheckbox) {
+          correspondingManagerCheckbox.checked = false;
+        }
       });
-    }
+    });
+  }
 
     // Sửa Node
     document.querySelectorAll('.editNodeBtn').forEach(btn => {
