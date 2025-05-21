@@ -65,7 +65,7 @@
               {% endfor %}
             </td>
             {# CHỈ HIỂN THỊ NẾU LÀ ADMIN #}
-    {% if current_user_role == 'admin' %}
+    {% if current_user.role == 'admin' %}
             <td>
               <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Sửa</button>
               <form method="POST"
