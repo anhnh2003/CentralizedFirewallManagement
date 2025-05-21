@@ -110,7 +110,7 @@
             <div class="form-group">
               <label>Người quản lý</label>
               <div>
-                {% for u in users %}
+                {% for u in users %} {# This loop is fine as it's rendered server-side #}
                 <div class="form-check">
                   <input class="form-check-input node-manager-checkbox" type="checkbox"
                          id="edit_manager_{{ u.id }}" name="managers" value="{{ u.id }}">
@@ -124,7 +124,7 @@
             <div class="form-group">
               <label>Người xem</label>
               <div>
-                {% for u in users %}
+                {% for u in users %} {# This loop is fine as it's rendered server-side #}
                 <div class="form-check">
                   <input class="form-check-input node-viewer-checkbox" type="checkbox"
                          id="edit_viewer_{{ u.id }}" name="viewers" value="{{ u.id }}">
@@ -151,6 +151,9 @@
     const updateNodeUrlTpl    = "{{ url_for('home_blueprint.update_node',    node_id=0) }}";
     const addNodeFormsContainer = document.getElementById('addNodeFormsContainer');
     let addNodeCount = 0;
+
+    // Truyền dữ liệu users từ Flask sang JavaScript
+    const allUsers = {{ users | tojson }};
 
     // Hàm thiết lập loại trừ lẫn nhau cho checkbox manager/viewer
     function setupNodeCheckboxListeners(formElement) {
@@ -225,9 +228,30 @@
       });
     });
 
+    // Hàm tạo HTML cho các checkbox người dùng (Manager/Viewer)
+    function createUserCheckboxesHtml(formIdPrefix, inputName, usersList) {
+        let html = '';
+        usersList.forEach(user => {
+            html += `
+                <div class="form-check">
+                    <input class="form-check-input node-${inputName}-checkbox" type="checkbox"
+                           id="${formIdPrefix}_${inputName}_${user.id}"
+                           name="${inputName}_${addNodeCount}" value="${user.id}">
+                    <label class="form-check-label" for="${formIdPrefix}_${inputName}_${user.id}">
+                        ${user.username}
+                    </label>
+                </div>
+            `;
+        });
+        return html;
+    }
+
     // Thêm Node Động
     document.getElementById('addNodeBtn').addEventListener('click', () => {
       const i = addNodeCount++;
+      const managersHtml = createUserCheckboxesHtml(`add_node_${i}`, 'managers', allUsers);
+      const viewersHtml = createUserCheckboxesHtml(`add_node_${i}`, 'viewers', allUsers);
+
       const html = `
         <form class="add-node-form border p-3 mb-3"
               method="POST"
@@ -259,31 +283,13 @@
           <div class="form-group">
             <label>Người quản lý</label>
             <div>
-              {% for u in users %}
-              <div class="form-check">
-                <input class="form-check-input node-manager-checkbox" type="checkbox"
-                       id="add_node_${i}_manager_${u.id}"
-                       name="managers_${i}" value="{{ u.id }}">
-                <label class="form-check-label" for="add_node_${i}_manager_${u.id}">
-                  {{ u.username }}
-                </label>
-              </div>
-              {% endfor %}
+              ${managersHtml}
             </div>
           </div>
           <div class="form-group">
             <label>Người xem</label>
             <div>
-              {% for u in users %}
-              <div class="form-check">
-                <input class="form-check-input node-viewer-checkbox" type="checkbox"
-                       id="add_node_${i}_viewer_${u.id}"
-                       name="viewers_${i}" value="{{ u.id }}">
-                <label class="form-check-label" for="add_node_${i}_viewer_${u.id}">
-                  {{ u.username }}
-                </label>
-              </div>
-              {% endfor %}
+              ${viewersHtml}
             </div>
           </div>
           <button type="submit" class="btn btn-success">Thêm</button>
