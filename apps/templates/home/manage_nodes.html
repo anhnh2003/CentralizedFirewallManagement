@@ -28,7 +28,6 @@
 
   <div class="page-content">
     <h2 class="mb-4">Quản lý Nodes</h2>
-
     {# CHỈ HIỂN THỊ NÚT "THÊM NODE" NẾU LÀ ADMIN #}
     {% if current_user.role == 'admin' %}
     <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Thêm Node</button>
@@ -65,6 +64,8 @@
                 {{ un.user.username }}{% if not loop.last %}, {% endif %}
               {% endfor %}
             </td>
+            {# CHỈ HIỂN THỊ NẾU LÀ ADMIN #}
+    {% if current_user_role == 'admin' %}
             <td>
               <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Sửa</button>
               <form method="POST"
@@ -74,6 +75,7 @@
                 <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
               </form>
             </td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>
@@ -233,10 +235,10 @@
 
     // Thêm Node Động
     document.getElementById('addNodeBtn').addEventListener('click', () => {
-    const i = addNodeCount++;
-    // Tạo HTML cho các checkbox người dùng trực tiếp bằng Jinja2
-    // Lưu ý: Jinja2 sẽ xử lý phần này trên server, trước khi JS chạy
-    const managersHtml = `
+      const i = addNodeCount++;
+      // Tạo HTML cho các checkbox người dùng trực tiếp bằng Jinja2
+      // Lưu ý: Jinja2 sẽ xử lý phần này trên server, trước khi JS chạy
+      const managersHtml = `
         {% for u in users %}
         <div class="form-check">
           <input class="form-check-input node-manager-checkbox" type="checkbox"
@@ -247,8 +249,8 @@
           </label>
         </div>
         {% endfor %}
-    `;
-    const viewersHtml = `
+      `;
+      const viewersHtml = `
         {% for u in users %}
         <div class="form-check">
           <input class="form-check-input node-viewer-checkbox" type="checkbox"
@@ -259,13 +261,13 @@
           </label>
         </div>
         {% endfor %}
-    `;
+      `;
 
-    const html = `
+      const html = `
         <form class="add-node-form border p-3 mb-3"
               method="POST"
               action="{{ url_for('home_blueprint.manage_nodes') }}">
-          <span class="close-btn" onclick="removeNodeForm(this.closest('form'))">&times;</span>
+          <span class="close-btn" onclick="this.closest('form').remove()">&times;</span>
           <h5>Node ${i+1}</h5>
           <div class="form-group">
             <label for="hostname_${i}">Hostname</label>
@@ -285,8 +287,8 @@
           <div class="form-group">
             <label for="password_${i}">Mật khẩu (để thiết lập SSH Key)</label>
             <textarea class="form-control"
-                     id="password_${i}" name="password_${i}" rows="2"
-                     placeholder="Nhập mật khẩu để ssh lần đầu. Mật khẩu này sẽ không được lưu trữ."></textarea>
+                      id="password_${i}" name="password_${i}" rows="2"
+                      placeholder="Nhập mật khẩu để ssh-copy-id. Mật khẩu này sẽ không được lưu trữ."></textarea>
             <small class="form-text text-muted">Mật khẩu này chỉ dùng cho thiết lập SSH Key ban đầu và sẽ không được lưu trữ.</small>
           </div>
           <div class="form-group">
@@ -303,35 +305,10 @@
           </div>
           <button type="submit" class="btn btn-success">Thêm</button>
         </form>`;
-    addNodeFormsContainer.insertAdjacentHTML('beforeend', html);
-    // Thiết lập lắng nghe cho form vừa thêm
-    const newForm = addNodeFormsContainer.lastElementChild;
-    setupNodeCheckboxListeners(newForm);
-});
-
-// Thêm hàm này vào JavaScript của bạn
-function removeNodeForm(formElement) {
-    formElement.remove(); // Xóa form khỏi DOM
-    addNodeCount--;       // Giảm biến đếm
-    // Tùy chọn: Nếu bạn muốn cập nhật lại các chỉ số Node để chúng liên tục (ví dụ: Node 1, Node 2...)
-    // bạn sẽ cần lặp lại tất cả các form hiện có và cập nhật lại H5 và id/name của các trường
-    // Tuy nhiên, việc này phức tạp hơn và có thể không cần thiết nếu bạn chỉ quan tâm đến việc giảm biến đếm
-    // để tránh trùng lặp id khi thêm form mới sau khi xóa.
-    updateNodeNumbers(); // Gọi hàm để cập nhật lại số Node
-}
-
-// Thêm hàm này để cập nhật lại số thứ tự Node nếu cần
-function updateNodeNumbers() {
-    const forms = document.querySelectorAll('.add-node-form');
-    forms.forEach((form, index) => {
-        const h5Element = form.querySelector('h5');
-        if (h5Element) {
-            h5Element.textContent = `Node ${index + 1}`;
-        }
-        // Nếu bạn cũng muốn cập nhật lại ID và name của các trường input, bạn sẽ cần logic phức tạp hơn ở đây.
-        // Ví dụ: Đổi 'hostname_X' thành 'hostname_Y'
-        // Đây là một ví dụ đơn giản chỉ cập nhật tiêu đề Node.
+      addNodeFormsContainer.insertAdjacentHTML('beforeend', html);
+      // Thiết lập lắng nghe cho form vừa thêm
+      const newForm = addNodeFormsContainer.lastElementChild;
+      setupNodeCheckboxListeners(newForm);
     });
-}
   </script>
 {% endblock %}
