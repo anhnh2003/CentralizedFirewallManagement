@@ -28,8 +28,10 @@
 
   <div class="page-content">
     <h2 class="mb-4">Quản lý Nodes</h2>
-
+    {# CHỈ HIỂN THỊ NÚT "THÊM NODE" NẾU LÀ ADMIN #}
+    {% if current_user.role == 'admin' %}
     <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Thêm Node</button>
+    {% endif %}
     <div id="addNodeFormsContainer"></div>
 
     <div class="table-responsive">
@@ -63,6 +65,8 @@
               {% endfor %}
             </td>
             <td>
+              {# CHỈ HIỂN THỊ NẾU LÀ ADMIN #}
+    {% if current_user.role == 'admin' %}
               <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Sửa</button>
               <form method="POST"
                     action="{{ url_for('home_blueprint.delete_node', node_id=n.id) }}"
@@ -71,6 +75,7 @@
                 <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
               </form>
             </td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>
