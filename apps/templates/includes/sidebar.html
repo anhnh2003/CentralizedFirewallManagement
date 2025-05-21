@@ -91,15 +91,6 @@
               <span class="hide-menu">Data Visualization</span>
             </a>
           </li>
-  
-          {# admin-only #}
-          {% if current_user.role == 'admin' %}
-          <li class="sidebar-item">
-            <a class="sidebar-link waves-effect waves-dark sidebar-link" href="{{ url_for('home_blueprint.manage_users') }}" aria-expanded="false">
-              <i class="mdi mdi-account-plus"></i>
-              <span class="hide-menu">Manage Users</span>
-            </a>
-          </li>
           <li class="sidebar-item">
             <a class="sidebar-link waves-effect waves-dark sidebar-link" href="{{ url_for('home_blueprint.manage_nodes') }}" aria-expanded="false">
               <i class="mdi mdi-account-plus"></i>
@@ -130,6 +121,14 @@
            </li>
          </ul>
        </li>
+          {# admin-only #}
+          {% if current_user.role == 'admin' %}
+          <li class="sidebar-item">
+            <a class="sidebar-link waves-effect waves-dark sidebar-link" href="{{ url_for('home_blueprint.manage_users') }}" aria-expanded="false">
+              <i class="mdi mdi-account-plus"></i>
+              <span class="hide-menu">Manage Users</span>
+            </a>
+          </li>
           {% endif %}
         </ul>
       </nav>

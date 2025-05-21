@@ -229,12 +229,14 @@
 
   // Dynamically add user (giữ nguyên)
   let addFormCount = 0;
-  document.getElementById('addUserBtn').addEventListener('click', () => {
+
+document.getElementById('addUserBtn').addEventListener('click', () => {
     const i = addFormCount++;
     const html = `
       <form class="add-user-form border p-3 mb-3"
             method="POST"
             action="{{ url_for('home_blueprint.manage_users') }}">
+            <span class="close-btn" onclick="removeUserForm(this.closest('form'))">&times;</span>
         <h5>User ${i+1}</h5>
         <div class="form-group">
           <label for="username_${i}">Username</label>
@@ -277,7 +279,30 @@
       </form>`;
     document.getElementById('addUserFormsContainer').insertAdjacentHTML('beforeend', html);
     setupAddUserCheckboxListeners(); // Setup listeners for dynamically added forms
-  });
+});
+
+// --- Thêm hàm này vào JavaScript của bạn ---
+function removeUserForm(formElement) {
+    formElement.remove(); // Xóa form khỏi DOM
+    addFormCount--;       // Giảm biến đếm
+
+    // Cập nhật lại số thứ tự của các form User còn lại
+    updateUserNumbers();
+}
+
+function updateUserNumbers() {
+    const forms = document.querySelectorAll('.add-user-form');
+    forms.forEach((form, index) => {
+        const h5Element = form.querySelector('h5');
+        if (h5Element) {
+            h5Element.textContent = `User ${index + 1}`;
+        }
+        // Lưu ý: Nếu bạn cũng cần cập nhật 'id' và 'name' của các trường input
+        // bên trong form (ví dụ: username_0 thành username_X), bạn sẽ cần thêm
+        // logic phức tạp hơn ở đây để duyệt qua tất cả các input và thay đổi thuộc tính của chúng.
+        // Tuy nhiên, việc chỉ cập nhật tiêu đề 'User X' thường là đủ cho mục đích hiển thị.
+    });
+}
 
   function setupAddUserCheckboxListeners() {
     const managedCheckboxes = document.querySelectorAll('.managed-node-add-checkbox');

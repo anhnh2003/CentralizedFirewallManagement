@@ -468,9 +468,13 @@ def generate_ssh_keys():
 
 @blueprint.route('/manage_nodes', methods=['GET', 'POST'])
 @login_required
-@role_required('admin') # Đảm bảo bạn đã định nghĩa role_required decorator
+@role_required('admin', 'user') # Đảm bảo bạn đã định nghĩa role_required decorator
 def manage_nodes():
     if request.method == 'POST':
+        # KIỂM TRA QUYỀN HẠN: CHỈ ADMIN MỚI ĐƯỢC THÊM NODE
+        if current_user.role != 'admin':
+            flash("Bạn không có quyền thêm node.", 'danger')
+            return redirect(url_for('home_blueprint.manage_nodes'))
         # --- Kiểm tra và Tạo SSH Keys nếu chưa tồn tại ---
         key_gen_success, key_gen_message = generate_ssh_keys()
         if not key_gen_success:
@@ -571,7 +575,7 @@ def delete_node(node_id):
 # Get Node data (JSON) for edit modal
 @blueprint.route('/get_node_data/<int:node_id>')
 @login_required
-@role_required('admin')
+@role_required('admin','user')
 def get_node_data(node_id):
     node = Nodes.query.options(
         joinedload(Nodes.user_nodes)
@@ -708,7 +712,7 @@ def add_rule():
             sports  = request.form.getlist('sport[]')
             dports  = request.form.getlist('dport[]')
             for c,t,p,src,dst,sp,dp in zip(chains, targets, prots, srcs, dsts, sports, dports):
-                cmd = f"iptables -A {c} -p {p} -s {src} -d {dst} -j {t}"
+                cmd = f"sudo iptables -A {c} -p {p} -s {src} -d {dst} -j {t}"
                 if sp: cmd += f" --sport {sp}"
                 if dp: cmd += f" --dport {dp}"
                 cmds.append(cmd)
@@ -740,7 +744,7 @@ def view_status():
     for node in nodes:
         status[node.id] = {}
         for chain in ['INPUT','OUTPUT','FORWARD']:
-            cmd = f"iptables -L {chain} --line-numbers"
+            cmd = f"sudo iptables -L {chain} --line-numbers"
             res = run_ssh_on_node(node, cmd)
             if res.returncode == 0:
                 status[node.id][chain] = parse_iptables_output(res.stdout)
@@ -773,7 +777,7 @@ def delete_rule():
         return redirect(url_for('home_blueprint.view_status'))
 
     node = Nodes.query.get_or_404(nid)
-    cmd = f"iptables -D {chain} {rn}"
+    cmd = f"sudo iptables -D {chain} {rn}"
     res = run_ssh_on_node(node, cmd)
     if res.returncode != 0:
         flash(f"Error deleting on {node.hostname}: {res.stderr}", 'danger')
