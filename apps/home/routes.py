@@ -323,8 +323,9 @@ def view_log():
 # --- Data Visualization from all accessible nodes ---
 @blueprint.route('/data_visualization')
 @login_required
+@blueprint.route('/data_visualization')
+@login_required
 def data_visualization():
-    # Tương tự như view_log, lấy danh sách IP mà user có quyền truy cập
     user_allowed_ips = set()
     node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
     for entry in node_entries:
@@ -337,8 +338,8 @@ def data_visualization():
 
     if not os.path.exists(base_log_dir):
         flash(f"Thư mục log từ xa '{base_log_dir}' không tồn tại.", 'warning')
-        # Thay vì redirect, có thể hiển thị trang trống với thông báo
-        return render_template('home/data_visualization.html', aggregated_data=json.dumps({}))
+        # Trả về đối tượng dictionary rỗng thay vì chuỗi JSON rỗng
+        return render_template('home/data_visualization.html', aggregated_data={}) 
 
     for client_ip_dir in os.listdir(base_log_dir):
         if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
@@ -355,18 +356,17 @@ def data_visualization():
                     for line in f:
                         entry = parse_log_line(line)
                         if entry:
-                            entry['client_ip'] = client_ip_dir # Thêm IP của client vào entry
+                            entry['client_ip'] = client_ip_dir
                             all_entries.append(entry)
             except Exception as e:
-                # Không hiển thị flash cho từng lỗi file trong visualization để tránh quá tải
-                print(f"Error reading log file {iptables_log_path}: {e}") # Log lỗi ra console
+                print(f"Error reading log file {iptables_log_path}: {e}")
 
     if not all_entries:
         flash("Không có bản ghi log nào để hiển thị dữ liệu.", 'warning')
-        return render_template('home/data_visualization.html', aggregated_data=json.dumps({}))
+        # Trả về đối tượng dictionary rỗng
+        return render_template('home/data_visualization.html', aggregated_data={})
 
-    # Các trường cần vẽ
-    fields = ["src_ip", "dst_ip", "protocol", "in_interface", "out_interface", "client_ip"] # Thêm client_ip vào để có thể visualize
+    fields = ["src_ip", "dst_ip", "protocol", "in_interface", "out_interface", "client_ip"]
     aggregated_data = {}
     for field in fields:
         values = [e[field] for e in all_entries if e.get(field)]
@@ -374,12 +374,11 @@ def data_visualization():
             cnt = Counter(values)
             aggregated_data[field] = [[k, v] for k, v in cnt.items()]
 
-    # truyền JSON vào template
+    # TRUYỀN TRỰC TIẾP ĐỐI TƯỢNG DICTIONARY VÀO TEMPLATE
     return render_template(
         'home/data_visualization.html',
-        aggregated_data=json.dumps(aggregated_data)
+        aggregated_data=aggregated_data # Bỏ json.dumps() 
     )
-
 # Hiển thị và xử lý người dùng
 from sqlalchemy.orm import joinedload
 @blueprint.route('/manage_users', methods=['GET', 'POST'])
