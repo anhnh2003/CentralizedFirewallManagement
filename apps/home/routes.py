@@ -90,41 +90,89 @@ def query_iptables(chain):
     output = process.communicate()
     return output[0].decode('utf-8')
 def parse_iptables_output(output):
-    #parse the output into a list of lists, where each inner list represents a row of the iptables output
-    #the inner lists must have the following format: [num, target, prot, opt, source, destination, s_port, d_port, detail], if the corresponding field is not present in the output, the value should be an empty string
-    #example output: 7    DROP       tcp  --  192.168.7.2          123.145.1.2          tcp spt:12 dpt:1233
-    #the correct format should be: ['7', 'DROP', 'tcp', '--', '192.168.7.2', '123.145.1.2', '12', '1233', 'tcp']
+    """
+    Parses the output of 'sudo iptables -L <chain> --line-numbers'.
+    Returns a list of tuples, where each tuple is (rule_number, [Target, Prot, Opt, Source, Destination, Spt, Dpt, Detail]).
+    Fields not present will be empty strings.
+    """
     table_data = []
     lines = output.split('\n')
-    #skip the last empty line
-    lines = lines[:-1]
+
+    # Regex để parse một dòng luật IPTables với --line-numbers
+    # Các cột: num, target, prot, opt, source, destination
+    # và phần còn lại là 'remaining_detail' (có thể chứa spt/dpt hoặc các flag khác)
+    # Rất quan trọng: sử dụng '\s+' để khớp với 1 hoặc nhiều khoảng trắng
+    # và `.*?` (non-greedy) để khớp đến khi gặp cột tiếp theo hoặc kết thúc dòng.
+    pattern = re.compile(
+        r'^\s*(?P<num>\d+)\s+'          # 1. Rule number
+        r'(?P<target>\S+)\s+'         # 2. Target (e.g., ACCEPT, DROP)
+        r'(?P<prot>\S+)\s+'           # 3. Protocol (e.g., tcp, udp, all)
+        r'(?P<opt>\S+)\s+'            # 4. Opt (e.g., --)
+        r'(?P<source>\S+)\s+'         # 5. Source IP/Hostname
+        r'(?P<destination>\S+)\s*'    # 6. Destination IP/Hostname
+        r'(?P<remaining_detail>.*)$'  # 7. All remaining details
+    )
+
     for line in lines:
-        if line.startswith('Chain'):
+        line = line.strip()
+        # Bỏ qua các dòng tiêu đề và dòng trống
+        # Khi không có -v, dòng tiêu đề pkts có thể không xuất hiện, hoặc xuất hiện ở format khác.
+        # Dòng 'num' và 'Chain' là đủ để lọc tiêu đề.
+        if not line or line.startswith('Chain') or line.startswith('num'):
             continue
-        if line.startswith('target'):
-            continue
-        if line.startswith('num'):
-            continue
-        parts = line.split()
-        num = parts[0]
-        target = parts[1]
-        prot = parts[2]
-        opt = parts[3]
-        source = parts[4]
-        destination = parts[5]
-        
-        s_port_match = re.search(r'spt:(\S+)', line)
-        s_port = s_port_match.group(1) if s_port_match else 'any'
-        
-        d_port_match = re.search(r'dpt:(\S+)', line)
-        d_port = d_port_match.group(1) if d_port_match else 'any'
-        
-        # Remove the known fields from the line to get the detail
-        detail = line
-        for field in [num, target, prot, opt, source, destination, f'spt:{s_port}', f'dpt:{d_port}']:
-            detail = detail.replace(field, '', 1).strip()
-        
-        table_data.append([num, target, prot, opt, source, destination, s_port, d_port, detail])
+
+        match = pattern.match(line)
+        if match:
+            data = match.groupdict()
+            
+            num = int(data['num'])
+            target = data['target']
+            prot = data['prot']
+            opt = data['opt']
+            source = data['source']
+            destination = data['destination']
+            
+            remaining_detail = data['remaining_detail'].strip()
+            
+            s_port = ''
+            d_port = ''
+            
+            # Extract Source Port (SPT)
+            spt_match = re.search(r'spt:(\S+)', remaining_detail)
+            if spt_match:
+                s_port = spt_match.group(1)
+                # Loại bỏ phần SPT đã tìm thấy khỏi remaining_detail
+                remaining_detail = remaining_detail.replace(spt_match.group(0), '').strip()
+            
+            # Extract Destination Port (DPT)
+            dpt_match = re.search(r'dpt:(\S+)', remaining_detail)
+            if dpt_match:
+                d_port = dpt_match.group(1)
+                # Loại bỏ phần DPT đã tìm thấy khỏi remaining_detail
+                remaining_detail = remaining_detail.replace(dpt_match.group(0), '').strip()
+
+            # Clean up any multiple spaces that might result from replacements
+            detail_final = re.sub(r'\s+', ' ', remaining_detail).strip()
+
+            # Chuẩn bị dữ liệu cho template
+            rule_data = [
+                target,
+                prot,
+                opt,
+                source,
+                destination,
+                s_port,
+                d_port,
+                detail_final
+            ]
+            
+            table_data.append((num, rule_data))
+        else:
+            # Nếu một dòng không khớp với định dạng luật mong đợi, có thể là dòng policy hoặc lỗi
+            # Ví dụ: "Chain INPUT (policy ACCEPT)"
+            # Bạn có thể xử lý các dòng này nếu muốn, hoặc bỏ qua như hiện tại.
+            pass
+
     return table_data
 
 def validate_iptables_command(command):
