@@ -1,3 +1,164 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<style>
+    .page-content {
+        padding: 2rem;
+        background: #f8f9fa;
+    }
+    .node-table {
+        margin-top: 20px;
+        border: 1px solid #e0e0e0; /* Add a subtle border to separate node tables */
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,.05);
+    }
+    .node-header {
+        background-color: #e9ecef;
+        padding: 10px 15px;
+        border-bottom: 1px solid #e0e0e0;
+        font-weight: bold;
+        cursor: pointer; /* Make it clickable for showing/hiding */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .node-content {
+        padding: 15px;
+    }
+    .table-scroll {
+        overflow-x: auto; /* Allow horizontal scrolling for large tables */
+    }
+    .chain-header {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+    .table-compact th, .table-compact td {
+        padding: 0.5rem; /* Make table rows more compact */
+        vertical-align: middle;
+    }
+    .hidden {
+        display: none;
+    }
+</style>
+
+<div class="page-content">
+    <h2 class="mb-4">Firewall Rules Status</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header">
+            Chọn Nodes để hiển thị luật
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label for="nodeSelector">Chọn Node(s):</label>
+                <div id="nodeSelector" class="form-check">
+                    {% for node_id, node_info in nodes_with_roles.items() %}
+                        {% set node = node_info.object %}
+                        {% set role = node_info.role %}
+                        <div class="form-check">
+                            <input class="form-check-input node-checkbox" type="checkbox" 
+                                   value="{{ node.id }}" id="nodeCheck-{{ node.id }}">
+                            <label class="form-check-label" for="nodeCheck-{{ node.id }}">
+                                {{ node.hostname }} ({{ node.ip_address }}) - Role: {{ role | capitalize }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                    {% if not nodes_with_roles %}
+                        <p class="text-muted">Bạn không có quyền truy cập vào bất kỳ node nào.</p>
+                    {% endif %}
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary mt-3" id="showSelectedNodes">Hiển thị luật của Nodes đã chọn</button>
+            <button type="button" class="btn btn-secondary mt-3" id="showAllNodes">Hiển thị tất cả Nodes</button>
+            <button type="button" class="btn btn-secondary mt-3" id="hideAllNodes">Ẩn tất cả Nodes</button>
+        </div>
+    </div>
+
+    <div id="nodeRuleContainer">
+        {% for node_id, node_info in nodes_with_roles.items() %}
+            {% set node = node_info.object %}
+            {% set role = node_info.role %}
+            <div class="node-table card mb-4 hidden" id="node-{{ node.id }}-section">
+                <div class="node-header">
+                    <h4>Node: {{ node.hostname }} ({{ node.ip_address }}) - Role: {{ role | capitalize }}</h4>
+                </div>
+                <div class="node-content">
+                    {% if status[node.id] %}
+                        {% for chain, rules in status[node.id].items() %}
+                        <h5 class="mt-4">Chain: {{ chain }}</h5>
+                        <div class="table-responsive table-scroll">
+                            <table class="table table-bordered table-striped table-hover table-compact">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Num</th>
+                                        <th>Target</th>
+                                        <th>Prot</th>
+                                        <th>Opt</th>
+                                        <th>Source</th>
+                                        <th>Destination</th>
+                                        <th>Source Port</th>
+                                        <th>Destination Port</th>
+                                        <th>Details</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if rules %}
+                                        {% for rule_index, rule_data in rules %}
+                                        <tr>
+                                            <td>{{ rule_index }}</td>
+                                            <td>{{ rule_data[0] or '' }}</td> {# Target #}
+                                            <td>{{ rule_data[1] or '' }}</td> {# Prot #}
+                                            <td>{{ rule_data[2] or '' }}</td> {# Opt #}
+                                            <td>{{ rule_data[3] or '' }}</td> {# Source #}
+                                            <td>{{ rule_data[4] or '' }}</td> {# Destination #}
+                                            <td>{{ rule_data[5] or '' }}</td> {# Spt #}
+                                            <td>{{ rule_data[6] or '' }}</td> {# Dpt #}
+                                            <td>{{ rule_data[7] or '' }}</td> {# Detail #}
+                                            <td>
+                                                {# Chỉ hiển thị nút Delete nếu người dùng là manager của node này #}
+                                                {% if role == 'manager' %}
+                                                <form action="{{ url_for('home_blueprint.delete_rule') }}" method="post" style="display:inline;">
+                                                    <input type="hidden" name="node_id" value="{{ node.id }}">
+                                                    <input type="hidden" name="chain_name" value="{{ chain }}">
+                                                    <input type="hidden" name="rule_index" value="{{ rule_index }}">
+                                                    <button type="submit" class="btn btn-danger btn-sm"
+                                                            onclick="return confirm('Bạn có chắc chắn muốn xóa luật này không?');">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <span class="text-muted">No Delete Perm.</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="10" class="text-center">Không có luật nào trong chain này.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Không thể tải trạng thái IPTables cho node này hoặc không có luật nào.</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %}
 {% block scripts %}
 <script>
     // Đảm bảo script được chạy sau khi DOM đã tải hoàn chỉnh
