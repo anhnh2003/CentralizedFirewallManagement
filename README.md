@@ -457,6 +457,41 @@ sudo iptables -A INPUT -j LOG --log-prefix "[IPTABLES] INPUT: " --log-level 4
 sudo iptables -A OUTPUT -j LOG --log-prefix "[IPTABLES] OUTPUT: " --log-level 4
 sudo iptables -A FORWARD -j LOG --log-prefix "[IPTABLES] FORWARD: " --log-level 4
 ```
+# 📚 Hướng dẫn cài đặt và cấu hình cho Nodes từ xa (Client Nodes)
+
+Để ứng dụng quản lý tường lửa tập trung có thể thu thập log và trực quan hóa dữ liệu từ các node, mỗi node từ xa cần được cấu hình đúng cách để cho phép truy cập SSH và ghi log IPTables.
+
+---
+
+## 🎯 Mục tiêu trên mỗi Node
+
+1.  **Thiết lập SSH Key-based Authentication:** Đảm bảo server quản lý có thể SSH vào node mà không cần mật khẩu.
+2.  **Cấp quyền `sudo NOPASSWD` cho các lệnh cần thiết:** Cho phép user SSH đọc log và thêm/quản lý luật IPTables mà không cần nhập mật khẩu `sudo`.
+3.  **Cài đặt các dependency cần thiết:** Đảm bảo các công cụ như `iptables-persistent` (để lưu luật) và `rsyslog` hoạt động.
+4.  **Cấu hình luật ghi log IPTables:** Thêm các luật để IPTables ghi log vào `/var/log/iptables.log` trên cả ba chain `INPUT`, `OUTPUT`, `FORWARD`.
+
+---
+
+## 📋 Điều kiện tiên quyết trên mỗi Node
+
+* Hệ điều hành Ubuntu 20.04/22.04 LTS (hoặc tương đương)
+* Quyền truy cập `sudo` hoặc `root` ban đầu
+* Kết nối Internet ổn định
+
+---
+
+## 🚀 Cài đặt và Cấu hình
+
+### 1. Cập nhật hệ thống và cài đặt OpenSSH Server
+
+Đảm bảo hệ thống được cập nhật và `openssh-server` đã được cài đặt để cho phép truy cập SSH.
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install openssh-server -y
+sudo systemctl enable ssh
+sudo systemctl start ssh
+# 📚 Hướng dẫn cài đặt và cấu hình cho Nodes quản lí (Management Nodes)
 ## Start the app
 ```bash
 gunicorn --bind 0.0.0.0:5000 run:app

@@ -202,22 +202,29 @@ def is_valid_rule_number(rule_number):
         return rule_number > 0
     except ValueError:
         return False
-
-def parse_log_file():
-    log_file = '/var/log/iptables.log'
-    log_entries = []
-
-    with open(log_file, 'r') as file:
-        for line in file:
-            log_entries.append(parse_log_line(line))
-
-    return log_entries
+# --- View Logs from all nodes the user can access ---
 @blueprint.route('/view_log')
 @login_required
 def view_log():
-    log_entries = parse_log_file()
-    return render_template('home/view_log.html', log_entries=log_entries)
+    # Lấy tất cả node mà user có entry trong UserNodes (role viewer hoặc manager)
+    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=current_user.id)]
+    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
 
+    all_entries = []
+    for node in nodes:
+        # Truy vấn log file qua SSH
+        cmd = "cat /var/log/iptables.log"
+        res = run_ssh_on_node(node, cmd)
+        if res.returncode != 0:
+            flash(f"Không thể lấy log từ {node.hostname}: {res.stderr}", 'warning')
+            continue
+        # parse từng dòng
+        for line in res.stdout.splitlines():
+            entry = parse_log_line(line)
+            if entry:
+                all_entries.append(entry)
+
+    return render_template('home/view_log.html', log_entries=all_entries)
 def parse_log_line(line):
     # Define the regex pattern
     pattern = re.compile(
@@ -242,30 +249,44 @@ def parse_log_line(line):
         return match.groupdict()
     return {}
 import json
+# --- Data Visualization from all accessible nodes ---
 @blueprint.route('/data_visualization')
 @login_required
 def data_visualization():
-    log_entries = parse_log_file()
-    if not log_entries:
-        return "No log entries to visualize."
+    # Tương tự, lấy node list
+    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=current_user.id)]
+    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
 
-    # Fields to visualize
-    fields = ["src_ip", "dst_ip", "protocol", "in_interface", "out_interface", "detail"]
-    
-    # Aggregated data for each field
+    all_entries = []
+    for node in nodes:
+        cmd = "cat /var/log/iptables.log"
+        res = run_ssh_on_node(node, cmd)
+        if res.returncode != 0:
+            continue
+        for line in res.stdout.splitlines():
+            entry = parse_log_line(line)
+            if entry:
+                all_entries.append(entry)
+
+    if not all_entries:
+        flash("Không có bản ghi log nào để hiển thị.", 'warning')
+        return redirect(url_for('home_blueprint.view_log'))
+
+    # Các trường cần vẽ
+    fields = ["src_ip", "dst_ip", "protocol", "in_interface", "out_interface"]
     aggregated_data = {}
     for field in fields:
-        values = [entry[field] for entry in log_entries if field in entry and entry[field]]
+        values = [e[field] for e in all_entries if e.get(field)]
         if values:
-            counter = Counter(values)
-            aggregated_data[field] = [[key, value] for key, value in counter.items()]
+            cnt = Counter(values)
+            # thành [[key,count],...]
+            aggregated_data[field] = [[k, v] for k, v in cnt.items()]
 
-    # Convert the aggregated data to JSON format for rendering in the template
-    aggregated_data_json = json.dumps(aggregated_data, indent=4)
-    logging.debug(f"Aggregated data: {aggregated_data}")
-
-
-    return render_template('home/data_visualization.html', aggregated_data=aggregated_data_json)
+    # truyền JSON vào template
+    return render_template(
+        'home/data_visualization.html',
+        aggregated_data=json.dumps(aggregated_data)
+    )
 # Hiển thị và xử lý người dùng
 from sqlalchemy.orm import joinedload
 @blueprint.route('/manage_users', methods=['GET', 'POST'])

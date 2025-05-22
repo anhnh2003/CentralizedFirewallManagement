@@ -1,186 +1,107 @@
-
 {% extends "layouts/base.html" %}
 
-{% block title %} Dashboard {% endblock %} 
-
-<!-- Specific Page CSS goes HERE  -->
-{% block stylesheets %}
-
-    <!-- chartist CSS -->
-    <link href="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.css" rel="stylesheet">
-    <link href="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist-init.css" rel="stylesheet">
-    <link href="{{ config.ASSETS_ROOT }}/plugins/chartist-plugin-tooltip-master/dist/chartist-plugin-tooltip.css" rel="stylesheet">
-    <!--This page css - Morris CSS -->
-    <link href="{{ config.ASSETS_ROOT }}/plugins/c3-master/c3.min.css" rel="stylesheet">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPTables Log Visualization</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.js"></script>
-
-{% endblock stylesheets %}
-
 {% block content %}
-    <style>
-     body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        h1 {
-            text-align: center;
-        }
-        #charts-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .chart-container {
-            margin: 20px;
-            width: 300px;
-        }
-        .chart-title {
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .chart {
-            height: 300px;
-        }
-        .description {
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-        }
-        .description span {
-            display: inline-block;
-            margin-right: 10px;
-            padding: 5px 10px;
-            border-radius: 5px;
-            color: #fff;
-        }
-    </style>
+<style>
+  .page-content {
+    margin-left: 0px;  /* điều chỉnh cho khớp sidebar */
+    padding: 2rem;
+    background: #f8f9fa;
+  }
+  .card {
+    height: 100%;
+  }
+  .chart-container {
+    position: relative;
+    height: 250px;
+  }
+  .card-header {
+    font-weight: bold;
+    text-transform: capitalize;
+  }
+</style>
 
-    <!-- ============================================================== -->
-    <!-- Bread crumb and right sidebar toggle -->
-    <!-- ============================================================== -->
-    <div class="page-breadcrumb">
-        <div class="row align-items-center">
-            <div class="col-md-6 col-8 align-self-center">
-                <h3 class="page-title mb-0 p-0">Dashboard</h3>
-                <div class="d-flex align-items-center">
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-            <div class="col-md-6 col-4 align-self-center">
-                <div class="text-end upgrade-btn">
-                        <a href="https://appseed.us/support/"
-                        class="btn btn-danger d-none d-md-inline-block text-white" target="_blank">
-                        Support        
-                        </a>
-                </div>
-            </div>
+<div class="page-content">
+  <h2 class="mb-4">Firewall Log Analytics</h2>
+  <p>Thống kê và cảnh báo từ tất cả các node bạn được phân quyền.</p>
+
+  <div class="row">
+    {% for field, data in aggregated_data.items() %}
+    <div class="col-lg-6 col-md-12 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header">
+          {{ field.replace('_',' ')|title }}
         </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <canvas id="chart-{{ field }}"></canvas>
+          </div>
+          <hr>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>{{ field.replace('_',' ')|title }}</th>
+                  <th class="text-right">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in data %}
+                <tr>
+                  <td>{{ item[0] or '(empty)' }}</td>
+                  <td class="text-right">{{ item[1] }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
-    <!-- ============================================================== -->
-    <!-- End Bread crumb and right sidebar toggle -->
-    <!-- ============================================================== -->
-    <!-- ============================================================== -->
-    <!-- Container fluid  -->
-    <!-- ============================================================== -->
-    <div class="container form-container">
-        <h1>IPTables Log Data Visualization</h1>
-    <div id="charts-container"></div>
-    </div>
-
-    <script>
-        // Load the JSON data passed from the Flask backend
-        const aggregatedData = JSON.parse(`{{ aggregated_data|safe }}`);
-
-        // Exclude the 'details' field
-        const fieldsToExclude = ['detail'];
-        const filteredData = Object.keys(aggregatedData)
-            .filter(field => !fieldsToExclude.includes(field))
-            .reduce((obj, key) => {
-                obj[key] = aggregatedData[key];
-                return obj;
-            }, {});
-
-        // Function to render pie charts
-        function renderPieChart(containerId, title, data) {
-            // Create a container for the chart
-            const container = document.createElement('div');
-            container.className = 'chart-container';
-
-            // Add chart title
-            const chartTitle = document.createElement('div');
-            chartTitle.className = 'chart-title';
-            chartTitle.innerText = title;
-            container.appendChild(chartTitle);
-
-            // Add chart element
-            const chartElement = document.createElement('div');
-            chartElement.id = containerId;
-            chartElement.className = 'chart';
-            container.appendChild(chartElement);
-
-            document.getElementById('charts-container').appendChild(container);
-
-            // Generate chart with pastel border colors
-            c3.generate({
-                bindto: `#${containerId}`,
-                data: {
-                    columns: data,
-                    type: 'pie',
-                },
-                pie: {
-                    label: {
-                        format: function () {
-                            return ''; // No percentage displayed on the chart
-                        },
-                    },
-                },
-                color: {
-                    pattern: [
-                        '#A8D5E2', '#F6D186', '#FFABAB', '#B8F2E6', 
-                        '#FFC3A0', '#D5AAFF', '#C3E8FF', '#FFE7A0'
-                    ], // Pastel colors
-                },
-                transition: {
-                    duration: 500,
-                },
-                size: {
-                    width: 300,
-                    height: 300,
-                }
-            });
-        }
-
-        // Render a pie chart for each field in the JSON data
-        Object.keys(filteredData).forEach((field, index) => {
-            renderPieChart(`chart-${index}`, `Distribution of ${field}`, filteredData[field]);
-        });
-    </script>
-
+    {% endfor %}
+  </div>
+</div>
 {% endblock content %}
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Serialize the aggregated_data object into JSON
+    const aggregatedData = JSON.parse(`{{ aggregated_data | tojson | safe }}`);
 
-{% block javascripts %}
-
-    <!-- ============================================================== -->
-    <!-- This page plugins -->
-    <!-- ============================================================== -->
-    <!-- chartist chart -->
-    <script src="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.js"></script>
-    <script src="{{ config.ASSETS_ROOT }}/plugins/chartist-plugin-tooltip-master/dist/chartist-plugin-tooltip.min.js"></script>
-    <!--c3 JavaScript -->
-    <script src="{{ config.ASSETS_ROOT }}/plugins/d3/d3.min.js"></script>
-    <script src="{{ config.ASSETS_ROOT }}/plugins/c3-master/c3.min.js"></script>
-    <!--Custom JavaScript -->
-    <script src="{{ config.ASSETS_ROOT }}/js/pages/dashboards/dashboard1.js"></script>
-
-{% endblock javascripts %}
+    Object.entries(aggregatedData).forEach(([field, data]) => {
+      const ctx = document.getElementById(`chart-${field}`).getContext('2d');
+      const labels = data.map(item => item[0] || '(empty)');
+      const counts = data.map(item => item[1]);
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '# of occurrences',
+            data: counts,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 },
+              title: { display: true, text: field.replace('_',' ').toUpperCase() }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Count' }
+            }
+          },
+          plugins: {
+            tooltip: { mode: 'index', intersect: false },
+            legend: { display: false }
+          }
+        }
+      });
+    });
+  </script>
+{% endblock scripts %}
