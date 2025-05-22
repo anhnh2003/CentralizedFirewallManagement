@@ -1,27 +1,212 @@
 {% extends "layouts/base.html" %}
-{% block content %}
-<style>.page-content{margin-left:0px;padding:2rem;} .node-block{margin-bottom:2rem;}</style>
-<div class="page-content">
-  <h2 class="mb-4">View Rules Status</h2>
 
-  {% for node in nodes %}
-  <div class="node-block">
-    <h4>{{ node.hostname }} ({{ node.ip_address }})</h4>
-    {% for chain in ['INPUT','OUTPUT','FORWARD'] %}
-    <h5>{{ chain }} chain</h5>
-    <table class="table table-sm table-bordered">
-      <thead><tr><th>#</th><th>Target</th><th>Prot</th><th>Opt</th><th>Src</th><th>Dst</th><th>Spt</th><th>Dpt</th><th>Detail</th></tr></thead>
-      <tbody>
-        {% for row in status[node.id][chain] %}
-        <tr>
-          {% for col in row %}<td>{{ col }}</td>{% endfor %}
-        </tr>
+{% block content %}
+<style>
+    /* CSS từ file dashboard.html để tạo bảng có thể trượt ngang và kiểu dáng đẹp */
+    .page-content {
+        margin-left: 0px;
+        padding: 2rem;
+    }
+
+    .node-block {
+        margin-bottom: 2rem;
+        background-color: #ffffff; /* Thêm màu nền cho từng khối node */
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.1); /* Thêm đổ bóng nhẹ */
+        border-radius: 8px; /* Bo tròn góc */
+        padding: 1.5rem;
+    }
+
+    .table-wrapper {
+        margin: 10px 0px 20px; /* Điều chỉnh margin cho phù hợp với node-block */
+        font-family: 'Nunito Sans', sans-serif;
+        box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.1); /* Đổ bóng nhẹ hơn cho bảng */
+        overflow-x: auto; /* Add horizontal scroll bar */
+        border-radius: 5px; /* Bo tròn góc cho wrapper */
+    }
+
+    .fl-table {
+        border-radius: 5px;
+        font-family: 'Nunito Sans', sans-serif;
+        font-size: 12px;
+        font-weight: normal;
+        border: none;
+        border-collapse: collapse;
+        width: 100%;
+        max-width: 100%;
+        white-space: nowrap;
+        background-color: white;
+    }
+
+    .fl-table td, .fl-table th {
+        text-align: center;
+        font-family: inherit;
+        padding: 8px;
+    }
+
+    .fl-table td {
+        border-right: 1px solid #f8f8f8;
+        font-size: 12px;
+        font-family: inherit;
+    }
+
+    .fl-table thead th {
+        color: #ffffff;
+        background: #4fc3f7; /* Màu xanh dương */
+        font-family: inherit;
+    }
+
+    .fl-table thead th:nth-child(odd) {
+        color: #ffffff;
+        background: #324960; /* Màu xanh đậm hơn */
+        font-family: inherit;
+    }
+
+    .fl-table tr:nth-child(even) {
+        background: #F8F8F8;
+        font-family: inherit;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 767px) {
+        .fl-table {
+            display: block;
+            width: 100%;
+        }
+        .table-wrapper:before {
+            content: "Scroll horizontally >";
+            display: block;
+            text-align: right;
+            font-size: 11px;
+            color: #555; /* Màu chữ dễ nhìn hơn trên nền sáng */
+            padding: 0 0 10px;
+        }
+        .fl-table thead, .fl-table tbody, .fl-table thead th {
+            display: block;
+        }
+        .fl-table thead th:last-child {
+            border-bottom: none;
+        }
+        .fl-table thead {
+            float: left;
+        }
+        .fl-table tbody {
+            width: auto;
+            position: relative;
+            overflow-x: auto;
+        }
+        .fl-table td, .fl-table th {
+            padding: 20px .625em .625em .625em;
+            height: 60px;
+            vertical-align: middle;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            overflow-y: auto;
+            width: 120px;
+            font-size: 13px;
+            text-overflow: ellipsis;
+        }
+        .fl-table thead th {
+            text-align: left;
+            border-bottom: 1px solid #f7f7f9;
+        }
+        .fl-table tbody tr {
+            display: table-cell;
+        }
+        .fl-table tbody tr:nth-child(odd) {
+            background: none;
+        }
+        .fl-table tr:nth-child(even) {
+            background: transparent;
+        }
+        .fl-table tr td:nth-child(odd) {
+            background: #F8F8F8;
+            border-right: 1px solid #E6E4E4;
+        }
+        .fl-table tr td:nth-child(even) {
+            border-right: 1px solid #E6E4E4;
+        }
+        .fl-table tbody td {
+            display: block;
+            text-align: center;
+        }
+    }
+    /* Nút Delete */
+    .btn-delete {
+        background-color: #dc3545; /* Màu đỏ */
+        color: white;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none; /* Bỏ gạch chân cho thẻ <a> */
+        font-size: 12px;
+        transition: background-color 0.3s ease;
+    }
+    .btn-delete:hover {
+        background-color: #c82333; /* Màu đỏ đậm hơn khi hover */
+    }
+</style>
+
+<div class="page-content">
+    <h2 class="mb-4">View Rules Status</h2>
+
+    {% for node in nodes %}
+    <div class="node-block">
+        <h4>{{ node.hostname }} ({{ node.ip_address }})</h4>
+        {% for chain_name, chain_rules in status[node.id].items() %}
+            <h5>{{ chain_name }} Chain</h5>
+            <div class="table-wrapper">
+                <table class="fl-table">
+                    <thead>
+                        <tr>
+                            <th>Num</th>
+                            <th>Target</th>
+                            <th>Prot</th>
+                            <th>Opt</th>
+                            <th>Source</th>
+                            <th>Destination</th>
+                            <th>Source Port</th>
+                            <th>Destination Port</th>
+                            <th>Details</th>
+                            <th>Action</th> </tr>
+                    </thead>
+                    <tbody>
+                        {% for rule_index, rule_data in chain_rules %}
+                        <tr>
+                            <td>{{ rule_index }}</td> {# Đây là số thứ tự của luật #}
+                            <td>{{ rule_data[0] }}</td> {# Target #}
+                            <td>{{ rule_data[1] }}</td> {# Prot #}
+                            <td>{{ rule_data[2] }}</td> {# Opt #}
+                            <td>{{ rule_data[3] }}</td> {# Source #}
+                            <td>{{ rule_data[4] }}</td> {# Destination #}
+                            <td>{{ rule_data[5] }}</td> {# Source Port #}
+                            <td>{{ rule_data[6] }}</td> {# Destination Port #}
+                            <td>{{ rule_data[7] }}</td> {# Details (phần còn lại của luật) #}
+                            <td>
+                                {# Nút Delete: Gửi request POST đến endpoint delete_rule #}
+                                <form action="{{ url_for('home_blueprint.delete_rule') }}" method="post" style="display:inline;">
+                                    <input type="hidden" name="node_id" value="{{ node.id }}">
+                                    <input type="hidden" name="chain_name" value="{{ chain_name }}">
+                                    <input type="hidden" name="rule_index" value="{{ rule_index }}">
+                                    <button type="submit" class="btn-delete">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         {% endfor %}
-      </tbody>
-    </table>
+    </div>
     {% endfor %}
-  </div>
-  {% endfor %}
 
 </div>
-{% endblock %}
+{% endblock content %}
+
+{% block javascripts %}
+    <script src="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.js"></script>
+    <script src="{{ config.ASSETS_ROOT }}/plugins/chartist-plugin-tooltip-master/dist/chartist-plugin-tooltip.min.js"></script>
+    <script src="{{ config.ASSETS_ROOT }}/plugins/d3/d3.min.js"></script>
+    <script src="{{ config.ASSETS_ROOT }}/plugins/c3-master/c3.min.js"></script>
+    <script src="{{ config.ASSETS_ROOT }}/js/pages/dashboards/dashboard1.js"></script>
+{% endblock javascripts %}

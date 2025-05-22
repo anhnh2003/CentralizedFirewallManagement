@@ -90,41 +90,86 @@ def query_iptables(chain):
     output = process.communicate()
     return output[0].decode('utf-8')
 def parse_iptables_output(output):
-    #parse the output into a list of lists, where each inner list represents a row of the iptables output
-    #the inner lists must have the following format: [num, target, prot, opt, source, destination, s_port, d_port, detail], if the corresponding field is not present in the output, the value should be an empty string
-    #example output: 7    DROP       tcp  --  192.168.7.2          123.145.1.2          tcp spt:12 dpt:1233
-    #the correct format should be: ['7', 'DROP', 'tcp', '--', '192.168.7.2', '123.145.1.2', '12', '1233', 'tcp']
+    """
+    Parses the output of 'sudo iptables -L <chain> --line-numbers -n -v'.
+    Returns a list of tuples, where each tuple is (rule_number, [Target, Prot, Opt, Source, Destination, Spt, Dpt, Detail]).
+    Fields not present will be empty strings.
+    """
     table_data = []
     lines = output.split('\n')
-    #skip the last empty line
-    lines = lines[:-1]
+
+    # Regex để parse một dòng luật IPTables với --line-numbers -n -v
+    # Cố gắng bắt các cột chính và phần còn lại làm "detail"
+    # Các nhóm bắt: num, target, prot, opt, source, destination, và remaining_detail.
+    # remaining_detail sẽ được xử lý thêm để lấy SPT/DPT.
+    pattern = re.compile(
+        r'^\s*(?P<num>\d+)\s+'           # 1. Rule number
+        r'(?P<target>\S+)\s+'          # 2. Target (e.g., ACCEPT, DROP, LOG)
+        r'(?P<prot>\S+)\s+'            # 3. Protocol (e.g., tcp, udp, all)
+        r'(?P<opt>\S+)\s+'             # 4. Opt (e.g., --)
+        r'(?P<source>\S+)\s+'          # 5. Source IP/Network
+        r'(?P<destination>\S+)\s*'     # 6. Destination IP/Network
+        r'(?P<remaining_detail>.*)$'   # 7. All remaining details (non-greedy)
+    )
+
     for line in lines:
-        if line.startswith('Chain'):
+        line = line.strip()
+        # Bỏ qua các dòng tiêu đề và dòng trống
+        if not line or line.startswith('Chain') or line.startswith('num') or line.startswith('pkts'):
             continue
-        if line.startswith('target'):
-            continue
-        if line.startswith('num'):
-            continue
-        parts = line.split()
-        num = parts[0]
-        target = parts[1]
-        prot = parts[2]
-        opt = parts[3]
-        source = parts[4]
-        destination = parts[5]
-        
-        s_port_match = re.search(r'spt:(\S+)', line)
-        s_port = s_port_match.group(1) if s_port_match else 'any'
-        
-        d_port_match = re.search(r'dpt:(\S+)', line)
-        d_port = d_port_match.group(1) if d_port_match else 'any'
-        
-        # Remove the known fields from the line to get the detail
-        detail = line
-        for field in [num, target, prot, opt, source, destination, f'spt:{s_port}', f'dpt:{d_port}']:
-            detail = detail.replace(field, '', 1).strip()
-        
-        table_data.append([num, target, prot, opt, source, destination, s_port, d_port, detail])
+
+        match = pattern.match(line)
+        if match:
+            data = match.groupdict()
+            
+            num = int(data['num'])
+            target = data['target']
+            prot = data['prot']
+            opt = data['opt']
+            source = data['source']
+            destination = data['destination']
+            
+            remaining_detail = data['remaining_detail'].strip()
+            
+            s_port = ''
+            d_port = ''
+            
+            # Extract Source Port (SPT)
+            spt_match = re.search(r'SPT=(\S+)', remaining_detail)
+            if spt_match:
+                s_port = spt_match.group(1)
+                # Loại bỏ phần SPT đã tìm thấy khỏi remaining_detail để tránh trùng lặp hoặc sai sót
+                remaining_detail = remaining_detail.replace(spt_match.group(0), '').strip()
+            
+            # Extract Destination Port (DPT)
+            dpt_match = re.search(r'DPT=(\S+)', remaining_detail)
+            if dpt_match:
+                d_port = dpt_match.group(1)
+                # Loại bỏ phần DPT đã tìm thấy khỏi remaining_detail
+                remaining_detail = remaining_detail.replace(dpt_match.group(0), '').strip()
+
+            # Clean up any multiple spaces that might result from replacements
+            detail_final = re.sub(r'\s+', ' ', remaining_detail).strip()
+
+            # Chuẩn bị dữ liệu cho template (không bao gồm num ở đây, vì num sẽ là phần tử đầu tiên của tuple)
+            rule_data = [
+                target,
+                prot,
+                opt,
+                source,
+                destination,
+                s_port,
+                d_port,
+                detail_final
+            ]
+            
+            table_data.append((num, rule_data))
+        else:
+            # Nếu một dòng không khớp với định dạng luật mong đợi, có thể là dòng policy hoặc lỗi
+            # Bạn có thể log lỗi hoặc bỏ qua. Ở đây chúng ta bỏ qua.
+            # print(f"Warning: Could not parse iptables line: {line}")
+            pass
+
     return table_data
 
 def validate_iptables_command(command):
@@ -202,29 +247,6 @@ def is_valid_rule_number(rule_number):
         return rule_number > 0
     except ValueError:
         return False
-# --- View Logs from all nodes the user can access ---
-@blueprint.route('/view_log')
-@login_required
-def view_log():
-    # Lấy tất cả node mà user có entry trong UserNodes (role viewer hoặc manager)
-    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=current_user.id)]
-    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
-
-    all_entries = []
-    for node in nodes:
-        # Truy vấn log file qua SSH
-        cmd = "cat /var/log/iptables.log"
-        res = run_ssh_on_node(node, cmd)
-        if res.returncode != 0:
-            flash(f"Không thể lấy log từ {node.hostname}: {res.stderr}", 'warning')
-            continue
-        # parse từng dòng
-        for line in res.stdout.splitlines():
-            entry = parse_log_line(line)
-            if entry:
-                all_entries.append(entry)
-
-    return render_template('home/view_log.html', log_entries=all_entries)
 def parse_log_line(line):
     # Define the regex pattern
     pattern = re.compile(
@@ -249,37 +271,107 @@ def parse_log_line(line):
         return match.groupdict()
     return {}
 import json
+# --- View Logs from all nodes the user can access ---
+@blueprint.route('/view_log')
+@login_required
+def view_log():
+    # Lấy tất cả node mà user có entry trong UserNodes (role viewer hoặc manager)
+    # Tuy nhiên, trong trường hợp này, chúng ta sẽ duyệt qua các thư mục IP trong /var/log/remote
+    # và chỉ hiển thị log từ các IP mà user có quyền xem.
+    user_allowed_ips = set()
+    node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
+    for entry in node_entries:
+        node = Nodes.query.get(entry.node_id)
+        if node:
+            user_allowed_ips.add(node.ip_address) # Giả định Nodes có trường ip_address
+
+    base_log_dir = "/var/log/remote/"
+    all_entries = []
+
+    if not os.path.exists(base_log_dir):
+        flash(f"Thư mục log từ xa '{base_log_dir}' không tồn tại.", 'warning')
+        return render_template('home/view_log.html', log_entries=[])
+
+    # Duyệt qua các thư mục con trong /var/log/remote (mỗi thư mục là một IP client)
+    for client_ip_dir in os.listdir(base_log_dir):
+        # Bỏ qua các IP không hợp lệ hoặc localhost
+        if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
+            continue
+
+        # Chỉ xử lý các IP mà người dùng hiện tại có quyền truy cập
+        if client_ip_dir not in user_allowed_ips:
+            continue
+
+        iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
+
+        if os.path.exists(iptables_log_path):
+            try:
+                with open(iptables_log_path, 'r') as f:
+                    for line in f:
+                        entry = parse_log_line(line)
+                        if entry:
+                            # Thêm thông tin IP của client vào mỗi entry log
+                            entry['client_ip'] = client_ip_dir
+                            all_entries.append(entry)
+            except Exception as e:
+                flash(f"Lỗi khi đọc file log {iptables_log_path}: {e}", 'error')
+        else:
+            flash(f"File '{iptables_log_path}' không tồn tại.", 'info')
+
+    return render_template('home/view_log.html', log_entries=all_entries)
+
 # --- Data Visualization from all accessible nodes ---
 @blueprint.route('/data_visualization')
 @login_required
 def data_visualization():
-    # Tương tự, lấy node list
-    node_ids = [un.node_id for un in UserNodes.query.filter_by(user_id=current_user.id)]
-    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
+    # Tương tự như view_log, lấy danh sách IP mà user có quyền truy cập
+    user_allowed_ips = set()
+    node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
+    for entry in node_entries:
+        node = Nodes.query.get(entry.node_id)
+        if node:
+            user_allowed_ips.add(node.ip_address)
 
+    base_log_dir = "/var/log/remote/"
     all_entries = []
-    for node in nodes:
-        cmd = "cat /var/log/iptables.log"
-        res = run_ssh_on_node(node, cmd)
-        if res.returncode != 0:
+
+    if not os.path.exists(base_log_dir):
+        flash(f"Thư mục log từ xa '{base_log_dir}' không tồn tại.", 'warning')
+        # Thay vì redirect, có thể hiển thị trang trống với thông báo
+        return render_template('home/data_visualization.html', aggregated_data=json.dumps({}))
+
+    for client_ip_dir in os.listdir(base_log_dir):
+        if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
             continue
-        for line in res.stdout.splitlines():
-            entry = parse_log_line(line)
-            if entry:
-                all_entries.append(entry)
+
+        if client_ip_dir not in user_allowed_ips:
+            continue
+
+        iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
+
+        if os.path.exists(iptables_log_path):
+            try:
+                with open(iptables_log_path, 'r') as f:
+                    for line in f:
+                        entry = parse_log_line(line)
+                        if entry:
+                            entry['client_ip'] = client_ip_dir # Thêm IP của client vào entry
+                            all_entries.append(entry)
+            except Exception as e:
+                # Không hiển thị flash cho từng lỗi file trong visualization để tránh quá tải
+                print(f"Error reading log file {iptables_log_path}: {e}") # Log lỗi ra console
 
     if not all_entries:
-        flash("Không có bản ghi log nào để hiển thị.", 'warning')
-        return redirect(url_for('home_blueprint.view_log'))
+        flash("Không có bản ghi log nào để hiển thị dữ liệu.", 'warning')
+        return render_template('home/data_visualization.html', aggregated_data=json.dumps({}))
 
     # Các trường cần vẽ
-    fields = ["src_ip", "dst_ip", "protocol", "in_interface", "out_interface"]
+    fields = ["src_ip", "dst_ip", "protocol", "in_interface", "out_interface", "client_ip"] # Thêm client_ip vào để có thể visualize
     aggregated_data = {}
     for field in fields:
         values = [e[field] for e in all_entries if e.get(field)]
         if values:
             cnt = Counter(values)
-            # thành [[key,count],...]
             aggregated_data[field] = [[k, v] for k, v in cnt.items()]
 
     # truyền JSON vào template
@@ -287,6 +379,7 @@ def data_visualization():
         'home/data_visualization.html',
         aggregated_data=json.dumps(aggregated_data)
     )
+
 # Hiển thị và xử lý người dùng
 from sqlalchemy.orm import joinedload
 @blueprint.route('/manage_users', methods=['GET', 'POST'])
@@ -759,18 +852,21 @@ def view_status():
     # both manager & viewer can view
     entries = UserNodes.query.filter_by(user_id=current_user.id).all()
     node_ids = [un.node_id for un in entries]
-    nodes    = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
+    nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
 
     status = {}
     for node in nodes:
         status[node.id] = {}
         for chain in ['INPUT','OUTPUT','FORWARD']:
-            cmd = f"sudo iptables -L {chain} --line-numbers"
+            # Thêm -n (numeric output) và -v (verbose) để có đủ thông tin và định dạng nhất quán
+            cmd = f"sudo iptables -L {chain} --line-numbers -n -v"
             res = run_ssh_on_node(node, cmd)
             if res.returncode == 0:
+                # parse_iptables_output bây giờ trả về (rule_number, [cols])
                 status[node.id][chain] = parse_iptables_output(res.stdout)
             else:
-                status[node.id][chain] = [[ 'ERR', res.stderr ]]
+                flash(f"Không thể lấy trạng thái IPTables từ {node.hostname} chain {chain}: {res.stderr}", 'warning')
+                status[node.id][chain] = [] # Trả về list rỗng nếu có lỗi để tránh lỗi template
     return render_template('home/view_status.html', nodes=nodes, status=status)
 
 @blueprint.route('/delete_rule')
@@ -778,31 +874,35 @@ def view_status():
 @role_required('admin', 'user')
 def delete_rule():
     """
-    URL params: node_id, chain, rule_number
+    Xóa luật IPTables trên node. Nhận dữ liệu qua POST.
     """
     try:
-        nid     = int(request.args.get('node_id'))
-        chain   = request.args.get('chain','').upper()
-        rn      = int(request.args.get('rule_number'))
-    except:
-        flash('Invalid parameters.', 'danger')
+        nid = request.form.get('node_id', type=int) # Lấy từ request.form
+        chain = request.form.get('chain_name', '').upper() # Lấy từ request.form
+        rn = request.form.get('rule_index', type=int) # Lấy từ request.form
+    except Exception as e:
+        flash(f'Invalid parameters: {e}', 'danger')
         return redirect(url_for('home_blueprint.view_status'))
 
-    # check if only manager can delete
-    if not UserNodes.query.filter_by(
-            user_id=current_user.id,
-            node_id=nid,
-            role='manager'
-        ).first():
+    # Kiểm tra quyền hạn của người dùng (đã được xử lý bởi @role_required,
+    # nhưng vẫn có thể giữ kiểm tra này như một lớp bảo vệ bổ sung nếu cần)
+    user_node_role = UserNodes.query.filter_by(
+        user_id=current_user.id,
+        node_id=nid
+    ).first()
+
+    # Thêm kiểm tra vai trò cụ thể ở đây nếu decorator role_required không đủ chi tiết
+    # Ví dụ: nếu admin không có entry trong UserNodes cho node này nhưng vẫn có quyền
+    if not user_node_role or user_node_role.role not in ['manager', 'admin']:
         flash('You do not have permission to delete rules on this node.', 'danger')
         return redirect(url_for('home_blueprint.view_status'))
 
     node = Nodes.query.get_or_404(nid)
-    cmd = f"sudo iptables -D {chain} {rn}"
-    res = run_ssh_on_node(node, cmd)
-    if res.returncode != 0:
-        flash(f"Error deleting on {node.hostname}: {res.stderr}", 'danger')
-    else:
-        flash('Rule deleted successfully.', 'success')
 
+    # Lệnh xóa luật IPTables
+    cmd_delete = f"sudo iptables -D {chain} {rn}"
+    res_delete = run_ssh_on_node(node, cmd_delete)
+
+    if res_delete.returncode != 0:
+        flash(f"Error deleting rule {rn} from chain {chain} on {node.hostname}: {res_delete.stderr}", 'danger')
     return redirect(url_for('home_blueprint.view_status'))
