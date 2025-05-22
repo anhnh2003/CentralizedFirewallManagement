@@ -163,6 +163,7 @@
 <script>
     // Đảm bảo script được chạy sau khi DOM đã tải hoàn chỉnh
     document.addEventListener('DOMContentLoaded', function() {
+        console.log("JavaScript loaded and DOM content loaded!");
         const nodeCheckboxes = document.querySelectorAll('.node-checkbox');
         const showSelectedNodesBtn = document.getElementById('showSelectedNodes');
         const showAllNodesBtn = document.getElementById('showAllNodes');
@@ -190,6 +191,7 @@
         // --- Gắn sự kiện cho nút "Hiển thị luật của Nodes đã chọn" ---
         // Kiểm tra xem nút có tồn tại không trước khi gắn sự kiện
         if (showSelectedNodesBtn) {
+            console.log("showSelectedNodesBtn found!"); // <--- THÊM DÒNG NÀY
             showSelectedNodesBtn.addEventListener('click', function() {
                 hideAllNodeSections(); // Ẩn tất cả trước
                 nodeCheckboxes.forEach(checkbox => {
@@ -205,6 +207,7 @@
 
         // --- Gắn sự kiện cho nút "Hiển thị tất cả Nodes" ---
         if (showAllNodesBtn) {
+            console.log("showAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
             showAllNodesBtn.addEventListener('click', function() {
                 nodeCheckboxes.forEach(checkbox => {
                     showNodeSection(checkbox.value);
@@ -218,6 +221,7 @@
 
         // --- Gắn sự kiện cho nút "Ẩn tất cả Nodes" ---
         if (hideAllNodesBtn) {
+            console.log("hideAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
             hideAllNodesBtn.addEventListener('click', function() {
                 hideAllNodeSections();
                 nodeCheckboxes.forEach(checkbox => {
