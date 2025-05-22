@@ -849,29 +849,41 @@ def add_rule():
 @login_required
 @role_required('admin', 'user')
 def view_status():
-    # both manager & viewer can view
-    entries = UserNodes.query.filter_by(user_id=current_user.id).all()
-    node_ids = [un.node_id for un in entries]
+    # Lấy tất cả các node mà người dùng hiện tại có quyền (viewer hoặc manager)
+    user_nodes_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
+    
+    node_ids = [un.node_id for un in user_nodes_entries]
     nodes = Nodes.query.filter(Nodes.id.in_(node_ids)).all()
 
+    # Tạo một dictionary để lưu thông tin node, bao gồm vai trò của người dùng
+    # Ví dụ: {node_id: {'object': node_obj, 'role': 'manager/viewer'}}
+    nodes_with_roles = {}
+    for entry in user_nodes_entries:
+        node_obj = next((n for n in nodes if n.id == entry.node_id), None)
+        if node_obj:
+            nodes_with_roles[node_obj.id] = {
+                'object': node_obj,
+                'role': entry.role # Lưu vai trò của user trên node này
+            }
+
     status = {}
-    for node in nodes:
+    for node_entry in nodes_with_roles.values():
+        node = node_entry['object']
         status[node.id] = {}
         for chain in ['INPUT','OUTPUT','FORWARD']:
-            # Thêm -n (numeric output) và -v (verbose) để có đủ thông tin và định dạng nhất quán
-            cmd = f"sudo iptables -L {chain} --line-number"
+            cmd = f"sudo iptables -L {chain} --line-numbers"
             res = run_ssh_on_node(node, cmd)
             if res.returncode == 0:
-                # parse_iptables_output bây giờ trả về (rule_number, [cols])
                 status[node.id][chain] = parse_iptables_output(res.stdout)
             else:
                 flash(f"Không thể lấy trạng thái IPTables từ {node.hostname} chain {chain}: {res.stderr}", 'warning')
-                status[node.id][chain] = [] # Trả về list rỗng nếu có lỗi để tránh lỗi template
-    return render_template('home/view_status.html', nodes=nodes, status=status)
+                status[node.id][chain] = [] # Trả về list rỗng nếu có lỗi
 
-@blueprint.route('/delete_rule')
+    # Truyền nodes_with_roles thay vì chỉ nodes
+    return render_template('home/view_status.html', nodes_with_roles=nodes_with_roles, status=status)
+
+@blueprint.route('/delete_rule', methods=['POST'])
 @login_required
-@role_required('admin', 'user')
 def delete_rule():
     """
     Xóa luật IPTables trên node. Nhận dữ liệu qua POST.
