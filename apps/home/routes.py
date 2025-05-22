@@ -90,86 +90,41 @@ def query_iptables(chain):
     output = process.communicate()
     return output[0].decode('utf-8')
 def parse_iptables_output(output):
-    """
-    Parses the output of 'sudo iptables -L <chain> --line-numbers -n -v'.
-    Returns a list of tuples, where each tuple is (rule_number, [Target, Prot, Opt, Source, Destination, Spt, Dpt, Detail]).
-    Fields not present will be empty strings.
-    """
+    #parse the output into a list of lists, where each inner list represents a row of the iptables output
+    #the inner lists must have the following format: [num, target, prot, opt, source, destination, s_port, d_port, detail], if the corresponding field is not present in the output, the value should be an empty string
+    #example output: 7    DROP       tcp  --  192.168.7.2          123.145.1.2          tcp spt:12 dpt:1233
+    #the correct format should be: ['7', 'DROP', 'tcp', '--', '192.168.7.2', '123.145.1.2', '12', '1233', 'tcp']
     table_data = []
     lines = output.split('\n')
-
-    # Regex để parse một dòng luật IPTables với --line-numbers -n -v
-    # Cố gắng bắt các cột chính và phần còn lại làm "detail"
-    # Các nhóm bắt: num, target, prot, opt, source, destination, và remaining_detail.
-    # remaining_detail sẽ được xử lý thêm để lấy SPT/DPT.
-    pattern = re.compile(
-        r'^\s*(?P<num>\d+)\s+'           # 1. Rule number
-        r'(?P<target>\S+)\s+'          # 2. Target (e.g., ACCEPT, DROP, LOG)
-        r'(?P<prot>\S+)\s+'            # 3. Protocol (e.g., tcp, udp, all)
-        r'(?P<opt>\S+)\s+'             # 4. Opt (e.g., --)
-        r'(?P<source>\S+)\s+'          # 5. Source IP/Network
-        r'(?P<destination>\S+)\s*'     # 6. Destination IP/Network
-        r'(?P<remaining_detail>.*)$'   # 7. All remaining details (non-greedy)
-    )
-
+    #skip the last empty line
+    lines = lines[:-1]
     for line in lines:
-        line = line.strip()
-        # Bỏ qua các dòng tiêu đề và dòng trống
-        if not line or line.startswith('Chain') or line.startswith('num') or line.startswith('pkts'):
+        if line.startswith('Chain'):
             continue
-
-        match = pattern.match(line)
-        if match:
-            data = match.groupdict()
-            
-            num = int(data['num'])
-            target = data['target']
-            prot = data['prot']
-            opt = data['opt']
-            source = data['source']
-            destination = data['destination']
-            
-            remaining_detail = data['remaining_detail'].strip()
-            
-            s_port = ''
-            d_port = ''
-            
-            # Extract Source Port (SPT)
-            spt_match = re.search(r'SPT=(\S+)', remaining_detail)
-            if spt_match:
-                s_port = spt_match.group(1)
-                # Loại bỏ phần SPT đã tìm thấy khỏi remaining_detail để tránh trùng lặp hoặc sai sót
-                remaining_detail = remaining_detail.replace(spt_match.group(0), '').strip()
-            
-            # Extract Destination Port (DPT)
-            dpt_match = re.search(r'DPT=(\S+)', remaining_detail)
-            if dpt_match:
-                d_port = dpt_match.group(1)
-                # Loại bỏ phần DPT đã tìm thấy khỏi remaining_detail
-                remaining_detail = remaining_detail.replace(dpt_match.group(0), '').strip()
-
-            # Clean up any multiple spaces that might result from replacements
-            detail_final = re.sub(r'\s+', ' ', remaining_detail).strip()
-
-            # Chuẩn bị dữ liệu cho template (không bao gồm num ở đây, vì num sẽ là phần tử đầu tiên của tuple)
-            rule_data = [
-                target,
-                prot,
-                opt,
-                source,
-                destination,
-                s_port,
-                d_port,
-                detail_final
-            ]
-            
-            table_data.append((num, rule_data))
-        else:
-            # Nếu một dòng không khớp với định dạng luật mong đợi, có thể là dòng policy hoặc lỗi
-            # Bạn có thể log lỗi hoặc bỏ qua. Ở đây chúng ta bỏ qua.
-            # print(f"Warning: Could not parse iptables line: {line}")
-            pass
-
+        if line.startswith('target'):
+            continue
+        if line.startswith('num'):
+            continue
+        parts = line.split()
+        num = parts[0]
+        target = parts[1]
+        prot = parts[2]
+        opt = parts[3]
+        source = parts[4]
+        destination = parts[5]
+        
+        s_port_match = re.search(r'spt:(\S+)', line)
+        s_port = s_port_match.group(1) if s_port_match else 'any'
+        
+        d_port_match = re.search(r'dpt:(\S+)', line)
+        d_port = d_port_match.group(1) if d_port_match else 'any'
+        
+        # Remove the known fields from the line to get the detail
+        detail = line
+        for field in [num, target, prot, opt, source, destination, f'spt:{s_port}', f'dpt:{d_port}']:
+            detail = detail.replace(field, '', 1).strip()
+        
+        table_data.append([num, target, prot, opt, source, destination, s_port, d_port, detail])
     return table_data
 
 def validate_iptables_command(command):
@@ -856,7 +811,7 @@ def view_status():
         status[node.id] = {}
         for chain in ['INPUT','OUTPUT','FORWARD']:
             # Thêm -n (numeric output) và -v (verbose) để có đủ thông tin và định dạng nhất quán
-            cmd = f"sudo iptables -L {chain} --line-numbers -n -v"
+            cmd = f"sudo iptables -L {chain} --line-number"
             res = run_ssh_on_node(node, cmd)
             if res.returncode == 0:
                 # parse_iptables_output bây giờ trả về (rule_number, [cols])
