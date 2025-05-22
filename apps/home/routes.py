@@ -323,8 +323,6 @@ def view_log():
 # --- Data Visualization from all accessible nodes ---
 @blueprint.route('/data_visualization')
 @login_required
-@blueprint.route('/data_visualization')
-@login_required
 def data_visualization():
     user_allowed_ips = set()
     node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
