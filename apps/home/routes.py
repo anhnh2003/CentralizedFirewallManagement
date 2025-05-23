@@ -251,29 +251,42 @@ def is_valid_rule_number(rule_number):
     except ValueError:
         return False
 def parse_log_line(line):
-    # Define the regex pattern
+    # Cập nhật regex để khớp với định dạng log thực tế của bạn
+    # Ví dụ: "May 23 15:03:27 vsclab kernel: [17826.753610] [IPTABLES] OUTPUT: IN= OUT=lo SRC=127.0.0.1 DST=127.0.0.53 LEN=71 TOS=0x00 PREC=0x00 TTL=64 ID=11809 DF PROTO=UDP SPT=37526 DPT=53 LEN=51"
+    
     pattern = re.compile(
-        r'(?P<timestamp>\S+)\s+(?P<hostname>\S+)\s+kernel:\s+(?P<chain>[A-Z]+)\s+LOG:\s+'
-        r'IN=(?P<in_interface>\S*)\s+OUT=(?P<out_interface>\S*)\s+'
-        r'(?:MAC=(?P<mac>[A-Fa-f0-9: ]+)\s+)?'
-        r'SRC=(?P<src_ip>\S+)\s+DST=(?P<dst_ip>\S+)\s+LEN=(?P<length>\d+)\s+'
-        r'TOS=(?P<tos>\S+)\s+PREC=(?P<prec>\S+)\s+'
-        r'TTL=(?P<ttl>\d+)\s+ID=(?P<id>\d+)\s+'
-        r'(?:DF\s+)?PROTO=(?P<protocol>\S+)\s+'
-        r'(?:SPT=(?P<src_port>\d+)\s+DPT=(?P<dst_port>\d+)\s+)?'
-        r'(?:TYPE=(?P<type>\d+)\s+CODE=(?P<code>\d+)\s+ID=(?P<icmp_id>\d+)\s+SEQ=(?P<icmp_seq>\d+)\s+)?'
-        r'(?:WINDOW=(?P<window>\d+)\s+RES=(?P<res>\S+)\s+)?'
-        r'(?P<detail>.+)?'
+        r'^(?P<timestamp>\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2})\s+'  # Timestamp: May 23 15:03:27
+        r'(?P<hostname>\S+)\s+'                             # Hostname: vsclab
+        r'kernel:\s+'                                       # "kernel: "
+        r'\[(?P<kernel_timestamp>\d+\.\d+)\]\s+'            # Internal kernel timestamp: [17826.753610]
+        r'\[IPTABLES\]\s+'                                  # "[IPTABLES] "
+        r'(?P<chain>[A-Z]+):\s+'                            # Chain (OUTPUT/INPUT): "OUTPUT: " hoặc "INPUT: "
+        r'IN=(?P<in_interface>\S*)\s+'                      # IN= (có thể rỗng)
+        r'OUT=(?P<out_interface>\S*)\s+'                    # OUT= (có thể rỗng)
+        r'(?:MAC=(?P<mac>[A-Fa-f0-9: ]+)\s+)?'              # MAC (tùy chọn)
+        r'SRC=(?P<src_ip>\S+)\s+'                           # SRC=
+        r'DST=(?P<dst_ip>\S+)\s+'                           # DST=
+        r'LEN=(?P<length>\d+)\s+'                           # LEN=
+        r'TOS=(?P<tos>\S+)\s+'                              # TOS=
+        r'PREC=(?P<prec>\S+)\s+'                            # PREC=
+        r'TTL=(?P<ttl>\d+)\s+'                              # TTL=
+        r'ID=(?P<id>\d+)\s+'                                # ID=
+        r'(?:DF\s+)?'                                       # DF (tùy chọn)
+        r'PROTO=(?P<protocol>\S+)\s+'                       # PROTO=
+        r'(?:SPT=(?P<src_port>\d+)\s+DPT=(?P<dst_port>\d+)\s+)?' # SPT/DPT (tùy chọn)
+        r'(?:TYPE=(?P<type>\d+)\s+CODE=(?P<code>\d+)\s+ID=(?P<icmp_id>\d+)\s+SEQ=(?P<icmp_seq>\d+)\s+)?' # ICMP (tùy chọn)
+        r'(?:WINDOW=(?P<window>\d+)\s+RES=(?P<res>\S+)\s+)?' # TCP Window (tùy chọn)
+        r'(?P<detail>.*)?'                                  # Các phần còn lại (nếu có)
     )
 
-    # Match the line using the pattern
-    match = pattern.match(line)
+    # Đảm bảo đây là .search()
+    match = pattern.search(line)
 
-    # If the pattern matches, return a dictionary of parsed fields
     if match:
         return match.groupdict()
     else:
-        print(f"DEBUG: Could not parse log line: {line.strip()}")
+        # In ra dòng log không thể parse để debug thêm
+        print(f"DEBUG_PARSE_FINAL_CHECK: Could not parse line: {line.strip()}")
         return {}
 import json
 # --- View Logs from all nodes the user can access ---
