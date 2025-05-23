@@ -293,18 +293,21 @@ import json
 @blueprint.route('/view_log')
 @login_required
 def view_log():
-    # Lấy tất cả node mà user có entry trong UserNodes (role viewer hoặc manager)
-    # Tuy nhiên, trong trường hợp này, chúng ta sẽ duyệt qua các thư mục IP trong /var/log/remote
-    # và chỉ hiển thị log từ các IP mà user có quyền xem.
     print("\nDEBUG_VIEW_LOG: Starting view_log function.")
-    user_allowed_ips = set()
+    user_allowed_nodes_map = {} # Sử dụng dictionary để lưu trữ node_id và node_ip dễ dàng
+    
     node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
     for entry in node_entries:
         node = Nodes.query.get(entry.node_id)
         if node:
-            print(f"DEBUG_VIEW_LOG: User {current_user.id} allowed IP: {node.ip_address}") # Debug: Các IP được phép
-            user_allowed_ips.add(node.ip_address) # Giả định Nodes có trường ip_address
-    print(f"DEBUG_VIEW_LOG: Found {len(node_entries)} node entries for user {current_user.id}.") # Debug: Số lượng node entries
+            print(f"DEBUG_VIEW_LOG: User {current_user.id} allowed IP: {node.ip_address}, Node ID: {node.id}")
+            # Lưu trữ cả ip_address và id của node
+            user_allowed_nodes_map[node.ip_address] = {
+                'node_id': node.id,
+                'node_ip': node.ip_address
+            }
+    
+    print(f"DEBUG_VIEW_LOG: Found {len(node_entries)} node entries for user {current_user.id}.")
     base_log_dir = "/var/log/remote/"
     all_entries = []
 
@@ -319,28 +322,32 @@ def view_log():
             continue
 
         # Chỉ xử lý các IP mà người dùng hiện tại có quyền truy cập
-        if client_ip_dir not in user_allowed_ips:
+        if client_ip_dir not in user_allowed_nodes_map:
             continue
 
         iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
-        print(f"DEBUG_VIEW_LOG: Found file {iptables_log_path} for user {current_user.id}.")
+        print(f"DEBUG_VIEW_LOG: Checking file {iptables_log_path}.")
+        
         if os.path.exists(iptables_log_path):
-            print(f"DEBUG_VIEW_LOG: file {iptables_log_path} exist.")
+            print(f"DEBUG_VIEW_LOG: File {iptables_log_path} exists.")
             try:
                 with open(iptables_log_path, 'r') as f:
-                    print("DEBUG_VIEW_LOG: File content:",f)
+                    print(f"DEBUG_VIEW_LOG: Reading file {iptables_log_path}...")
                     for line in f:
                         entry = parse_log_line(line)
-                        print("line: ", entry)
                         if entry:
-                            # Thêm thông tin IP của client vào mỗi entry log
-                            entry['client_ip'] = client_ip_dir
+                            # Thêm thông tin IP của client (node_ip) và node_id vào mỗi entry log
+                            node_info = user_allowed_nodes_map[client_ip_dir]
+                            entry['node_id'] = node_info['node_id']
+                            entry['node_ip'] = node_info['node_ip'] # Đổi tên thành node_ip cho rõ ràng
                             all_entries.append(entry)
-                
+                print(f"DEBUG_VIEW_LOG: Successfully processed {len(all_entries)} entries from {iptables_log_path}.")
             except Exception as e:
                 flash(f"Lỗi khi đọc file log {iptables_log_path}: {e}", 'error')
+                print(f"ERROR_VIEW_LOG: Error reading log file {iptables_log_path}: {e}")
         else:
             flash(f"File '{iptables_log_path}' không tồn tại.", 'info')
+            print(f"DEBUG_VIEW_LOG: File '{iptables_log_path}' does not exist.")
 
     return render_template('home/view_log.html', log_entries=all_entries)
 
