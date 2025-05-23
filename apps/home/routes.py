@@ -315,9 +315,9 @@ def view_log():
             print(f"DEBUG_VIEW_LOG: file {iptables_log_path} exist.")
             try:
                 with open(iptables_log_path, 'r') as f:
+                    print("DEBUG_VIEW_LOG: File content:",f)
                     for line in f:
                         entry = parse_log_line(line)
-                        print("File log: ", f)
                         print("line: ", entry)
                         if entry:
                             # Thêm thông tin IP của client vào mỗi entry log
