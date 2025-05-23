@@ -1,70 +1,77 @@
 {% extends "layouts/base.html" %}
 
+{# Thêm DataTables CSS vào block stylesheets. Đảm bảo nó được giữ lại bằng {{ super() }} #}
 {% block stylesheets %}
-    {{ super() }}
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" />
+    {{ super() }} 
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css"/>
     <style>
+        /* Custom CSS cho layout và các phần tử không phải bảng DataTables */
         .page-content {
             padding: 2rem;
             background: #f8f9fa;
         }
-
         .card {
             border: 1px solid #e0e0e0;
             border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, .05);
+            box-shadow: 0 2px 4px rgba(0,0,0,.05);
         }
-
-        .data-table {
+        .node-table {
             margin-top: 20px;
-            word-wrap: break-word;
-            word-break: break-all;
-            vertical-align: top;
-            white-space: normal !important;
         }
-
-        .dataTables_wrapper {
-            width: 100%;
-            overflow-x: auto; /* Đảm bảo bảng có thể cuộn ngang */
-        }
-
-        .dataTables_wrapper .dataTables_filter,
-        .dataTables_wrapper .dataTables_length {
+        .node-header {
+            background-color: #e9ecef;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: bold;
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            align-items: center;
         }
-
-        .dataTables_wrapper .dataTables_filter input {
-            padding: 0.375rem 0.75rem;
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            margin-left: 0.5rem;
+        .node-content {
+            padding: 15px;
         }
-
+        .hidden {
+            display: none;
+        }
+        /* CSS cho bảng DataTables để các từ dài tự động xuống dòng và căn chỉnh */
+        .data-table td {
+            word-wrap: break-word; /* Cho phép từ dài tự động xuống dòng */
+            word-break: break-all; /* Ngắt từ bất cứ đâu nếu cần */
+            vertical-align: top; /* Căn trên để nội dung dài không đẩy ô quá cao */
+        }
+        .data-table th, .data-table td {
+            white-space: normal !important; /* Đảm bảo nội dung không bị ép vào một dòng */
+        }
+        /* Điều chỉnh styling của DataTables controls cho giống Bootstrap */
+        .dataTables_wrapper .dataTables_filter input,
         .dataTables_wrapper .dataTables_length select {
-            padding: 0.375rem 0.75rem;
+            padding: 0.375rem 0.75rem; /* Bootstrap-like padding */
             border: 1px solid #ced4da;
             border-radius: 0.25rem;
+            margin-left: 0.5rem; /* Khoảng cách với label */
+            display: inline-block; /* Để hiển thị trên cùng một dòng với label */
         }
-
+        .dataTables_wrapper .dataTables_filter label,
+        .dataTables_wrapper .dataTables_length label {
+            font-weight: normal; /* Đảm bảo label không in đậm quá mức */
+        }
         .dataTables_wrapper .dataTables_paginate .paginate_button {
             padding: 0.5em 0.8em;
             margin-left: 2px;
             border: 1px solid transparent;
             border-radius: 2px;
             background-color: #e9ecef;
-            color: #333 !important;
+            color: #333 !important; /* !important để override default DataTables color */
             cursor: pointer;
             text-decoration: none;
         }
-
-        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
             background-color: #007bff;
             color: white !important;
             border-color: #007bff;
         }
-
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
             background-color: #0056b3;
             color: white !important;
@@ -85,7 +92,9 @@
     {% endwith %}
 
     <div class="card mb-4 shadow-sm">
-        <div class="card-header">Chọn Nodes để hiển thị luật</div>
+        <div class="card-header">
+            Chọn Nodes để hiển thị luật
+        </div>
         <div class="card-body">
             <div class="form-group">
                 <label for="nodeSelector">Chọn Node(s):</label>
@@ -94,7 +103,8 @@
                         {% set node = node_info.object %}
                         {% set role = node_info.role %}
                         <div class="form-check">
-                            <input class="form-check-input node-checkbox" type="checkbox" value="{{ node.id }}" id="nodeCheck-{{ node.id }}">
+                            <input class="form-check-input node-checkbox" type="checkbox" 
+                                   value="{{ node.id }}" id="nodeCheck-{{ node.id }}">
                             <label class="form-check-label" for="nodeCheck-{{ node.id }}">
                                 {{ node.hostname }} ({{ node.ip_address }}) - Role: {{ role | capitalize }}
                             </label>
@@ -123,6 +133,8 @@
                     {% if status[node.id] %}
                         {% for chain, rules in status[node.id].items() %}
                         <h5 class="mt-4">Chain: {{ chain }}</h5>
+                        {# Thêm class 'data-table' để DataTables có thể nhận diện #}
+                        {# table-responsive để Bootstrap xử lý cuộn ngang khi không có DataTables #}
                         <div class="table-responsive">
                             <table class="table table-bordered table-striped table-hover data-table" id="table-{{ node.id }}-{{ chain }}">
                                 <thead class="thead-dark">
@@ -144,14 +156,14 @@
                                         {% for rule_index, rule_data in rules %}
                                         <tr>
                                             <td>{{ rule_index }}</td>
-                                            <td>{{ rule_data[0] or '' }}</td>
-                                            <td>{{ rule_data[1] or '' }}</td>
-                                            <td>{{ rule_data[2] or '' }}</td>
-                                            <td>{{ rule_data[3] or '' }}</td>
-                                            <td>{{ rule_data[4] or '' }}</td>
-                                            <td>{{ rule_data[5] or '' }}</td>
-                                            <td>{{ rule_data[6] or '' }}</td>
-                                            <td>{{ rule_data[7] or '' }}</td>
+                                            <td>{{ rule_data[0] or '' }}</td> {# Target #}
+                                            <td>{{ rule_data[1] or '' }}</td> {# Prot #}
+                                            <td>{{ rule_data[2] or '' }}</td> {# Opt #}
+                                            <td>{{ rule_data[3] or '' }}</td> {# Source #}
+                                            <td>{{ rule_data[4] or '' }}</td> {# Destination #}
+                                            <td>{{ rule_data[5] or '' }}</td> {# Spt #}
+                                            <td>{{ rule_data[6] or '' }}</td> {# Dpt #}
+                                            <td>{{ rule_data[7] or '' }}</td> {# Detail #}
                                             <td>
                                                 {% if role == 'manager' %}
                                                 <form action="{{ url_for('home_blueprint.delete_rule') }}" method="post" style="display:inline;">
@@ -188,36 +200,190 @@
 </div>
 {% endblock content %}
 
+{# Đặt DataTables JS và script tùy chỉnh vào block javascripts. #}
+{# Sẽ ưu tiên tải jQuery và DataTables ở đây để đảm bảo chúng luôn có sẵn. #}
 {% block javascripts %}
-    {{ super() }}
-    <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    {# CHÈN JQUERY VÀ DATATABLES Ở ĐÂY để đảm bảo thứ tự tải. #}
+    {# Kiểm tra xem jQuery đã được định nghĩa chưa, nếu chưa thì tải từ CDN #}
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            $('.data-table').DataTable({
-                paging: true,
-                searching: true,
-                ordering: true,
-                info: true,
-                lengthMenu: [[20, 50, 100, 200, -1], [20, 50, 100, 200, "Tất cả"]],
-                pageLength: 20,
-                scrollX: true,
-                autoWidth: false,
-                language: {
-                    sProcessing: "Đang xử lý...",
-                    sLengthMenu: "Hiển thị _MENU_ mục",
-                    sZeroRecords: "Không tìm thấy dòng nào phù hợp",
-                    sInfo: "Đang hiển thị _START_ đến _END_ trong tổng số _TOTAL_ mục",
-                    sInfoEmpty: "Đang hiển thị 0 đến 0 trong tổng số 0 mục",
-                    sInfoFiltered: "(được lọc từ _MAX_ mục)",
-                    sSearch: "Tìm kiếm:",
-                    oPaginate: {
-                        sFirst: "Đầu",
-                        sPrevious: "Trước",
-                        sNext: "Tiếp",
-                        sLast: "Cuối"
+        if (typeof jQuery === 'undefined') {
+            console.log("jQuery is not defined, loading from CDN...");
+            var script = document.createElement('script');
+            script.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js";
+            script.onload = function() {
+                console.log("jQuery loaded from CDN.");
+                loadDataTables();
+            };
+            document.head.appendChild(script);
+        } else {
+            console.log("jQuery is already defined.");
+            loadDataTables();
+        }
+
+        function loadDataTables() {
+            // Tải DataTables JS SAU KHI jQuery đã có
+            if (typeof $.fn.DataTable === 'undefined') {
+                console.log("DataTables is not defined, loading from CDN...");
+                var script = document.createElement('script');
+                script.src = "https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js";
+                script.onload = function() {
+                    console.log("DataTables loaded from CDN.");
+                    initializePageScripts();
+                };
+                document.head.appendChild(script);
+            } else {
+                console.log("DataTables is already defined.");
+                initializePageScripts();
+            }
+        }
+
+        function initializePageScripts() {
+            // Đảm bảo DOM đã tải đầy đủ trước khi chạy script của bạn
+            $(document).ready(function() {
+                console.log("JavaScript loaded and DOM content ready for view_status.html!");
+                const nodeCheckboxes = document.querySelectorAll('.node-checkbox');
+                const showSelectedNodesBtn = document.getElementById('showSelectedNodes');
+                const showAllNodesBtn = document.getElementById('showAllNodes');
+                const hideAllNodesBtn = document.getElementById('hideAllNodes');
+                const nodeRuleContainer = document.getElementById('nodeRuleContainer');
+
+                // Lưu trữ các instance DataTables để có thể hủy bỏ chúng sau này
+                const dataTableInstances = {};
+
+                // Hàm ẩn tất cả các section node
+                function hideAllNodeSections() {
+                    nodeRuleContainer.querySelectorAll('.node-table').forEach(section => {
+                        section.classList.add('hidden');
+                    });
+                }
+
+                // Hàm hiển thị một section node cụ thể và khởi tạo DataTables
+                function showNodeSection(nodeId) {
+                    const section = document.getElementById(`node-${nodeId}-section`);
+                    if (section) {
+                        section.classList.remove('hidden');
+                        // Khởi tạo DataTables cho tất cả các bảng trong section này
+                        $(section).find('.data-table').each(function() {
+                            const tableId = $(this).attr('id');
+                            // Chỉ khởi tạo nếu chưa được khởi tạo
+                            if (!$.fn.DataTable.isDataTable(this)) { 
+                                console.log(`Initializing DataTable for #${tableId}`);
+                                const dataTable = $(this).DataTable({
+                                    "paging": true, // Bật phân trang
+                                    "searching": true, // Bật ô tìm kiếm (filter)
+                                    "ordering": true, // Bật sắp xếp cột
+                                    "info": true, // Hiển thị thông tin bảng
+                                    "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], // Tùy chọn số dòng/trang
+                                    "pageLength": 20, // Mặc định 20 dòng
+                                    "scrollX": true, // Cho phép cuộn ngang
+                                    "autoWidth": false, // Tắt tự động điều chỉnh chiều rộng cột
+                                    "columnDefs": [ // Căn chỉnh cột Details (index 8)
+                                        { "width": "15%", "targets": 8 } 
+                                    ],
+                                    "language": { // Việt hóa các nhãn của DataTables
+                                        "sProcessing": "Đang xử lý...",
+                                        "sLengthMenu": "Hiển thị _MENU_ mục",
+                                        "sZeroRecords": "Không tìm thấy dòng nào phù hợp",
+                                        "sInfo": "Đang hiển thị _START_ đến _END_ trong tổng số _TOTAL_ mục",
+                                        "sInfoEmpty": "Đang hiển thị 0 đến 0 trong tổng số 0 mục",
+                                        "sInfoFiltered": "(được lọc từ _MAX_ mục)",
+                                        "sInfoPostFix": "",
+                                        "sSearch": "Tìm kiếm:",
+                                        "sUrl": "",
+                                        "oPaginate": {
+                                            "sFirst": "Đầu",
+                                            "sPrevious": "Trước",
+                                            "sNext": "Tiếp",
+                                            "sLast": "Cuối"
+                                        }
+                                    }
+                                });
+                                dataTableInstances[tableId] = dataTable; // Lưu instance vào đối tượng
+                            } else {
+                                console.log(`DataTable for #${tableId} already initialized.`);
+                                // Nếu đã khởi tạo, có thể gọi .draw() nếu nội dung thay đổi
+                                // dataTableInstances[tableId].draw();
+                            }
+                        });
                     }
                 }
-            });
-        });
+
+                // --- Khởi tạo ban đầu: Ẩn tất cả các node khi trang tải ---
+                hideAllNodeSections();
+
+                // --- Gắn sự kiện cho nút "Hiển thị luật của Nodes đã chọn" ---
+                if (showSelectedNodesBtn) {
+                    showSelectedNodesBtn.addEventListener('click', function() {
+                        hideAllNodeSections(); // Ẩn tất cả trước
+                        nodeCheckboxes.forEach(checkbox => {
+                            if (checkbox.checked) {
+                                showNodeSection(checkbox.value);
+                            }
+                        });
+                    });
+                }
+
+                // --- Gắn sự kiện cho nút "Hiển thị tất cả Nodes" ---
+                if (showAllNodesBtn) {
+                    showAllNodesBtn.addEventListener('click', function() {
+                        nodeCheckboxes.forEach(checkbox => {
+                            showNodeSection(checkbox.value);
+                            checkbox.checked = true; // Tự động tick vào tất cả các checkbox
+                        });
+                    });
+                }
+
+                // --- Gắn sự kiện cho nút "Ẩn tất cả Nodes" ---
+                if (hideAllNodesBtn) {
+                    hideAllNodesBtn.addEventListener('click', function() {
+                        hideAllNodeSections();
+                        nodeCheckboxes.forEach(checkbox => {
+                            checkbox.checked = false; // Bỏ tick tất cả các checkbox
+                        });
+                        // Hủy bỏ tất cả DataTables instances khi ẩn để tránh lỗi
+                        for (const tableId in dataTableInstances) {
+                            if (dataTableInstances.hasOwnProperty(tableId)) {
+                                // Destroy DataTables instance
+                                dataTableInstances[tableId].destroy();
+                                
+                                // Remove DataTables-generated elements and restore original table HTML
+                                // The DataTables wrapper is usually a div around the table with specific classes
+                                const $originalTable = $(`#${tableId}`);
+                                const $wrapper = $originalTable.closest('.dataTables_wrapper');
+
+                                if ($wrapper.length) {
+                                    // Move the original table out of the wrapper, then remove the wrapper
+                                    $wrapper.before($originalTable);
+                                    $wrapper.remove();
+                                }
+
+                                // Clean up any remaining DataTables data
+                                $originalTable.removeData('dataTable');
+                                $originalTable.removeClass('dataTable');
+                            }
+                        }
+                        // Reset the object storing DataTables instances
+                        Object.keys(dataTableInstances).forEach(key => delete dataTableInstances[key]);
+                    });
+                }
+
+                // --- Tùy chọn: Khi click vào tiêu đề node, ẩn/hiện nội dung của node đó ---
+                nodeRuleContainer.querySelectorAll('.node-header').forEach(header => {
+                    header.addEventListener('click', function() {
+                        const nodeContent = this.nextElementSibling; // Lấy div .node-content
+                        if (nodeContent) {
+                            nodeContent.classList.toggle('hidden');
+                            // Nếu đang hiển thị, khởi tạo DataTables
+                            if (!nodeContent.classList.contains('hidden')) {
+                                const nodeId = this.closest('.node-table').id.replace('-section', '').replace('node-', '');
+                                showNodeSection(nodeId); // Gọi lại để đảm bảo DataTables được khởi tạo
+                            }
+                        }
+                    });
+                });
+            }); // End $(document).ready()
+        } // End initializePageScripts()
     </script>
+    {# Giữ lại {{ super() }} để đảm bảo các script từ base.html (nếu có) cũng được tải #}
+    {{ super() }} 
 {% endblock javascripts %}
