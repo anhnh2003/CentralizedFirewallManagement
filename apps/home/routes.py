@@ -310,12 +310,11 @@ def view_log():
             continue
 
         iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
-
+        print(f"DEBUG_VIEW_LOG: Found file {iptables_log_path} for user {current_user.id}.")
         if os.path.exists(iptables_log_path):
             try:
                 with open(iptables_log_path, 'r') as f:
                     for line in f:
-
                         entry = parse_log_line(line)
                         print("File log: ", f)
                         print("line: ", entry)
