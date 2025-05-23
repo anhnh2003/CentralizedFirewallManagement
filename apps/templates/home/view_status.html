@@ -1,46 +1,85 @@
 {% extends "layouts/base.html" %}
 
-{% block content %}
-<style>
-    .page-content {
-        padding: 2rem;
-        background: #f8f9fa;
-    }
-    .node-table {
-        margin-top: 20px;
-        border: 1px solid #e0e0e0; /* Add a subtle border to separate node tables */
-        border-radius: 5px;
-        box-shadow: 0 2px 4px rgba(0,0,0,.05);
-    }
-    .node-header {
-        background-color: #e9ecef;
-        padding: 10px 15px;
-        border-bottom: 1px solid #e0e0e0;
-        font-weight: bold;
-        cursor: pointer; /* Make it clickable for showing/hiding */
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .node-content {
-        padding: 15px;
-    }
-    .table-scroll {
-        overflow-x: auto; /* Allow horizontal scrolling for large tables */
-    }
-    .chain-header {
-        background-color: #f2f2f2;
-        font-weight: bold;
-    }
-    .table-compact th, .table-compact td {
-        padding: 0.5rem; /* Make table rows more compact */
-        vertical-align: middle;
-    }
-    .hidden {
-        display: none;
-    }
-</style>
+{# Thêm DataTables CSS vào head block #}
+{% block stylesheets %}
+    {{ super() }} {# Đảm bảo giữ lại các stylesheet từ base.html #}
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css"/>
+    <style>
+        /* Custom CSS cho layout và các phần tử không phải bảng DataTables */
+        .page-content {
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+        .card {
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,.05);
+        }
+        .node-table {
+            margin-top: 20px;
+        }
+        .node-header {
+            background-color: #e9ecef;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .node-content {
+            padding: 15px;
+        }
+        .hidden {
+            display: none;
+        }
+        /* CSS cho bảng DataTables để các từ dài tự động xuống dòng và căn chỉnh */
+        .data-table td {
+            word-wrap: break-word; /* Cho phép từ dài tự động xuống dòng */
+            word-break: break-all; /* Ngắt từ bất cứ đâu nếu cần */
+            vertical-align: top; /* Căn trên để nội dung dài không đẩy ô quá cao */
+        }
+        .data-table th, .data-table td {
+            white-space: normal !important; /* Đảm bảo nội dung không bị ép vào một dòng */
+        }
+        /* Điều chỉnh styling của DataTables controls cho giống Bootstrap */
+        .dataTables_wrapper .dataTables_filter input,
+        .dataTables_wrapper .dataTables_length select {
+            padding: 0.375rem 0.75rem; /* Bootstrap-like padding */
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            margin-left: 0.5rem; /* Khoảng cách với label */
+            display: inline-block; /* Để hiển thị trên cùng một dòng với label */
+        }
+        .dataTables_wrapper .dataTables_filter label,
+        .dataTables_wrapper .dataTables_length label {
+            font-weight: normal; /* Đảm bảo label không in đậm quá mức */
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.5em 0.8em;
+            margin-left: 2px;
+            border: 1px solid transparent;
+            border-radius: 2px;
+            background-color: #e9ecef;
+            color: #333 !important; /* !important để override default DataTables color */
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            background-color: #007bff;
+            color: white !important;
+            border-color: #007bff;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current) {
+            background-color: #0056b3;
+            color: white !important;
+        }
+    </style>
+{% endblock stylesheets %}
 
+{% block content %}
 <div class="page-content">
     <h2 class="mb-4">Firewall Rules Status</h2>
 
@@ -52,6 +91,8 @@
         {% endif %}
     {% endwith %}
 
+    {# Nút "Show filter form" đã được thay thế bằng các nút điều khiển hiển thị nodes #}
+    {# và ô tìm kiếm của DataTables sẽ xuất hiện tự động cho mỗi bảng luật #}
     <div class="card mb-4 shadow-sm">
         <div class="card-header">
             Chọn Nodes để hiển thị luật
@@ -94,8 +135,10 @@
                     {% if status[node.id] %}
                         {% for chain, rules in status[node.id].items() %}
                         <h5 class="mt-4">Chain: {{ chain }}</h5>
-                        <div class="table-responsive table-scroll">
-                            <table class="table table-bordered table-striped table-hover table-compact">
+                        {# Thêm class 'data-table' để DataTables có thể nhận diện #}
+                        {# table-responsive để Bootstrap xử lý cuộn ngang khi không có DataTables #}
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-striped table-hover data-table" id="table-{{ node.id }}-{{ chain }}">
                                 <thead class="thead-dark">
                                     <tr>
                                         <th>Num</th>
@@ -124,7 +167,6 @@
                                             <td>{{ rule_data[6] or '' }}</td> {# Dpt #}
                                             <td>{{ rule_data[7] or '' }}</td> {# Detail #}
                                             <td>
-                                                {# Chỉ hiển thị nút Delete nếu người dùng là manager của node này #}
                                                 {% if role == 'manager' %}
                                                 <form action="{{ url_for('home_blueprint.delete_rule') }}" method="post" style="display:inline;">
                                                     <input type="hidden" name="node_id" value="{{ node.id }}">
@@ -159,89 +201,150 @@
     </div>
 </div>
 {% endblock content %}
+
 {% block javascripts %}
-<script>
-    // Đảm bảo script được chạy sau khi DOM đã tải hoàn chỉnh
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("JavaScript loaded and DOM content loaded!");
-        const nodeCheckboxes = document.querySelectorAll('.node-checkbox');
-        const showSelectedNodesBtn = document.getElementById('showSelectedNodes');
-        const showAllNodesBtn = document.getElementById('showAllNodes');
-        const hideAllNodesBtn = document.getElementById('hideAllNodes');
-        const nodeRuleContainer = document.getElementById('nodeRuleContainer');
+    {{ super() }} {# Đảm bảo giữ lại các script từ base.html, đặc biệt là jQuery #}
+    {# DataTables JS phải được tải sau jQuery #}
+    <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 
-        // Hàm ẩn tất cả các section node
-        function hideAllNodeSections() {
-            nodeRuleContainer.querySelectorAll('.node-table').forEach(section => {
-                section.classList.add('hidden');
-            });
-        }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("JavaScript loaded and DOM content loaded for view_status.html!");
+            const nodeCheckboxes = document.querySelectorAll('.node-checkbox');
+            const showSelectedNodesBtn = document.getElementById('showSelectedNodes');
+            const showAllNodesBtn = document.getElementById('showAllNodes');
+            const hideAllNodesBtn = document.getElementById('hideAllNodes');
+            const nodeRuleContainer = document.getElementById('nodeRuleContainer');
 
-        // Hàm hiển thị một section node cụ thể
-        function showNodeSection(nodeId) {
-            const section = document.getElementById(`node-${nodeId}-section`);
-            if (section) {
-                section.classList.remove('hidden');
+            // Lưu trữ các instance DataTables để có thể hủy bỏ chúng sau này
+            const dataTableInstances = {};
+
+            // Hàm ẩn tất cả các section node
+            function hideAllNodeSections() {
+                nodeRuleContainer.querySelectorAll('.node-table').forEach(section => {
+                    section.classList.add('hidden');
+                });
             }
-        }
 
-        // --- Khởi tạo ban đầu: Ẩn tất cả các node khi trang tải ---
-        hideAllNodeSections();
+            // Hàm hiển thị một section node cụ thể và khởi tạo DataTables
+            function showNodeSection(nodeId) {
+                const section = document.getElementById(`node-${nodeId}-section`);
+                if (section) {
+                    section.classList.remove('hidden');
+                    // Khởi tạo DataTables cho tất cả các bảng trong section này
+                    $(section).find('.data-table').each(function() {
+                        const tableId = $(this).attr('id');
+                        if (!$.fn.DataTable.isDataTable(this)) { // Chỉ khởi tạo nếu chưa được khởi tạo
+                            console.log(`Initializing DataTable for #${tableId}`);
+                            const dataTable = $(this).DataTable({
+                                "paging": true,
+                                "searching": true,
+                                "ordering": true,
+                                "info": true,
+                                "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
+                                "pageLength": 20, // Mặc định 20 dòng
+                                "scrollX": true, // Cho phép cuộn ngang
+                                "autoWidth": false, // Tắt tự động điều chỉnh chiều rộng cột
+                                "columnDefs": [ // Căn chỉnh cột Details (index 8)
+                                    { "width": "15%", "targets": 8 } 
+                                ],
+                                "language": { // Việt hóa các nhãn của DataTables
+                                    "sProcessing": "Đang xử lý...",
+                                    "sLengthMenu": "Hiển thị _MENU_ mục",
+                                    "sZeroRecords": "Không tìm thấy dòng nào phù hợp",
+                                    "sInfo": "Đang hiển thị _START_ đến _END_ trong tổng số _TOTAL_ mục",
+                                    "sInfoEmpty": "Đang hiển thị 0 đến 0 trong tổng số 0 mục",
+                                    "sInfoFiltered": "(được lọc từ _MAX_ mục)",
+                                    "sInfoPostFix": "",
+                                    "sSearch": "Tìm kiếm:",
+                                    "sUrl": "",
+                                    "oPaginate": {
+                                        "sFirst": "Đầu",
+                                        "sPrevious": "Trước",
+                                        "sNext": "Tiếp",
+                                        "sLast": "Cuối"
+                                    }
+                                }
+                            });
+                            dataTableInstances[tableId] = dataTable; // Lưu instance
+                        } else {
+                            console.log(`DataTable for #${tableId} already initialized.`);
+                        }
+                    });
+                }
+            }
 
-        // --- Gắn sự kiện cho nút "Hiển thị luật của Nodes đã chọn" ---
-        // Kiểm tra xem nút có tồn tại không trước khi gắn sự kiện
-        if (showSelectedNodesBtn) {
-            console.log("showSelectedNodesBtn found!"); // <--- THÊM DÒNG NÀY
-            showSelectedNodesBtn.addEventListener('click', function() {
-                hideAllNodeSections(); // Ẩn tất cả trước
-                nodeCheckboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
+            // --- Khởi tạo ban đầu: Ẩn tất cả các node khi trang tải ---
+            hideAllNodeSections();
+
+            // --- Gắn sự kiện cho nút "Hiển thị luật của Nodes đã chọn" ---
+            if (showSelectedNodesBtn) {
+                showSelectedNodesBtn.addEventListener('click', function() {
+                    hideAllNodeSections(); // Ẩn tất cả trước
+                    nodeCheckboxes.forEach(checkbox => {
+                        if (checkbox.checked) {
+                            showNodeSection(checkbox.value);
+                        }
+                    });
+                });
+            }
+
+            // --- Gắn sự kiện cho nút "Hiển thị tất cả Nodes" ---
+            if (showAllNodesBtn) {
+                showAllNodesBtn.addEventListener('click', function() {
+                    nodeCheckboxes.forEach(checkbox => {
                         showNodeSection(checkbox.value);
+                        checkbox.checked = true; // Tự động tick vào tất cả các checkbox
+                    });
+                });
+            }
+
+            // --- Gắn sự kiện cho nút "Ẩn tất cả Nodes" ---
+            if (hideAllNodesBtn) {
+                hideAllNodesBtn.addEventListener('click', function() {
+                    hideAllNodeSections();
+                    nodeCheckboxes.forEach(checkbox => {
+                        checkbox.checked = false; // Bỏ tick tất cả các checkbox
+                    });
+                    // Hủy bỏ tất cả DataTables instances khi ẩn để tránh lỗi
+                    for (const tableId in dataTableInstances) {
+                        if (dataTableInstances.hasOwnProperty(tableId)) {
+                            dataTableInstances[tableId].destroy();
+                            // Loại bỏ các phần tử do DataTables tạo ra để khôi phục DOM gốc
+                            $(`#${tableId}`).removeData('dataTable'); // Xóa dữ liệu DataTables
+                            $(`#${tableId}`).empty().html(`
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Num</th><th>Target</th><th>Prot</th><th>Opt</th><th>Source</th>
+                                        <th>Destination</th><th>Source Port</th><th>Destination Port</th>
+                                        <th>Details</th><th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="10" class="text-center">Không có luật nào trong chain này.</td></tr>
+                                </tbody>
+                            `); // Khôi phục cấu trúc ban đầu nếu cần
+                        }
+                    }
+                    // Reset dataTableInstances object
+                    Object.keys(dataTableInstances).forEach(key => delete dataTableInstances[key]);
+                });
+            }
+
+            // --- Tùy chọn: Khi click vào tiêu đề node, ẩn/hiện nội dung của node đó ---
+            nodeRuleContainer.querySelectorAll('.node-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const nodeContent = this.nextElementSibling; // Lấy div .node-content
+                    if (nodeContent) {
+                        nodeContent.classList.toggle('hidden');
+                        // Nếu đang hiển thị, khởi tạo DataTables
+                        if (!nodeContent.classList.contains('hidden')) {
+                            const nodeId = this.closest('.node-table').id.replace('-section', '').replace('node-', '');
+                            showNodeSection(nodeId); // Gọi lại để đảm bảo DataTables được khởi tạo
+                        }
                     }
                 });
             });
-        } else {
-            console.error("Element with ID 'showSelectedNodes' not found.");
-        }
-
-
-        // --- Gắn sự kiện cho nút "Hiển thị tất cả Nodes" ---
-        if (showAllNodesBtn) {
-            console.log("showAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
-            showAllNodesBtn.addEventListener('click', function() {
-                nodeCheckboxes.forEach(checkbox => {
-                    showNodeSection(checkbox.value);
-                    checkbox.checked = true; // Tự động tick vào tất cả các checkbox
-                });
-            });
-        } else {
-            console.error("Element with ID 'showAllNodes' not found.");
-        }
-
-
-        // --- Gắn sự kiện cho nút "Ẩn tất cả Nodes" ---
-        if (hideAllNodesBtn) {
-            console.log("hideAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
-            hideAllNodesBtn.addEventListener('click', function() {
-                hideAllNodeSections();
-                nodeCheckboxes.forEach(checkbox => {
-                    checkbox.checked = false; // Bỏ tick tất cả các checkbox
-                });
-            });
-        } else {
-            console.error("Element with ID 'hideAllNodes' not found.");
-        }
-
-
-        // --- Tùy chọn: Khi click vào tiêu đề node, ẩn/hiện nội dung của node đó ---
-        nodeRuleContainer.querySelectorAll('.node-header').forEach(header => {
-            header.addEventListener('click', function() {
-                const nodeContent = this.nextElementSibling; // Lấy div .node-content
-                if (nodeContent) {
-                    nodeContent.classList.toggle('hidden');
-                }
-            });
         });
-    });
-</script>
+    </script>
 {% endblock javascripts %}
