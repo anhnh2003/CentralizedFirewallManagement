@@ -86,7 +86,12 @@
     {% include 'includes/scripts.html' %}
 
     <!-- Specific Page JS goes HERE  -->
-    {% block javascripts %}{% endblock javascripts %}
+    {% block javascripts %}
+    {# Dòng này TẢI JQUERY. #}
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        {# Giữ lại {{ super() }} để đảm bảo các script từ template con cũng được tải #}
+        {{ super() }} 
+    {% endblock javascripts %}
 
     <script src="{{ config.ASSETS_ROOT }}/js/custom.js"></script>
     <script>

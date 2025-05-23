@@ -1,8 +1,8 @@
 {% extends "layouts/base.html" %}
 
-{# Thêm DataTables CSS vào head block #}
+{# Thêm DataTables CSS vào block stylesheets. Đảm bảo nó được giữ lại bằng {{ super() }} #}
 {% block stylesheets %}
-    {{ super() }} {# Đảm bảo giữ lại các stylesheet từ base.html #}
+    {{ super() }} 
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css"/>
     <style>
         /* Custom CSS cho layout và các phần tử không phải bảng DataTables */
@@ -91,8 +91,6 @@
         {% endif %}
     {% endwith %}
 
-    {# Nút "Show filter form" đã được thay thế bằng các nút điều khiển hiển thị nodes #}
-    {# và ô tìm kiếm của DataTables sẽ xuất hiện tự động cho mỗi bảng luật #}
     <div class="card mb-4 shadow-sm">
         <div class="card-header">
             Chọn Nodes để hiển thị luật
@@ -202,9 +200,10 @@
 </div>
 {% endblock content %}
 
+{# Đặt DataTables JS và script tùy chỉnh vào block javascripts. Đảm bảo nó được giữ lại bằng {{ super() }} #}
 {% block javascripts %}
     {{ super() }} {# Đảm bảo giữ lại các script từ base.html, đặc biệt là jQuery #}
-    {# DataTables JS phải được tải sau jQuery #}
+    {# DataTables JS phải được tải sau jQuery. jQuery thường được tải trong base.html. #}
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 
     <script>
@@ -234,14 +233,15 @@
                     // Khởi tạo DataTables cho tất cả các bảng trong section này
                     $(section).find('.data-table').each(function() {
                         const tableId = $(this).attr('id');
-                        if (!$.fn.DataTable.isDataTable(this)) { // Chỉ khởi tạo nếu chưa được khởi tạo
+                        // Chỉ khởi tạo nếu chưa được khởi tạo
+                        if (!$.fn.DataTable.isDataTable(this)) { 
                             console.log(`Initializing DataTable for #${tableId}`);
                             const dataTable = $(this).DataTable({
-                                "paging": true,
-                                "searching": true,
-                                "ordering": true,
-                                "info": true,
-                                "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
+                                "paging": true, // Bật phân trang
+                                "searching": true, // Bật ô tìm kiếm (filter)
+                                "ordering": true, // Bật sắp xếp cột
+                                "info": true, // Hiển thị thông tin bảng
+                                "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], // Tùy chọn số dòng/trang
                                 "pageLength": 20, // Mặc định 20 dòng
                                 "scrollX": true, // Cho phép cuộn ngang
                                 "autoWidth": false, // Tắt tự động điều chỉnh chiều rộng cột
@@ -266,9 +266,11 @@
                                     }
                                 }
                             });
-                            dataTableInstances[tableId] = dataTable; // Lưu instance
+                            dataTableInstances[tableId] = dataTable; // Lưu instance vào đối tượng
                         } else {
                             console.log(`DataTable for #${tableId} already initialized.`);
+                            // Nếu đã khởi tạo, có thể gọi .draw() nếu nội dung thay đổi
+                            // dataTableInstances[tableId].draw();
                         }
                     });
                 }
@@ -309,24 +311,30 @@
                     // Hủy bỏ tất cả DataTables instances khi ẩn để tránh lỗi
                     for (const tableId in dataTableInstances) {
                         if (dataTableInstances.hasOwnProperty(tableId)) {
+                            // Destroy DataTables instance
                             dataTableInstances[tableId].destroy();
-                            // Loại bỏ các phần tử do DataTables tạo ra để khôi phục DOM gốc
-                            $(`#${tableId}`).removeData('dataTable'); // Xóa dữ liệu DataTables
-                            $(`#${tableId}`).empty().html(`
-                                <thead class="thead-dark">
-                                    <tr>
-                                        <th>Num</th><th>Target</th><th>Prot</th><th>Opt</th><th>Source</th>
-                                        <th>Destination</th><th>Source Port</th><th>Destination Port</th>
-                                        <th>Details</th><th>Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td colspan="10" class="text-center">Không có luật nào trong chain này.</td></tr>
-                                </tbody>
-                            `); // Khôi phục cấu trúc ban đầu nếu cần
+                            
+                            // Remove DataTables-generated elements and restore original table HTML
+                            // The DataTables wrapper is usually a div around the table with specific classes
+                            const $originalTable = $(`#${tableId}`);
+                            const $wrapper = $originalTable.closest('.dataTables_wrapper');
+
+                            if ($wrapper.length) {
+                                // Move the original table out of the wrapper, then remove the wrapper
+                                $wrapper.before($originalTable);
+                                $wrapper.remove();
+                            }
+
+                            // Clean up any remaining DataTables data
+                            $originalTable.removeData('dataTable');
+                            $originalTable.removeClass('dataTable');
+
+                            // If you need to completely reset the table content, you can do so here
+                            // Example: $originalTable.find('tbody').empty().append('<tr><td colspan="10" class="text-center">Không có luật nào trong chain này.</td></tr>');
+                            // But usually, just destroying is enough as the Jinja template will re-render if the section is shown again.
                         }
                     }
-                    // Reset dataTableInstances object
+                    // Reset the object storing DataTables instances
                     Object.keys(dataTableInstances).forEach(key => delete dataTableInstances[key]);
                 });
             }
