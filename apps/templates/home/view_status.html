@@ -1,72 +1,46 @@
 {% extends "layouts/base.html" %}
 
-{% block stylesheets %}
-    {{ super() }}
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.min.css" />
-    <style>
-        .table-wrapper {
-            margin: 20px auto;
-            font-family: 'Nunito Sans', sans-serif;
-            box-shadow: 0px 35px 50px rgba(0, 0, 0, 0.2);
-            overflow-x: auto; /* Add horizontal scroll bar */
-        }
-
-        .data-table {
-            border-radius: 5px;
-            font-family: 'Nunito Sans', sans-serif;
-            font-size: 12px;
-            border-collapse: collapse;
-            width: 100%;
-            max-width: 100%; /* Ensure table fits within the container */
-            white-space: nowrap; /* Prevent cell content from wrapping */
-            background-color: white;
-        }
-
-        .data-table thead th {
-            background: #4fc3f7;
-            color: white;
-            text-align: center;
-        }
-
-        .data-table tbody tr:nth-child(even) {
-            background: #f8f8f8;
-        }
-
-        .data-table td,
-        .data-table th {
-            text-align: center;
-            padding: 8px;
-            border: 1px solid #e0e0e0;
-        }
-
-        /* Responsive design for smaller screens */
-        @media (max-width: 767px) {
-            .table-wrapper:before {
-                content: "Scroll horizontally >";
-                display: block;
-                text-align: right;
-                font-size: 12px;
-                color: #333;
-                margin-bottom: 5px;
-            }
-        }
-
-        .dataTables_wrapper .dataTables_filter {
-            float: right; /* Position Filter to the right */
-        }
-
-        .dataTables_wrapper .dataTables_length {
-            float: left; /* Position Length selection to the left */
-        }
-
-        .dataTables_wrapper .dataTables_paginate {
-            float: right; /* Pagination at the bottom-right */
-        }
-    </style>
-{% endblock stylesheets %}
-
 {% block content %}
+<style>
+    .page-content {
+        padding: 2rem;
+        background: #f8f9fa;
+    }
+    .node-table {
+        margin-top: 20px;
+        border: 1px solid #e0e0e0; /* Add a subtle border to separate node tables */
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,.05);
+    }
+    .node-header {
+        background-color: #e9ecef;
+        padding: 10px 15px;
+        border-bottom: 1px solid #e0e0e0;
+        font-weight: bold;
+        cursor: pointer; /* Make it clickable for showing/hiding */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .node-content {
+        padding: 15px;
+    }
+    .table-scroll {
+        overflow-x: auto; /* Allow horizontal scrolling for large tables */
+    }
+    .chain-header {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+    .table-compact th, .table-compact td {
+        padding: 0.5rem; /* Make table rows more compact */
+        vertical-align: middle;
+    }
+    .hidden {
+        display: none;
+    }
+</style>
+
 <div class="page-content">
     <h2 class="mb-4">Firewall Rules Status</h2>
 
@@ -79,7 +53,9 @@
     {% endwith %}
 
     <div class="card mb-4 shadow-sm">
-        <div class="card-header">Chọn Nodes để hiển thị luật</div>
+        <div class="card-header">
+            Chọn Nodes để hiển thị luật
+        </div>
         <div class="card-body">
             <div class="form-group">
                 <label for="nodeSelector">Chọn Node(s):</label>
@@ -88,7 +64,8 @@
                         {% set node = node_info.object %}
                         {% set role = node_info.role %}
                         <div class="form-check">
-                            <input class="form-check-input node-checkbox" type="checkbox" value="{{ node.id }}" id="nodeCheck-{{ node.id }}">
+                            <input class="form-check-input node-checkbox" type="checkbox" 
+                                   value="{{ node.id }}" id="nodeCheck-{{ node.id }}">
                             <label class="form-check-label" for="nodeCheck-{{ node.id }}">
                                 {{ node.hostname }} ({{ node.ip_address }}) - Role: {{ role | capitalize }}
                             </label>
@@ -100,112 +77,171 @@
                 </div>
             </div>
             <button type="button" class="btn btn-primary mt-3" id="showSelectedNodes">Hiển thị luật của Nodes đã chọn</button>
+            <button type="button" class="btn btn-secondary mt-3" id="showAllNodes">Hiển thị tất cả Nodes</button>
+            <button type="button" class="btn btn-secondary mt-3" id="hideAllNodes">Ẩn tất cả Nodes</button>
         </div>
     </div>
 
-    <div class="table-wrapper">
-        <table class="data-table display nowrap" id="nodeRulesTable">
-            <thead class="thead-dark">
-            <tr>
-                <th>Timestamp</th>
-                <th>Node ID</th>      {# Cột mới #}
-                <th>Node IP</th>      {# Cột mới #}
-                <th>Hostname</th>
-                <th>Kernel Timestamp</th>
-                <th>Chain</th>
-                <th>In Interface</th>
-                <th>Out Interface</th>
-                <th>MAC</th>
-                <th>Source IP</th>
-                <th>Destination IP</th>
-                <th>Length</th>
-                <th>TOS</th>
-                <th>PREC</th>
-                <th>TTL</th>
-                <th>ID</th>
-                <th>Protocol</th>
-                <th>Source Port</th>
-                <th>Destination Port</th>
-                <th>Type</th>
-                <th>Code</th>
-                <th>ICMP ID</th>
-                <th>ICMP SEQ</th>
-                <th>Window</th>
-                <th>Res</th>
-                <th>Detail</th>
-                <th>Raw Log</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for entry in log_entries %}
-            <tr>
-                <td>{{ entry.get('timestamp', '') }}</td>
-                <td>{{ entry.get('node_id', '') }}</td>      {# Hiển thị Node ID #}
-                <td>{{ entry.get('node_ip', '') }}</td>      {# Hiển thị Node IP #}
-                <td>{{ entry.get('hostname', '') }}</td>
-                <td>{{ entry.get('kernel_timestamp', '') }}</td>
-                <td>{{ entry.get('chain', '') }}</td>
-                <td>{{ entry.get('in_interface', '') }}</td>
-                <td>{{ entry.get('out_interface', '') }}</td>
-                <td>{{ entry.get('mac', '') }}</td>
-                <td>{{ entry.get('src_ip', '') }}</td>
-                <td>{{ entry.get('dst_ip', '') }}</td>
-                <td>{{ entry.get('length', '') }}</td>
-                <td>{{ entry.get('tos', '') }}</td>
-                <td>{{ entry.get('prec', '') }}</td>
-                <td>{{ entry.get('ttl', '') }}</td>
-                <td>{{ entry.get('id', '') }}</td>
-                <td>{{ entry.get('protocol', '') }}</td>
-                <td>{{ entry.get('src_port', '') }}</td>
-                <td>{{ entry.get('dst_port', '') }}</td>
-                <td>{{ entry.get('type', '') }}</td>
-                <td>{{ entry.get('code', '') }}</td>
-                <td>{{ entry.get('icmp_id', '') }}</td>
-                <td>{{ entry.get('icmp_seq', '') }}</td>
-                <td>{{ entry.get('window', '') }}</td>
-                <td>{{ entry.get('res', '') }}</td>
-                <td>{{ entry.get('detail', '') }}</td>
-                <td>{{ entry.get('raw_log', '') }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        </table>
+    <div id="nodeRuleContainer">
+        {% for node_id, node_info in nodes_with_roles.items() %}
+            {% set node = node_info.object %}
+            {% set role = node_info.role %}
+            <div class="node-table card mb-4 hidden" id="node-{{ node.id }}-section">
+                <div class="node-header">
+                    <h4>Node: {{ node.hostname }} ({{ node.ip_address }}) - Role: {{ role | capitalize }}</h4>
+                </div>
+                <div class="node-content">
+                    {% if status[node.id] %}
+                        {% for chain, rules in status[node.id].items() %}
+                        <h5 class="mt-4">Chain: {{ chain }}</h5>
+                        <div class="table-responsive table-scroll">
+                            <table class="table table-bordered table-striped table-hover table-compact">
+                                <thead class="thead-dark">
+                                    <tr>
+                                        <th>Num</th>
+                                        <th>Target</th>
+                                        <th>Prot</th>
+                                        <th>Opt</th>
+                                        <th>Source</th>
+                                        <th>Destination</th>
+                                        <th>Source Port</th>
+                                        <th>Destination Port</th>
+                                        <th>Details</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if rules %}
+                                        {% for rule_index, rule_data in rules %}
+                                        <tr>
+                                            <td>{{ rule_index }}</td>
+                                            <td>{{ rule_data[0] or '' }}</td> {# Target #}
+                                            <td>{{ rule_data[1] or '' }}</td> {# Prot #}
+                                            <td>{{ rule_data[2] or '' }}</td> {# Opt #}
+                                            <td>{{ rule_data[3] or '' }}</td> {# Source #}
+                                            <td>{{ rule_data[4] or '' }}</td> {# Destination #}
+                                            <td>{{ rule_data[5] or '' }}</td> {# Spt #}
+                                            <td>{{ rule_data[6] or '' }}</td> {# Dpt #}
+                                            <td>{{ rule_data[7] or '' }}</td> {# Detail #}
+                                            <td>
+                                                {# Chỉ hiển thị nút Delete nếu người dùng là manager của node này #}
+                                                {% if role == 'manager' %}
+                                                <form action="{{ url_for('home_blueprint.delete_rule') }}" method="post" style="display:inline;">
+                                                    <input type="hidden" name="node_id" value="{{ node.id }}">
+                                                    <input type="hidden" name="chain_name" value="{{ chain }}">
+                                                    <input type="hidden" name="rule_index" value="{{ rule_index }}">
+                                                    <button type="submit" class="btn btn-danger btn-sm"
+                                                            onclick="return confirm('Bạn có chắc chắn muốn xóa luật này không?');">
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                                {% else %}
+                                                <span class="text-muted">No Delete Perm.</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="10" class="text-center">Không có luật nào trong chain này.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Không thể tải trạng thái IPTables cho node này hoặc không có luật nào.</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock content %}
-
 {% block javascripts %}
-    {{ super() }}
-    <!-- DataTables JS -->
-    <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            $('#nodeRulesTable').DataTable({
-                paging: true,
-                searching: true,
-                ordering: true,
-                info: true,
-                lengthMenu: [[20, 50, 100, 200, -1], [20, 50, 100, 200, "Tất cả"]],
-                pageLength: 20,
-                scrollX: true,
-                autoWidth: false,
-                language: {
-                    sProcessing: "Đang xử lý...",
-                    sLengthMenu: "Hiển thị _MENU_ mục",
-                    sZeroRecords: "Không tìm thấy dòng nào phù hợp",
-                    sInfo: "Đang hiển thị _START_ đến _END_ trong tổng số _TOTAL_ mục",
-                    sInfoEmpty: "Đang hiển thị 0 đến 0 trong tổng số 0 mục",
-                    sInfoFiltered: "(được lọc từ _MAX_ mục)",
-                    sInfoPostFix: "",
-                    sSearch: "Tìm kiếm:",
-                    oPaginate: {
-                        sFirst: "Đầu",
-                        sPrevious: "Trước",
-                        sNext: "Tiếp",
-                        sLast: "Cuối"
+<script>
+    // Đảm bảo script được chạy sau khi DOM đã tải hoàn chỉnh
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("JavaScript loaded and DOM content loaded!");
+        const nodeCheckboxes = document.querySelectorAll('.node-checkbox');
+        const showSelectedNodesBtn = document.getElementById('showSelectedNodes');
+        const showAllNodesBtn = document.getElementById('showAllNodes');
+        const hideAllNodesBtn = document.getElementById('hideAllNodes');
+        const nodeRuleContainer = document.getElementById('nodeRuleContainer');
+
+        // Hàm ẩn tất cả các section node
+        function hideAllNodeSections() {
+            nodeRuleContainer.querySelectorAll('.node-table').forEach(section => {
+                section.classList.add('hidden');
+            });
+        }
+
+        // Hàm hiển thị một section node cụ thể
+        function showNodeSection(nodeId) {
+            const section = document.getElementById(`node-${nodeId}-section`);
+            if (section) {
+                section.classList.remove('hidden');
+            }
+        }
+
+        // --- Khởi tạo ban đầu: Ẩn tất cả các node khi trang tải ---
+        hideAllNodeSections();
+
+        // --- Gắn sự kiện cho nút "Hiển thị luật của Nodes đã chọn" ---
+        // Kiểm tra xem nút có tồn tại không trước khi gắn sự kiện
+        if (showSelectedNodesBtn) {
+            console.log("showSelectedNodesBtn found!"); // <--- THÊM DÒNG NÀY
+            showSelectedNodesBtn.addEventListener('click', function() {
+                hideAllNodeSections(); // Ẩn tất cả trước
+                nodeCheckboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        showNodeSection(checkbox.value);
                     }
+                });
+            });
+        } else {
+            console.error("Element with ID 'showSelectedNodes' not found.");
+        }
+
+
+        // --- Gắn sự kiện cho nút "Hiển thị tất cả Nodes" ---
+        if (showAllNodesBtn) {
+            console.log("showAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
+            showAllNodesBtn.addEventListener('click', function() {
+                nodeCheckboxes.forEach(checkbox => {
+                    showNodeSection(checkbox.value);
+                    checkbox.checked = true; // Tự động tick vào tất cả các checkbox
+                });
+            });
+        } else {
+            console.error("Element with ID 'showAllNodes' not found.");
+        }
+
+
+        // --- Gắn sự kiện cho nút "Ẩn tất cả Nodes" ---
+        if (hideAllNodesBtn) {
+            console.log("hideAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
+            hideAllNodesBtn.addEventListener('click', function() {
+                hideAllNodeSections();
+                nodeCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false; // Bỏ tick tất cả các checkbox
+                });
+            });
+        } else {
+            console.error("Element with ID 'hideAllNodes' not found.");
+        }
+
+
+        // --- Tùy chọn: Khi click vào tiêu đề node, ẩn/hiện nội dung của node đó ---
+        nodeRuleContainer.querySelectorAll('.node-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const nodeContent = this.nextElementSibling; // Lấy div .node-content
+                if (nodeContent) {
+                    nodeContent.classList.toggle('hidden');
                 }
             });
         });
-    </script>
+    });
+</script>
 {% endblock javascripts %}

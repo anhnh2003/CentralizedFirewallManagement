@@ -24,33 +24,69 @@
     <div class="table-wrapper">
         <table id="logTable" class="display nowrap" style="width:100%">
             <thead>
-    <tr>
-        <th>Node ID</th> {# Cột mới #}
-        <th>Node IP</th> {# Cột mới #}
-        <th>Timestamp</th>
-        <th>Source</th>
-        <th>Destination</th>
-        <th>Protocol</th>
-        <th>Source Port</th>
-        <th>Destination Port</th>
-        <th>Raw Log</th>
-    </tr>
-</thead>
-<tbody>
-    {% for entry in log_entries %}
-    <tr>
-        <td>{{ entry.node_id }}</td> {# Hiển thị giá trị #}
-        <td>{{ entry.node_ip }}</td> {# Hiển thị giá trị #}
-        <td>{{ entry.timestamp }}</td>
-        <td>{{ entry.source }}</td>
-        <td>{{ entry.destination }}</td>
-        <td>{{ entry.protocol }}</td>
-        <td>{{ entry.source_port }}</td>
-        <td>{{ entry.destination_port }}</td>
-        <td>{{ entry.raw_log }}</td>
-    </tr>
-    {% endfor %}
-</tbody>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Node ID</th>
+                    <th>Node IP</th>
+                    <th>Hostname</th>
+                    <th>Kernel Timestamp</th>
+                    <th>Chain</th>
+                    <th>In Interface</th>
+                    <th>Out Interface</th>
+                    <th>MAC</th>
+                    <th>Source IP</th>
+                    <th>Destination IP</th>
+                    <th>Length</th>
+                    <th>TOS</th>
+                    <th>PREC</th>
+                    <th>TTL</th>
+                    <th>ID</th>
+                    <th>Flags</th>
+                    <th>Protocol</th>
+                    <th>Source Port</th>
+                    <th>Destination Port</th>
+                    <th>Type (ICMP)</th>
+                    <th>Code (ICMP)</th>
+                    <th>ICMP ID</th>
+                    <th>ICMP Seq</th>
+                    <th>Window</th>
+                    <th>RES</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in log_entries %}
+                <tr>
+                    <td>{{ entry.timestamp }}</td>
+                    <td>{{ entry.node_id }}</td>
+                    <td>{{ entry.node_ip }}</td>
+                    <td>{{ entry.hostname }}</td>
+                    <td>{{ entry.kernel_timestamp }}</td>
+                    <td>{{ entry.chain }}</td>
+                    <td>{{ entry.in_interface }}</td>
+                    <td>{{ entry.out_interface }}</td>
+                    <td>{{ entry.mac }}</td>
+                    <td>{{ entry.src_ip }}</td>
+                    <td>{{ entry.dst_ip }}</td>
+                    <td>{{ entry.length }}</td>
+                    <td>{{ entry.tos }}</td>
+                    <td>{{ entry.prec }}</td>
+                    <td>{{ entry.ttl }}</td>
+                    <td>{{ entry.id }}</td>
+                    <td>{{ entry.flags }}</td>
+                    <td>{{ entry.protocol }}</td>
+                    <td>{{ entry.src_port }}</td>
+                    <td>{{ entry.dst_port }}</td>
+                    <td>{{ entry.type }}</td>
+                    <td>{{ entry.code }}</td>
+                    <td>{{ entry.icmp_id }}</td>
+                    <td>{{ entry.icmp_seq }}</td>
+                    <td>{{ entry.window }}</td>
+                    <td>{{ entry.res }}</td>
+                    <td>{{ entry.detail }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
     <div>
@@ -58,14 +94,22 @@
         <div class="filter-form" id="filterForm">
             <label for="filterTimestamp">Timestamp:</label>
             <input type="text" id="filterTimestamp" placeholder="Enter timestamp">
+            <label for="filterNodeID">Node ID:</label>
+            <input type="text" id="filterNodeID" placeholder="Enter Node ID">
+            <label for="filterNodeIP">Node IP:</label>
+            <input type="text" id="filterNodeIP" placeholder="Enter Node IP">
             <label for="filterHostname">Hostname:</label>
             <input type="text" id="filterHostname" placeholder="Enter hostname">
+            <label for="filterKernelTimestamp">Kernel Timestamp:</label>
+            <input type="text" id="filterKernelTimestamp" placeholder="Enter kernel timestamp">
             <label for="filterChain">Chain:</label>
             <input type="text" id="filterChain" placeholder="Enter chain">
             <label for="filterInInterface">In Interface:</label>
             <input type="text" id="filterInInterface" placeholder="Enter in interface">
             <label for="filterOutInterface">Out Interface:</label>
             <input type="text" id="filterOutInterface" placeholder="Enter out interface">
+            <label for="filterMAC">MAC:</label>
+            <input type="text" id="filterMAC" placeholder="Enter MAC address">
             <label for="filterSrcIP">Source IP:</label>
             <input type="text" id="filterSrcIP" placeholder="Enter source IP">
             <label for="filterDstIP">Destination IP:</label>
@@ -88,6 +132,14 @@
             <input type="text" id="filterSrcPort" placeholder="Enter source port">
             <label for="filterDstPort">Destination Port:</label>
             <input type="text" id="filterDstPort" placeholder="Enter destination port">
+            <label for="filterType">Type (ICMP):</label>
+            <input type="text" id="filterType" placeholder="Enter ICMP type">
+            <label for="filterCode">Code (ICMP):</label>
+            <input type="text" id="filterCode" placeholder="Enter ICMP code">
+            <label for="filterIcmpID">ICMP ID:</label>
+            <input type="text" id="filterIcmpID" placeholder="Enter ICMP ID">
+            <label for="filterIcmpSeq">ICMP Seq:</label>
+            <input type="text" id="filterIcmpSeq" placeholder="Enter ICMP sequence">
             <label for="filterWindow">Window:</label>
             <input type="text" id="filterWindow" placeholder="Enter window">
             <label for="filterRES">RES:</label>
@@ -120,10 +172,14 @@
         $('#applyFilterButton').on('click', function() {
             var filterValues = [
                 $('#filterTimestamp').val(),
+                $('#filterNodeID').val(),
+                $('#filterNodeIP').val(),
                 $('#filterHostname').val(),
+                $('#filterKernelTimestamp').val(),
                 $('#filterChain').val(),
                 $('#filterInInterface').val(),
                 $('#filterOutInterface').val(),
+                $('#filterMAC').val(),
                 $('#filterSrcIP').val(),
                 $('#filterDstIP').val(),
                 $('#filterLength').val(),
@@ -135,12 +191,17 @@
                 $('#filterProtocol').val(),
                 $('#filterSrcPort').val(),
                 $('#filterDstPort').val(),
+                $('#filterType').val(),
+                $('#filterCode').val(),
+                $('#filterIcmpID').val(),
+                $('#filterIcmpSeq').val(),
                 $('#filterWindow').val(),
                 $('#filterRES').val(),
                 $('#filterDetail').val()
             ];
 
-            var filterString = filterValues.join(' ');
+            // Join non-empty filter values with a space for a broad search
+            var filterString = filterValues.filter(Boolean).join(' ');
             table.search(filterString).draw();
 
             if (table.rows({ filter: 'applied' }).data().length === 0) {
