@@ -352,6 +352,7 @@ def view_log():
                             # Cách 1: Thêm trực tiếp vào dictionary đã parse
                             entry['node_id'] = node_id_for_log
                             entry['node_ip'] = node_ip_for_log
+                            print(entry)
                             all_entries.append(entry)
 
                             # Cách 2 (Nếu bạn muốn kiểm soát chính xác thứ tự các key trong dict):
