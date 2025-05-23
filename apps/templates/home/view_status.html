@@ -203,7 +203,7 @@
 {# Đặt DataTables JS và script tùy chỉnh vào block javascripts. Đảm bảo nó được giữ lại bằng {{ super() }} #}
 {% block javascripts %}
     {{ super() }} {# Đảm bảo giữ lại các script từ base.html, đặc biệt là jQuery #}
-    {# DataTables JS phải được tải sau jQuery. jQuery thường được tải trong base.html. #}
+    {# DataTables JS phải được tải sau jQuery. jQuery đã được tải trong base.html. #}
     <script type="text/javascript" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
 
     <script>
