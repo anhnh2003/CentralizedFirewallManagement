@@ -312,6 +312,7 @@ def view_log():
         iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
         print(f"DEBUG_VIEW_LOG: Found file {iptables_log_path} for user {current_user.id}.")
         if os.path.exists(iptables_log_path):
+            print(f"DEBUG_VIEW_LOG: file {iptables_log_path} exist.")
             try:
                 with open(iptables_log_path, 'r') as f:
                     for line in f:
