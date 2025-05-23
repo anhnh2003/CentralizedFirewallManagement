@@ -294,15 +294,17 @@ import json
 @login_required
 def view_log():
     print("\nDEBUG_VIEW_LOG: Starting view_log function.")
-    user_allowed_nodes_map = {} # Sử dụng dictionary để lưu trữ node_id và node_ip dễ dàng
+    # Sử dụng dictionary để lưu trữ thông tin node_id và node_ip theo client_ip_dir
+    # user_allowed_nodes_info = { "ip_address": {"node_id": X, "node_ip": "Y"} }
+    user_allowed_nodes_info = {}
     
     node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
     for entry in node_entries:
         node = Nodes.query.get(entry.node_id)
         if node:
-            print(f"DEBUG_VIEW_LOG: User {current_user.id} allowed IP: {node.ip_address}, Node ID: {node.id}")
-            # Lưu trữ cả ip_address và id của node
-            user_allowed_nodes_map[node.ip_address] = {
+            print(f"DEBUG_VIEW_LOG: User {current_user.id} allowed node: {node.hostname} ({node.ip_address}) - ID: {node.id}")
+            # Lưu trữ thông tin node vào dictionary
+            user_allowed_nodes_info[node.ip_address] = {
                 'node_id': node.id,
                 'node_ip': node.ip_address
             }
@@ -322,26 +324,48 @@ def view_log():
             continue
 
         # Chỉ xử lý các IP mà người dùng hiện tại có quyền truy cập
-        if client_ip_dir not in user_allowed_nodes_map:
+        if client_ip_dir not in user_allowed_nodes_info:
+            print(f"DEBUG_VIEW_LOG: User not allowed to view logs for IP: {client_ip_dir}. Skipping.")
             continue
 
+        # Lấy thông tin node từ dictionary đã chuẩn bị sẵn
+        current_node_info = user_allowed_nodes_info[client_ip_dir]
+        node_id_for_log = current_node_info['node_id']
+        node_ip_for_log = current_node_info['node_ip']
+
         iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
-        print(f"DEBUG_VIEW_LOG: Checking file {iptables_log_path}.")
+        print(f"DEBUG_VIEW_LOG: Checking file {iptables_log_path} for IP {client_ip_dir}.")
         
         if os.path.exists(iptables_log_path):
-            print(f"DEBUG_VIEW_LOG: File {iptables_log_path} exists.")
+            print(f"DEBUG_VIEW_LOG: File {iptables_log_path} exists. Reading...")
             try:
                 with open(iptables_log_path, 'r') as f:
-                    print(f"DEBUG_VIEW_LOG: Reading file {iptables_log_path}...")
                     for line in f:
                         entry = parse_log_line(line)
+                        # Chỉ xử lý nếu parse_log_line trả về một dictionary không rỗng
                         if entry:
-                            # Thêm thông tin IP của client (node_ip) và node_id vào mỗi entry log
-                            node_info = user_allowed_nodes_map[client_ip_dir]
-                            entry['node_id'] = node_info['node_id']
-                            entry['node_ip'] = node_info['node_ip'] # Đổi tên thành node_ip cho rõ ràng
+                            # Thêm node_id và node_ip vào dictionary 'entry'
+                            # Lưu ý: thứ tự thêm vào dictionary không ảnh hưởng đến thứ tự hiển thị
+                            # trong template, nhưng bạn có thể kiểm soát nó bằng cách tạo một dict mới
+                            # hoặc sắp xếp lại các khóa nếu muốn.
+                            
+                            # Cách 1: Thêm trực tiếp vào dictionary đã parse
+                            entry['node_id'] = node_id_for_log
+                            entry['node_ip'] = node_ip_for_log
                             all_entries.append(entry)
-                print(f"DEBUG_VIEW_LOG: Successfully processed {len(all_entries)} entries from {iptables_log_path}.")
+
+                            # Cách 2 (Nếu bạn muốn kiểm soát chính xác thứ tự các key trong dict):
+                            # Bạn có thể tạo một OrderedDict hoặc tạo dict mới theo thứ tự mong muốn
+                            # new_entry = {
+                            #     'timestamp': entry.get('timestamp', ''),
+                            #     'node_id': node_id_for_log,
+                            #     'node_ip': node_ip_for_log,
+                            #     'hostname': entry.get('hostname', ''),
+                            #     # ... thêm các trường khác theo thứ tự bạn muốn ...
+                            # }
+                            # all_entries.append(new_entry)
+
+                print(f"DEBUG_VIEW_LOG: Successfully processed logs from {iptables_log_path}.")
             except Exception as e:
                 flash(f"Lỗi khi đọc file log {iptables_log_path}: {e}", 'error')
                 print(f"ERROR_VIEW_LOG: Error reading log file {iptables_log_path}: {e}")
