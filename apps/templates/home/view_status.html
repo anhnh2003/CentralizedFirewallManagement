@@ -105,40 +105,70 @@
 
     <div class="table-wrapper">
         <table class="data-table display nowrap" id="nodeRulesTable">
-            <thead>
-                <tr>
-                    <th>Num</th>
-                    <th>Target</th>
-                    <th>Prot</th>
-                    <th>Opt</th>
-                    <th>Source</th>
-                    <th>Destination</th>
-                    <th>Source Port</th>
-                    <th>Destination Port</th>
-                    <th>Details</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for chain, rules in status.items() %}
-                    {% for rule_index, rule_data in rules %}
-                    <tr>
-                        <td>{{ rule_index }}</td>
-                        <td>{{ rule_data[0] or '' }}</td>
-                        <td>{{ rule_data[1] or '' }}</td>
-                        <td>{{ rule_data[2] or '' }}</td>
-                        <td>{{ rule_data[3] or '' }}</td>
-                        <td>{{ rule_data[4] or '' }}</td>
-                        <td>{{ rule_data[5] or '' }}</td>
-                        <td>{{ rule_data[6] or '' }}</td>
-                        <td>{{ rule_data[7] or '' }}</td>
-                        <td>
-                            <a href="{{ url_for('home_blueprint.delete_rule', chain=chain, rule_number=rule_index) }}" class="btn btn-danger btn-sm">Delete</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% endfor %}
-            </tbody>
+            <thead class="thead-dark">
+            <tr>
+                <th>Timestamp</th>
+                <th>Node ID</th>      {# Cột mới #}
+                <th>Node IP</th>      {# Cột mới #}
+                <th>Hostname</th>
+                <th>Kernel Timestamp</th>
+                <th>Chain</th>
+                <th>In Interface</th>
+                <th>Out Interface</th>
+                <th>MAC</th>
+                <th>Source IP</th>
+                <th>Destination IP</th>
+                <th>Length</th>
+                <th>TOS</th>
+                <th>PREC</th>
+                <th>TTL</th>
+                <th>ID</th>
+                <th>Protocol</th>
+                <th>Source Port</th>
+                <th>Destination Port</th>
+                <th>Type</th>
+                <th>Code</th>
+                <th>ICMP ID</th>
+                <th>ICMP SEQ</th>
+                <th>Window</th>
+                <th>Res</th>
+                <th>Detail</th>
+                <th>Raw Log</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in log_entries %}
+            <tr>
+                <td>{{ entry.get('timestamp', '') }}</td>
+                <td>{{ entry.get('node_id', '') }}</td>      {# Hiển thị Node ID #}
+                <td>{{ entry.get('node_ip', '') }}</td>      {# Hiển thị Node IP #}
+                <td>{{ entry.get('hostname', '') }}</td>
+                <td>{{ entry.get('kernel_timestamp', '') }}</td>
+                <td>{{ entry.get('chain', '') }}</td>
+                <td>{{ entry.get('in_interface', '') }}</td>
+                <td>{{ entry.get('out_interface', '') }}</td>
+                <td>{{ entry.get('mac', '') }}</td>
+                <td>{{ entry.get('src_ip', '') }}</td>
+                <td>{{ entry.get('dst_ip', '') }}</td>
+                <td>{{ entry.get('length', '') }}</td>
+                <td>{{ entry.get('tos', '') }}</td>
+                <td>{{ entry.get('prec', '') }}</td>
+                <td>{{ entry.get('ttl', '') }}</td>
+                <td>{{ entry.get('id', '') }}</td>
+                <td>{{ entry.get('protocol', '') }}</td>
+                <td>{{ entry.get('src_port', '') }}</td>
+                <td>{{ entry.get('dst_port', '') }}</td>
+                <td>{{ entry.get('type', '') }}</td>
+                <td>{{ entry.get('code', '') }}</td>
+                <td>{{ entry.get('icmp_id', '') }}</td>
+                <td>{{ entry.get('icmp_seq', '') }}</td>
+                <td>{{ entry.get('window', '') }}</td>
+                <td>{{ entry.get('res', '') }}</td>
+                <td>{{ entry.get('detail', '') }}</td>
+                <td>{{ entry.get('raw_log', '') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
         </table>
     </div>
 </div>
