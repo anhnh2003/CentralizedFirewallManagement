@@ -272,7 +272,9 @@ def parse_log_line(line):
     # If the pattern matches, return a dictionary of parsed fields
     if match:
         return match.groupdict()
-    return {}
+    else:
+        print(f"DEBUG: Could not parse log line: {line.strip()}")
+        return {}
 import json
 # --- View Logs from all nodes the user can access ---
 @blueprint.route('/view_log')
