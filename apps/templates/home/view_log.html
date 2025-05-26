@@ -3,7 +3,7 @@
 {% block title %} View Logs {% endblock %}
 
 {% block stylesheets %}
-<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/dataTables.min.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/datatables.min.css" rel="stylesheet">
 
 <style>
     /* Tổng quan bảng */
@@ -353,36 +353,30 @@
 {% endblock content %}
 
 {% block javascripts %}
-<script src="{{ config.ASSETS_ROOT }}/plugins/jquery/jquery.min.js"></script>
-<script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/dataTables.min.js"></script>
-
+<script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/datatables.min.js"></script>
 
 <script>
-    // Sử dụng jQuery.noConflict(true) để đảm bảo không có xung đột với bất kỳ phiên bản jQuery nào khác
-    // được tải bởi base.html. Chúng ta sẽ sử dụng 'jQ' thay vì '$'.
-    var jQ = jQuery.noConflict(true);
+    var jQ = jQuery.noConflict(true); // Vẫn giữ noConflict để an toàn
 
     jQ(document).ready(function() {
-        // Kiểm tra xem DataTables đã được khởi tạo thành công chưa
         if (typeof jQ.fn.DataTable === 'undefined') {
             console.error("Lỗi: DataTables chưa được tải hoặc khởi tạo. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
             jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
-            return; // Dừng thực thi script nếu DataTables không có
+            return;
         }
 
         var table = jQ('#logTable').DataTable({
-            "order": [[0, "desc"]], /* Sắp xếp mặc định theo cột Timestamp giảm dần */
-            "searching": false, /* Tắt tìm kiếm toàn cục mặc định của DataTables */
-            "paging": true, /* Kích hoạt phân trang */
-            "info": true, /* Hiển thị thông tin bảng (vd: Showing 1 to 10 of 57 entries) */
-            "scrollX": true, /* Kích hoạt thanh cuộn ngang */
-            "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], /* Tùy chọn số lượng dòng mỗi trang */
-            "pageLength": 20, /* Mặc định 20 dòng mỗi trang */
-            "responsive": true /* Kích hoạt chế độ responsive của DataTables */
+            "order": [[0, "desc"]],
+            "searching": false, // Tắt tìm kiếm toàn cục
+            "paging": true,
+            "info": true,
+            "scrollX": true,
+            "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
+            "pageLength": 20,
+            "responsive": true
         });
 
         // Ánh xạ ID của input field trong form với chỉ số cột của bảng
-        // Lưu ý: Chỉ số cột bắt đầu từ 0
         var columnMapping = {
             'filterNodeID': 1,
             'filterNodeIP': 2,
@@ -412,34 +406,42 @@
             'filterDetail': 26
         };
 
-        // Mặc định ẩn form filter khi tải trang
         jQ('#filterForm').hide();
 
         jQ('#filterButton').on('click', function() {
-            jQ('#filterForm').toggle(); // Chuyển đổi trạng thái hiển thị của form
+            jQ('#filterForm').toggle();
         });
 
         jQ('#applyFilterButton').on('click', function() {
-            // Xóa tất cả các bộ lọc hiện tại của DataTables
-            table.columns().search('').draw();
+            console.log("Nút Apply Filter đã được nhấn."); // Để kiểm tra phản hồi
 
-            // Lọc theo khoảng thời gian Timestamp
-            var startDate = jQ('#filterTimestampStart').val();
-            var endDate = jQ('#filterTimestampEnd').val();
+            // Bước 1: Xóa tất cả các bộ lọc hiện có
+            table.columns().search(''); // Xóa bộ lọc cho từng cột
+            jQ.fn.dataTable.ext.search = []; // Xóa các hàm lọc tùy chỉnh (quan trọng cho timestamp)
 
-            if (startDate || endDate) {
-                // Custom filter function cho Timestamp
+            // Bước 2: Lọc theo khoảng thời gian Timestamp
+            var startDateVal = jQ('#filterTimestampStart').val();
+            var endDateVal = jQ('#filterTimestampEnd').val();
+
+            if (startDateVal || endDateVal) {
+                // Thêm hàm lọc tùy chỉnh cho Timestamp
                 jQ.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
-                        var timestamp = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
+                        var timestampStr = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
 
-                        // Chuyển đổi timestamp của bảng thành đối tượng Date để so sánh
-                        // Đảm bảo định dạng timestamp của bảng giống với định dạng của input datetime-local
-                        // hoặc chuyển đổi phù hợp. Ví dụ: "YYYY-MM-DD HH:MM:SS"
-                        var tableDate = new Date(timestamp.replace(/-/g, '/')); // Thay thế - bằng / để tương thích tốt hơn trên các trình duyệt
+                        // Chuyển đổi timestamp từ bảng sang định dạng chuẩn để so sánh
+                        // Thay thế '-' bằng '/' để đảm bảo tương thích tốt nhất trên các trình duyệt
+                        // Ví dụ: "2023-01-01 12:30:00" -> "2023/01/01 12:30:00"
+                        var tableDate = new Date(timestampStr.replace(/-/g, '/'));
 
-                        var filterStartDate = startDate ? new Date(startDate) : null;
-                        var filterEndDate = endDate ? new Date(endDate) : null;
+                        var filterStartDate = startDateVal ? new Date(startDateVal) : null;
+                        var filterEndDate = endDateVal ? new Date(endDateVal) : null;
+
+                        // Nếu filterEndDate được cung cấp, hãy điều chỉnh nó đến cuối ngày
+                        // Điều này giúp việc lọc "đến hết ngày" hoạt động chính xác
+                        if (filterEndDate) {
+                            filterEndDate.setHours(23, 59, 59, 999);
+                        }
 
                         if (filterStartDate && filterEndDate) {
                             return tableDate >= filterStartDate && tableDate <= filterEndDate;
@@ -453,45 +455,49 @@
                 );
             }
 
-            // Lọc theo từng cột dựa trên các input khác
+            // Bước 3: Lọc theo từng cột dựa trên các input khác
             for (var inputId in columnMapping) {
                 var columnIndex = columnMapping[inputId];
-                var filterValue = jQ('#' + inputId).val();
+                var filterValue = jQ('#' + inputId).val().trim(); // Sử dụng .trim() để loại bỏ khoảng trắng thừa
 
                 if (filterValue) {
-                    // Lọc không phân biệt chữ hoa/thường và có thể là một phần chuỗi
-                    table.column(columnIndex).search(filterValue, true, false).draw();
+                    // Áp dụng bộ lọc cho từng cột, không phân biệt chữ hoa/thường (true) và là một phần chuỗi (false)
+                    // DataTables sẽ xây dựng regex từ chuỗi filterValue.
+                    table.column(columnIndex).search(filterValue, true, false);
                 }
             }
 
-            // Thực thi bộ lọc và vẽ lại bảng
+            // Bước 4: Sau khi áp dụng tất cả các bộ lọc, chỉ vẽ lại bảng một lần
             table.draw();
+            console.log("Đã áp dụng filter và vẽ lại bảng."); // Kiểm tra xem hàm này có chạy không
 
-            // Hiển thị thông báo "No result found" nếu không có kết quả
+            // Bước 5: Hiển thị thông báo "No result found" nếu không có kết quả
             if (table.rows({ filter: 'applied' }).data().length === 0) {
                 jQ('#noResultMessage').show();
+                console.log("Không tìm thấy kết quả.");
             } else {
                 jQ('#noResultMessage').hide();
+                console.log("Tìm thấy " + table.rows({ filter: 'applied' }).data().length + " kết quả.");
             }
         });
 
         // Nút Clear Filter (Lọc lại bảng về trạng thái ban đầu)
         jQ('#clearFilterButton').on('click', function() {
+            console.log("Nút Clear Filter đã được nhấn."); // Để kiểm tra phản hồi
             // Xóa giá trị của tất cả các input fields trong form
             jQ('.filter-form input[type="text"]').val('');
             jQ('.filter-form input[type="datetime-local"]').val('');
 
             // Xóa tất cả các bộ lọc của DataTables
             table.columns().search('');
-
-            // Xóa bộ lọc tùy chỉnh cho Timestamp
-            jQ.fn.dataTable.ext.search = [];
+            jQ.fn.dataTable.ext.search = []; // Xóa bộ lọc tùy chỉnh cho Timestamp
 
             // Vẽ lại bảng
             table.draw();
 
             // Ẩn thông báo "No result found"
             jQ('#noResultMessage').hide();
+            console.log("Đã xóa filter và vẽ lại bảng.");
         });
     });
 </script>
