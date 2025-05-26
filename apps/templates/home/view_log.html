@@ -351,55 +351,62 @@
 
 <script>
     var jQ = jQuery.noConflict(true);
+    var table; // Khai báo biến table ở phạm vi toàn cục của script để dễ truy cập
 
     jQ(document).ready(function() {
         if (typeof jQ.fn.DataTable === 'undefined') {
-            console.error("Lỗi: DataTables chưa được tải hoặc khởi tạo. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
+            console.error("Lỗi: DataTables chưa được tải hoặc không có sẵn. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
             jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
             return;
         }
 
-        // Định nghĩa các cột và kiểu dữ liệu của chúng
-        // Đây là bước quan trọng để DataTables hiểu cách xử lý dữ liệu trong từng cột
-        var table = jQ('#logTable').DataTable({
-            "order": [[0, "desc"]],
-            "searching": false, // Tắt tìm kiếm toàn cục của DataTables
-            "paging": true,
-            "info": true,
-            "scrollX": true,
-            "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
-            "pageLength": 20,
-            "responsive": true,
-            "columns": [
-                { "type": "datetime" }, // Timestamp - Cột 0
-                { "type": "num-fmt" },  // Node ID - Cột 1 (sẽ được xử lý như số để lọc)
-                { "type": "string" },   // Node IP - Cột 2
-                { "type": "string" },   // Hostname - Cột 3
-                // Đã xóa Kernel Timestamp (index 4 cũ)
-                { "type": "string" },   // Chain - Cột 4 (index 5 cũ)
-                { "type": "string" },   // In IF - Cột 5 (index 6 cũ)
-                { "type": "string" },   // Out IF - Cột 6 (index 7 cũ)
-                { "type": "string" },   // MAC - Cột 7 (index 8 cũ)
-                { "type": "string" },   // Src IP - Cột 8 (index 9 cũ)
-                { "type": "string" },   // Dst IP - Cột 9 (index 10 cũ)
-                { "type": "num-fmt" },  // Length - Cột 10
-                { "type": "string" },   // TOS - Cột 11 (thường là hex, tốt nhất là string)
-                { "type": "string" },   // PREC - Cột 12 (thường là hex, tốt nhất là string)
-                { "type": "num-fmt" },  // TTL - Cột 13
-                { "type": "num-fmt" },  // ID - Cột 14
-                { "type": "string" },   // Flags - Cột 15
-                { "type": "string" },   // Protocol - Cột 16
-                { "type": "num-fmt" },  // Src Port - Cột 17
-                { "type": "num-fmt" },  // Dst Port - Cột 18
-                { "type": "num-fmt" },  // Type (ICMP) - Cột 19
-                { "type": "num-fmt" },  // Code (ICMP) - Cột 20
-                { "type": "num-fmt" },  // ICMP ID - Cột 21
-                { "type": "num-fmt" },  // ICMP Seq - Cột 22
-                { "type": "num-fmt" },  // Window - Cột 23
-                { "type": "string" },   // RES - Cột 24 (thường là hex, tốt nhất là string)
-                { "type": "string" }    // Detail - Cột 25
-            ]
-        });
+        // --- BƯỚC KHỞI TẠO DATATABLES CỰC KỲ QUAN TRỌNG ---
+        // Kiểm tra xem DataTables đã được khởi tạo trên #logTable chưa
+        if ( ! jQ.fn.dataTable.isDataTable( '#logTable' ) ) {
+            console.log("Khởi tạo DataTables cho #logTable...");
+            table = jQ('#logTable').DataTable({
+                "order": [[0, "desc"]],
+                "searching": false, // Tắt tìm kiếm toàn cục của DataTables
+                "paging": true,
+                "info": true,
+                "scrollX": true,
+                "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
+                "pageLength": 20,
+                "responsive": true, // Có thể gây vấn đề với scrollX, thử tắt nếu có lỗi hiển thị
+                "columns": [
+                    { "type": "datetime" }, // Timestamp - Cột 0
+                    { "type": "string" },  // Node ID - Cột 1 (Để string để chấp nhận cả "node-01" và "1", sau đó lọc số sẽ xử lý)
+                    { "type": "string" },   // Node IP - Cột 2
+                    { "type": "string" },   // Hostname - Cột 3
+                    { "type": "string" },   // Chain - Cột 4
+                    { "type": "string" },   // In IF - Cột 5
+                    { "type": "string" },   // Out IF - Cột 6
+                    { "type": "string" },   // MAC - Cột 7
+                    { "type": "string" },   // Src IP - Cột 8
+                    { "type": "string" },   // Dst IP - Cột 9
+                    { "type": "num-fmt" },  // Length - Cột 10
+                    { "type": "string" },   // TOS - Cột 11
+                    { "type": "string" },   // PREC - Cột 12
+                    { "type": "num-fmt" },  // TTL - Cột 13
+                    { "type": "num-fmt" },  // ID - Cột 14
+                    { "type": "string" },   // Flags - Cột 15
+                    { "type": "string" },   // Protocol - Cột 16
+                    { "type": "num-fmt" },  // Src Port - Cột 17
+                    { "type": "num-fmt" },  // Dst Port - Cột 18
+                    { "type": "num-fmt" },  // Type (ICMP) - Cột 19
+                    { "type": "num-fmt" },  // Code (ICMP) - Cột 20
+                    { "type": "num-fmt" },  // ICMP ID - Cột 21
+                    { "type": "num-fmt" },  // ICMP Seq - Cột 22
+                    { "type": "num-fmt" },  // Window - Cột 23
+                    { "type": "string" },   // RES - Cột 24
+                    { "type": "string" }    // Detail - Cột 25
+                ]
+            });
+            console.log("DataTables đã được khởi tạo thành công. table instanceof jQ.fn.DataTable:", table instanceof jQ.fn.DataTable);
+        } else {
+            console.log("DataTables đã được khởi tạo. Lấy instance hiện có.");
+            table = jQ('#logTable').DataTable();
+        }
 
         // Cập nhật columnMapping với các chỉ số cột mới sau khi xóa Kernel Timestamp
         // Ghi chú: Chỉ số cột bắt đầu từ 0
@@ -407,7 +414,6 @@
             'filterNodeID': 1,
             'filterNodeIP': 2,
             'filterHostname': 3,
-            // Kernel Timestamp đã bị xóa, các cột sau đó sẽ lùi chỉ số về
             'filterChain': 4,
             'filterInInterface': 5,
             'filterOutInterface': 6,
@@ -433,9 +439,9 @@
         };
 
         // Danh sách các cột mà chúng ta muốn lọc theo kiểu số nguyên dương
-        // Sử dụng ID của input field để dễ tham chiếu
         var numericFilterInputs = [
-            'filterNodeID', 'filterLength', 'filterTTL', 'filterID',
+            'filterNodeID', // Vẫn coi là số nếu người dùng nhập số, nhưng chấp nhận chuỗi cho "node-01"
+            'filterLength', 'filterTTL', 'filterID',
             'filterSrcPort', 'filterDstPort', 'filterType', 'filterCode',
             'filterIcmpID', 'filterIcmpSeq', 'filterWindow'
         ];
@@ -447,7 +453,7 @@
         });
 
         jQ('#applyFilterButton').on('click', function() {
-            console.log("Nút Apply Filter đã được nhấn.");
+            console.log("Nút Apply Filter đã được nhấn. Bắt đầu lọc...");
 
             // Bước 1: Xóa tất cả các bộ lọc hiện có
             table.columns().search(''); // Xóa bộ lọc cho từng cột
@@ -461,15 +467,12 @@
                 jQ.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
                         var timestampStr = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
-                        // Đảm bảo định dạng Date khớp với dữ liệu từ Flask.
-                        // Ví dụ: "2023-01-01 12:30:00" cần chuyển thành "2023/01/01 12:30:00"
                         var tableDate = new Date(timestampStr.replace(/-/g, '/'));
 
                         var filterStartDate = startDateVal ? new Date(startDateVal) : null;
                         var filterEndDate = endDateVal ? new Date(endDateVal) : null;
 
                         if (filterEndDate) {
-                            // Điều chỉnh endDate đến cuối ngày để bao gồm tất cả các bản ghi trong ngày đó
                             filterEndDate.setHours(23, 59, 59, 999);
                         }
 
@@ -480,7 +483,7 @@
                         } else if (filterEndDate) {
                             return tableDate <= filterEndDate;
                         }
-                        return true; // Nếu không có ngày bắt đầu/kết thúc được nhập, không lọc theo timestamp
+                        return true;
                     }
                 );
             }
@@ -490,26 +493,31 @@
                 var columnIndex = columnMapping[inputId];
                 var filterValue = jQ('#' + inputId).val().trim();
 
-                console.log("Input ID:", inputId, " - Column Index:", columnIndex, " - Filter Value:", filterValue);
+                console.log("DEBUG: Input ID:", inputId, "| Column Index:", columnIndex, "| Filter Value:", "'" + filterValue + "'");
 
                 if (filterValue) {
-                    // Kiểm tra xem đây có phải là cột số hay không
                     if (numericFilterInputs.includes(inputId)) {
-                        // Nếu là cột số, cố gắng chuyển đổi giá trị sang số nguyên
                         var numValue = parseInt(filterValue);
-                        if (!isNaN(numValue) && numValue >= 0) { // Đảm bảo là số nguyên dương
-                            // Tạo regex để tìm kiếm chính xác số đó trong cột
-                            // Sử dụng ^ và $ để khớp toàn bộ nội dung ô
+                        if (!isNaN(numValue) && numValue >= 0) {
+                            // Đối với Node ID, nếu user nhập số, thì tìm chính xác số đó.
+                            // Nếu Node ID có thể là chuỗi (ex: node-01), thì cần regex linh hoạt hơn,
+                            // hoặc định nghĩa riêng cho Node ID.
+                            // Hiện tại, Node ID được định nghĩa là string, nên cách lọc chuỗi sẽ phù hợp hơn cho "node-01".
+                            // Nếu bạn muốn Node ID LÀ SỐ, thì chỉ cần input num, và code này ok.
+                            // Nếu Node ID CÓ THỂ LÀ CHUỖI VÀ SỐ, thì dùng regex '.*' + escapeRegex(filterValue) + '.*'
+                            // Hoặc giữ nguyên type: "string" và chỉ dùng search(filterValue, false, true); cho Node ID.
+                            // VỚI YÊU CẦU LÀ SỐ NGUYÊN DƯƠNG: Dùng '^' + numValue + '$' là đúng.
                             table.column(columnIndex).search('^' + numValue + '$', true, false);
+                            console.log("DEBUG: Áp dụng lọc số cho cột " + columnIndex + ": '^" + numValue + "$'");
                         } else {
-                            // Nếu không phải số hợp lệ, hoặc không phải số nguyên dương,
-                            // chúng ta có thể coi như không tìm thấy gì để không hiển thị toàn bộ bảng
-                            table.column(columnIndex).search('^$', true, false); // Tìm kiếm chuỗi rỗng để không có kết quả
-                            console.warn("Giá trị không hợp lệ cho trường số '" + inputId + "': " + filterValue);
+                            // Nếu người dùng nhập chữ vào ô số, hoặc số âm, coi như không tìm thấy
+                            table.column(columnIndex).search('^$', true, false); // Tìm kiếm không có gì
+                            console.warn("DEBUG: Giá trị không hợp lệ cho trường số '" + inputId + "': '" + filterValue + "'. Đã lọc ra không có gì.");
                         }
                     } else {
                         // Đối với các cột chuỗi, sử dụng tìm kiếm thông minh (contains)
                         table.column(columnIndex).search(filterValue, false, true);
+                        console.log("DEBUG: Áp dụng lọc chuỗi cho cột " + columnIndex + ": '" + filterValue + "'");
                     }
                 }
             }
@@ -517,14 +525,14 @@
             // Bước 4: Sau khi áp dụng tất cả các bộ lọc, chỉ vẽ lại bảng một lần
             table.draw();
             console.log("Đã áp dụng filter và vẽ lại bảng.");
+            var appliedRowsCount = table.rows({ filter: 'applied' }).data().length;
+            console.log("Số hàng sau khi lọc:", appliedRowsCount);
 
             // Bước 5: Hiển thị thông báo "No result found" nếu không có kết quả
-            if (table.rows({ filter: 'applied' }).data().length === 0) {
+            if (appliedRowsCount === 0) {
                 jQ('#noResultMessage').show();
-                console.log("Không tìm thấy kết quả.");
             } else {
                 jQ('#noResultMessage').hide();
-                console.log("Tìm thấy " + table.rows({ filter: 'applied' }).data().length + " kết quả.");
             }
         });
 
