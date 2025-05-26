@@ -3,7 +3,7 @@
 {% block title %} View Logs {% endblock %}
 
 {% block stylesheets %}
-<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/datatables.min.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/dataTables.min.css" rel="stylesheet">
 
 <style>
     /* Tổng quan bảng */
@@ -353,30 +353,36 @@
 {% endblock content %}
 
 {% block javascripts %}
-<script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/datatables.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/jquery/jquery.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/dataTables.min.js"></script>
+
 
 <script>
-    var jQ = jQuery.noConflict(true); // Vẫn giữ noConflict để an toàn
+    // Sử dụng jQuery.noConflict(true) để đảm bảo không có xung đột với bất kỳ phiên bản jQuery nào khác
+    // được tải bởi base.html. Chúng ta sẽ sử dụng 'jQ' thay vì '$'.
+    var jQ = jQuery.noConflict(true);
 
     jQ(document).ready(function() {
+        // Kiểm tra xem DataTables đã được khởi tạo thành công chưa
         if (typeof jQ.fn.DataTable === 'undefined') {
             console.error("Lỗi: DataTables chưa được tải hoặc khởi tạo. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
             jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
-            return;
+            return; // Dừng thực thi script nếu DataTables không có
         }
 
         var table = jQ('#logTable').DataTable({
-            "order": [[0, "desc"]],
-            "searching": false, // Tắt tìm kiếm toàn cục
-            "paging": true,
-            "info": true,
-            "scrollX": true,
-            "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
-            "pageLength": 20,
-            "responsive": true
+            "order": [[0, "desc"]], /* Sắp xếp mặc định theo cột Timestamp giảm dần */
+            "searching": false, /* Tắt tìm kiếm toàn cục mặc định của DataTables */
+            "paging": true, /* Kích hoạt phân trang */
+            "info": true, /* Hiển thị thông tin bảng (vd: Showing 1 to 10 of 57 entries) */
+            "scrollX": true, /* Kích hoạt thanh cuộn ngang */
+            "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], /* Tùy chọn số lượng dòng mỗi trang */
+            "pageLength": 20, /* Mặc định 20 dòng mỗi trang */
+            "responsive": true /* Kích hoạt chế độ responsive của DataTables */
         });
 
         // Ánh xạ ID của input field trong form với chỉ số cột của bảng
+        // Lưu ý: Chỉ số cột bắt đầu từ 0
         var columnMapping = {
             'filterNodeID': 1,
             'filterNodeIP': 2,
@@ -406,10 +412,11 @@
             'filterDetail': 26
         };
 
+        // Mặc định ẩn form filter khi tải trang
         jQ('#filterForm').hide();
 
         jQ('#filterButton').on('click', function() {
-            jQ('#filterForm').toggle();
+            jQ('#filterForm').toggle(); // Chuyển đổi trạng thái hiển thị của form
         });
 
         jQ('#applyFilterButton').on('click', function() {
