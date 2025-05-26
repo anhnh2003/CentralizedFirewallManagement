@@ -422,6 +422,31 @@ def data_visualization():
         'home/data_visualization.html',
         aggregated_data=aggregated_data # Bỏ json.dumps() 
     )
+def parse_perf_log_line(line, log_type): # Enhanced log parsing
+    try:
+        match log_type:
+            case "disk":
+                match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?ROOT_USAGE:(\d+)%", line)
+                if match:
+                    return {"timestamp": match.group(1), "root_usage": int(match.group(2))}
+            case "cpu":
+                 match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?CPU_PERF.*?(\d+)%", line)
+                 if match:
+                    return {"timestamp": match.group(1), "cpu_usage": int(match.group(2))}
+            case "ram":
+                match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?RAM_PERF.*?Total:(\d+)MB, Used:(\d+)MB, Free:(\d+)MB", line)
+                if match:
+                    return {"timestamp": match.group(1), "total_ram": int(match.group(2)), "used_ram": int(match.group(3)), "free_ram": int(match.group(4))}
+            #network log parsing
+            case "network":
+                match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?NETWORK_PERF.*?TCP_LISTEN:(\d+), TCP_ESTABLISHED:(\d+)", line)
+                if match:
+                    return {"timestamp": match.group(1), "tcp_listen": int(match.group(2)), "tcp_established": int(match.group(3))}
+            case _:
+                return None  # Or raise an exception for unknown log types
+    except Exception as e:
+        print(f"Error parsing log line: {e}")
+        return None
 @blueprint.route('/performance_charts')
 @login_required
 def performance_charts():
@@ -454,7 +479,7 @@ def performance_charts():
                 try:
                     with open(log_path, 'r') as f:
                         for line in f:
-                            entry = parse_log_line(line, log_type)
+                            entry = parse_perf_log_line(line, log_type)
                             if entry:
                                 all_log_data[client_ip_dir][log_type].append(entry)
                 except Exception as e:
