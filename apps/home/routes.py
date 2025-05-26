@@ -538,7 +538,7 @@ def performance_charts():
                 try:
                     with open(log_path, 'r') as f:
                         for line in f:
-                            entry = parse_log_line(line, log_type)
+                            entry = parse_perf_log_line(line, log_type)
                             if entry and start_date <= entry['timestamp'] <= end_date:
                                 all_log_data[client_ip_dir][log_type].append(entry)
                 except Exception as e:
