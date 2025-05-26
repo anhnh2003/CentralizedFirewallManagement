@@ -481,15 +481,58 @@
                 jQ.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
                         var timestampStr = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
-                        var tableDate = new Date(timestampStr.replace(/-/g, '/'));
+                        var tableDate;
+
+                        // --- Bắt đầu phần chuyển đổi định dạng Timestamp từ bảng ---
+                        // Ví dụ: 'May 23 15:03:27'
+                        // Cần chuyển đổi thành một định dạng có năm để new Date() hiểu đúng.
+                        // Giả định rằng các log entry thiếu năm thuộc về năm hiện tại.
+                        var currentYear = new Date().getFullYear();
+                        var formattedTimestampStr;
+
+                        // Regex để khớp với định dạng 'Mon DD HH:MM:SS'
+                        var match = timestampStr.match(/([A-Za-z]{3})\s+(\d+)\s+(\d{2}:\d{2}:\d{2})/);
+
+                        if (match) {
+                            var monthNames = {
+                                'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+                                'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                            };
+                            var month = monthNames[match[1]];
+                            var day = match[2];
+                            var time = match[3];
+                            // Tạo định dạng 'YYYY/MM/DD HH:MM:SS' để new Date() hiểu tốt nhất
+                            formattedTimestampStr = currentYear + '/' + month + '/' + day + ' ' + time;
+                        } else {
+                            // Nếu timestamp không khớp định dạng 'Mon DD HH:MM:SS',
+                            // thử định dạng lại các dấu gạch ngang (cho YYYY-MM-DD HH:MM:SS)
+                            formattedTimestampStr = timestampStr.replace(/-/g, '/');
+                        }
+
+                        tableDate = new Date(formattedTimestampStr);
+                        // --- Kết thúc phần chuyển đổi định dạng Timestamp từ bảng ---
+
 
                         var filterStartDate = startDateVal ? new Date(startDateVal) : null;
                         var filterEndDate = endDateVal ? new Date(endDateVal) : null;
 
+                        // --- DEBUGGING LOGS (có thể xóa sau khi hoạt động) ---
+                        console.log("DEBUG Timestamp Filter - Original Timestamp:", timestampStr);
+                        console.log("DEBUG Timestamp Filter - Formatted Timestamp for tableDate:", formattedTimestampStr);
+                        console.log("DEBUG Timestamp Filter - Parsed tableDate:", tableDate);
+                        console.log("DEBUG Timestamp Filter - Parsed filterStartDate:", filterStartDate);
+                        console.log("DEBUG Timestamp Filter - Parsed filterEndDate:", filterEndDate);
+                        console.log("DEBUG Timestamp Filter - tableDate is valid?", !isNaN(tableDate.getTime()));
+                        console.log("DEBUG Timestamp Filter - filterStartDate is valid?", !isNaN(filterStartDate && filterStartDate.getTime()));
+                        console.log("DEBUG Timestamp Filter - filterEndDate is valid?", !isNaN(filterEndDate && filterEndDate.getTime()));
+                        // --- KẾT THÚC DEBUGGING LOGS ---
+
                         if (filterEndDate) {
+                            // Điều chỉnh endDate đến cuối ngày để bao gồm tất cả các bản ghi trong ngày đó
                             filterEndDate.setHours(23, 59, 59, 999);
                         }
 
+                        // So sánh ngày tháng
                         if (filterStartDate && filterEndDate) {
                             return tableDate >= filterStartDate && tableDate <= filterEndDate;
                         } else if (filterStartDate) {
@@ -497,7 +540,7 @@
                         } else if (filterEndDate) {
                             return tableDate <= filterEndDate;
                         }
-                        return true;
+                        return true; // Nếu không có ngày bắt đầu/kết thúc được nhập, không lọc theo timestamp
                     }
                 );
             }
