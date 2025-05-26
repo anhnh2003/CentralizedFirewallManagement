@@ -164,8 +164,7 @@
   <link rel="stylesheet" href="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist-init.css">
   {# Chartist JS #}
   <script src="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.js"></script>
-    {# Chartist init JS #}
-  <script src="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist-init.js"></script>
+
   <script>
     const chartData = JSON.parse(`{{ chart_data | tojson | safe }}`);
     const selectedNodesFromFlask = JSON.parse(`{{ selected_nodes | tojson | safe }}`);
@@ -194,12 +193,15 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
+              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
               labelInterpolationFnc: function(value, index) {
-                // Chỉ hiển thị khoảng 200 điểm nhãn trên trục X
-                const interval = Math.ceil(cpuChartData.labels.length / 200);
-                return index % interval === 0 ? value : null;
+                const totalLabels = cpuChartData.labels.length;
+                if (index === 0 || index === totalLabels - 1) { // Hiển thị nhãn đầu và cuối
+                  return value;
+                }
+                return null; // Ẩn các nhãn khác
               },
-              showGrid: true
+              showGrid: true // Có thể ẩn grid lines nếu bạn không muốn
             },
             axisY: {
               labelInterpolationFnc: function(value) { return value + '%'; },
@@ -211,7 +213,6 @@
           };
           createChartistLineChart(`cpu-chart-${ip}`, cpuChartData, cpuOptions);
         } else {
-          // If no data, display a message within the card body
           const container = document.getElementById(`cpu-chart-${ip}`);
           if(container) container.innerHTML = '<p style="text-align:center;">Không có dữ liệu CPU cho node này.</p>';
         }
@@ -223,9 +224,13 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
+              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
               labelInterpolationFnc: function(value, index) {
-                const interval = Math.ceil(diskChartData.labels.length / 200);
-                return index % interval === 0 ? value : null;
+                const totalLabels = diskChartData.labels.length;
+                if (index === 0 || index === totalLabels - 1) {
+                  return value;
+                }
+                return null;
               },
               showGrid: true
             },
@@ -250,9 +255,13 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
+              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
               labelInterpolationFnc: function(value, index) {
-                const interval = Math.ceil(ramChartData.labels.length / 200);
-                return index % interval === 0 ? value : null;
+                const totalLabels = ramChartData.labels.length;
+                if (index === 0 || index === totalLabels - 1) {
+                  return value;
+                }
+                return null;
               },
               showGrid: true
             },
@@ -276,9 +285,13 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
+              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
               labelInterpolationFnc: function(value, index) {
-                const interval = Math.ceil(networkChartData.labels.length / 200);
-                return index % interval === 0 ? value : null;
+                const totalLabels = networkChartData.labels.length;
+                if (index === 0 || index === totalLabels - 1) {
+                  return value;
+                }
+                return null;
               },
               showGrid: true
             },
