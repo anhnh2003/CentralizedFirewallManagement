@@ -17,7 +17,7 @@
     }
     /* Thiết kế form filter thân thiện hơn */
     .filter-form {
-        display: none;
+        display: none; /* Mặc định ẩn form filter */
         margin-top: 20px;
         padding: 20px;
         border: 1px solid #ddd;
@@ -67,6 +67,18 @@
     #filterButton:hover {
         background-color: #218838;
     }
+
+    /* Đảm bảo thanh cuộn ngang hiển thị rõ hơn khi cần */
+    .dataTables_scrollBody {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* cải thiện trải nghiệm trên thiết bị di động */
+    }
+    /* Giúp các cột không bị quá hẹp khi có thanh cuộn ngang */
+    #logTable.dataTable {
+        table-layout: fixed; /* Giúp các cột có chiều rộng cố định */
+        width: 100% !important; /* Đảm bảo bảng chiếm toàn bộ chiều rộng có sẵn */
+    }
+
 </style>
 {% endblock stylesheets %}
 
@@ -262,7 +274,9 @@
 {% endblock content %}
 
 {% block javascripts %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+
 <script>
     $(document).ready(function() {
         var table = $('#logTable').DataTable({
@@ -270,11 +284,16 @@
             "searching": true,
             "paging": true,
             "info": true,
-            "scrollX": true /* Kích hoạt thanh cuộn ngang */
+            "scrollX": true, /* Kích hoạt thanh cuộn ngang */
+            "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], /* Tùy chọn số lượng dòng mỗi trang */
+            "pageLength": 20 /* Mặc định 20 dòng mỗi trang */
         });
 
+        // Mặc định ẩn form filter khi tải trang
+        $('#filterForm').hide();
+
         $('#filterButton').on('click', function() {
-            $('#filterForm').toggle();
+            $('#filterForm').toggle(); // Chuyển đổi trạng thái hiển thị của form
         });
 
         $('#applyFilterButton').on('click', function() {
@@ -308,6 +327,7 @@
                 $('#filterDetail').val()
             ];
 
+            // Join non-empty filter values with a space for a broad search
             var filterString = filterValues.filter(Boolean).join(' ');
             table.search(filterString).draw();
 
@@ -318,11 +338,15 @@
             }
         });
 
-        $('#logTable thead th').on('click', function() {
-            var column = table.column($(this).index());
-            var order = column.order();
-            column.order(order[0][1] === 'asc' ? 'desc' : 'asc').draw();
-        });
+        // Event listener cho việc sắp xếp cột (nếu cần)
+        // $('#logTable thead th').on('click', function() {
+        //     var column = table.column($(this).index());
+        //     var order = column.order();
+        //     column.order(order[0][1] === 'asc' ? 'desc' : 'asc').draw();
+        // });
+        // DataTables đã tự động xử lý việc sắp xếp khi click vào tiêu đề cột,
+        // nên đoạn code trên có thể không cần thiết và có thể gây xung đột.
+        // Tôi đã comment nó lại.
     });
 </script>
 {% endblock javascripts %}

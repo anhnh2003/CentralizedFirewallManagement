@@ -286,7 +286,7 @@ def parse_log_line(line):
         return match.groupdict()
     else:
         # In ra dòng log không thể parse để debug thêm
-        print(f"DEBUG_PARSE_FINAL_CHECK: Could not parse line: {line.strip()}")
+        #print(f"DEBUG_PARSE_FINAL_CHECK: Could not parse line: {line.strip()}")
         return {}
 import json
 # --- View Logs from all nodes the user can access ---
@@ -321,7 +321,6 @@ def view_log():
 
         # Chỉ xử lý các IP mà người dùng hiện tại có quyền truy cập
         if client_ip_dir not in user_allowed_nodes_info:
-            print(f"DEBUG_VIEW_LOG: User not allowed to view logs for IP: {client_ip_dir}. Skipping.")
             continue
 
         # Lấy thông tin node từ dictionary đã chuẩn bị sẵn
