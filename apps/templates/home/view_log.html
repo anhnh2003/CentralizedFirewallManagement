@@ -3,8 +3,8 @@
 {% block title %} View Logs {% endblock %}
 
 {% block stylesheets %}
-<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/jquery.dataTables.min.css" rel="stylesheet">
-<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/responsive.dataTables.min.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/dataTables.min.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/dataTables.min.css" rel="stylesheet">
 
 <style>
     /* Tổng quan bảng */
@@ -62,7 +62,7 @@
         display: block; /* Đảm bảo label nằm trên input */
         color: #333;
     }
-    .filter-form input[type="text"] {
+    .filter-form input[type="text"], .filter-form input[type="datetime-local"] {
         width: calc(100% - 20px); /* Tính toán chiều rộng để trừ padding */
         padding: 10px; /* Tăng padding input */
         border: 1px solid #99d6ff; /* Viền input màu xanh đậm hơn */
@@ -164,8 +164,12 @@
 
     <div class="filter-form" id="filterForm">
         <div>
-            <label for="filterTimestamp">Timestamp:</label>
-            <input type="text" id="filterTimestamp" placeholder="Ex: YYYY-MM-DD HH:MM:SS">
+            <label for="filterTimestampStart">Timestamp (Start):</label>
+            <input type="datetime-local" id="filterTimestampStart">
+        </div>
+        <div>
+            <label for="filterTimestampEnd">Timestamp (End):</label>
+            <input type="datetime-local" id="filterTimestampEnd">
         </div>
         <div>
             <label for="filterNodeID">Node ID:</label>
@@ -272,6 +276,7 @@
             <input type="text" id="filterDetail" placeholder="Enter any keyword">
         </div>
         <button id="applyFilterButton">Apply Filter</button>
+        <button id="clearFilterButton">Clear Filter</button>
     </div>
 
     <p id="noResultMessage" style="display:none;">No result found</p>
@@ -361,15 +366,14 @@
     jQ(document).ready(function() {
         // Kiểm tra xem DataTables đã được khởi tạo thành công chưa
         if (typeof jQ.fn.DataTable === 'undefined') {
-            console.error("Lỗi: DataTables chưa được tải hoặc khởi tạo. Vui lòng kiểm tra các script cục bộ.");
-            // Có thể hiển thị một thông báo lỗi thân thiện với người dùng tại đây
+            console.error("Lỗi: DataTables chưa được tải hoặc khởi tạo. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
             jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
             return; // Dừng thực thi script nếu DataTables không có
         }
 
         var table = jQ('#logTable').DataTable({
             "order": [[0, "desc"]], /* Sắp xếp mặc định theo cột Timestamp giảm dần */
-            "searching": true, /* Cho phép tìm kiếm toàn cục */
+            "searching": false, /* Tắt tìm kiếm toàn cục mặc định của DataTables */
             "paging": true, /* Kích hoạt phân trang */
             "info": true, /* Hiển thị thông tin bảng (vd: Showing 1 to 10 of 57 entries) */
             "scrollX": true, /* Kích hoạt thanh cuộn ngang */
@@ -377,6 +381,37 @@
             "pageLength": 20, /* Mặc định 20 dòng mỗi trang */
             "responsive": true /* Kích hoạt chế độ responsive của DataTables */
         });
+
+        // Ánh xạ ID của input field trong form với chỉ số cột của bảng
+        // Lưu ý: Chỉ số cột bắt đầu từ 0
+        var columnMapping = {
+            'filterNodeID': 1,
+            'filterNodeIP': 2,
+            'filterHostname': 3,
+            'filterKernelTimestamp': 4,
+            'filterChain': 5,
+            'filterInInterface': 6,
+            'filterOutInterface': 7,
+            'filterMAC': 8,
+            'filterSrcIP': 9,
+            'filterDstIP': 10,
+            'filterLength': 11,
+            'filterTOS': 12,
+            'filterPREC': 13,
+            'filterTTL': 14,
+            'filterID': 15,
+            'filterFlags': 16,
+            'filterProtocol': 17,
+            'filterSrcPort': 18,
+            'filterDstPort': 19,
+            'filterType': 20,
+            'filterCode': 21,
+            'filterIcmpID': 22,
+            'filterIcmpSeq': 23,
+            'filterWindow': 24,
+            'filterRES': 25,
+            'filterDetail': 26
+        };
 
         // Mặc định ẩn form filter khi tải trang
         jQ('#filterForm').hide();
@@ -386,39 +421,52 @@
         });
 
         jQ('#applyFilterButton').on('click', function() {
-            var filterValues = [
-                jQ('#filterTimestamp').val(),
-                jQ('#filterNodeID').val(),
-                jQ('#filterNodeIP').val(),
-                jQ('#filterHostname').val(),
-                jQ('#filterKernelTimestamp').val(),
-                jQ('#filterChain').val(),
-                jQ('#filterInInterface').val(),
-                jQ('#filterOutInterface').val(),
-                jQ('#filterMAC').val(),
-                jQ('#filterSrcIP').val(),
-                jQ('#filterDstIP').val(),
-                jQ('#filterLength').val(),
-                jQ('#filterTOS').val(),
-                jQ('#filterPREC').val(),
-                jQ('#filterTTL').val(),
-                jQ('#filterID').val(),
-                jQ('#filterFlags').val(),
-                jQ('#filterProtocol').val(),
-                jQ('#filterSrcPort').val(),
-                jQ('#filterDstPort').val(),
-                jQ('#filterType').val(),
-                jQ('#filterCode').val(),
-                jQ('#filterIcmpID').val(),
-                jQ('#filterIcmpSeq').val(),
-                jQ('#filterWindow').val(),
-                jQ('#filterRES').val(),
-                jQ('#filterDetail').val()
-            ];
+            // Xóa tất cả các bộ lọc hiện tại của DataTables
+            table.columns().search('').draw();
 
-            // Nối các giá trị filter không rỗng với dấu cách cho tìm kiếm toàn cục
-            var filterString = filterValues.filter(Boolean).join(' ');
-            table.search(filterString).draw();
+            // Lọc theo khoảng thời gian Timestamp
+            var startDate = jQ('#filterTimestampStart').val();
+            var endDate = jQ('#filterTimestampEnd').val();
+
+            if (startDate || endDate) {
+                // Custom filter function cho Timestamp
+                jQ.fn.dataTable.ext.search.push(
+                    function(settings, data, dataIndex) {
+                        var timestamp = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
+
+                        // Chuyển đổi timestamp của bảng thành đối tượng Date để so sánh
+                        // Đảm bảo định dạng timestamp của bảng giống với định dạng của input datetime-local
+                        // hoặc chuyển đổi phù hợp. Ví dụ: "YYYY-MM-DD HH:MM:SS"
+                        var tableDate = new Date(timestamp.replace(/-/g, '/')); // Thay thế - bằng / để tương thích tốt hơn trên các trình duyệt
+
+                        var filterStartDate = startDate ? new Date(startDate) : null;
+                        var filterEndDate = endDate ? new Date(endDate) : null;
+
+                        if (filterStartDate && filterEndDate) {
+                            return tableDate >= filterStartDate && tableDate <= filterEndDate;
+                        } else if (filterStartDate) {
+                            return tableDate >= filterStartDate;
+                        } else if (filterEndDate) {
+                            return tableDate <= filterEndDate;
+                        }
+                        return true; // Nếu không có start/end date nào được nhập, không lọc
+                    }
+                );
+            }
+
+            // Lọc theo từng cột dựa trên các input khác
+            for (var inputId in columnMapping) {
+                var columnIndex = columnMapping[inputId];
+                var filterValue = jQ('#' + inputId).val();
+
+                if (filterValue) {
+                    // Lọc không phân biệt chữ hoa/thường và có thể là một phần chuỗi
+                    table.column(columnIndex).search(filterValue, true, false).draw();
+                }
+            }
+
+            // Thực thi bộ lọc và vẽ lại bảng
+            table.draw();
 
             // Hiển thị thông báo "No result found" nếu không có kết quả
             if (table.rows({ filter: 'applied' }).data().length === 0) {
@@ -426,6 +474,25 @@
             } else {
                 jQ('#noResultMessage').hide();
             }
+        });
+
+        // Nút Clear Filter (Lọc lại bảng về trạng thái ban đầu)
+        jQ('#clearFilterButton').on('click', function() {
+            // Xóa giá trị của tất cả các input fields trong form
+            jQ('.filter-form input[type="text"]').val('');
+            jQ('.filter-form input[type="datetime-local"]').val('');
+
+            // Xóa tất cả các bộ lọc của DataTables
+            table.columns().search('');
+
+            // Xóa bộ lọc tùy chỉnh cho Timestamp
+            jQ.fn.dataTable.ext.search = [];
+
+            // Vẽ lại bảng
+            table.draw();
+
+            // Ẩn thông báo "No result found"
+            jQ('#noResultMessage').hide();
         });
     });
 </script>
