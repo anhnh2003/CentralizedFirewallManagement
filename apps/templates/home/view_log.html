@@ -4,81 +4,155 @@
 
 {% block stylesheets %}
 <link href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/responsive/2.2.5/css/responsive.dataTables.min.css" rel="stylesheet">
+
 <style>
-    /* Đảm bảo thanh cuộn ngang cho bảng */
-    .dataTables_wrapper {
-        overflow-x: auto;
+    /* Tổng quan bảng */
+    #logTable {
+        width: 100% !important; /* Đảm bảo bảng chiếm toàn bộ chiều rộng có sẵn */
+        border-collapse: collapse; /* Xóa khoảng trống giữa các ô */
     }
-    /* Khoảng cách giữa các cột trong bảng */
+
+    /* Khoảng cách giữa các cột trong bảng và căn chỉnh */
     #logTable th,
     #logTable td {
-        padding: 8px 15px; /* Tăng padding để tạo khoảng cách */
+        padding: 10px 18px; /* Tăng padding để tạo khoảng cách lớn hơn */
         white-space: nowrap; /* Ngăn chặn xuống dòng cho các ô */
+        text-align: left; /* Căn trái nội dung trong ô */
+        border-bottom: 1px solid #ddd; /* Thêm đường kẻ dưới cho mỗi hàng */
     }
+
+    #logTable th {
+        background-color: #f2f2f2; /* Màu nền cho tiêu đề cột */
+        font-weight: bold;
+        color: #333;
+    }
+
+    #logTable tbody tr:hover {
+        background-color: #f5f5f5; /* Hiệu ứng hover khi rê chuột qua hàng */
+    }
+
+    /* Đảm bảo thanh cuộn ngang cho bảng chính DataTables */
+    .dataTables_wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch; /* Cải thiện trải nghiệm trên thiết bị di động */
+        padding-bottom: 15px; /* Thêm khoảng trống dưới để dễ thấy thanh cuộn */
+    }
+    .dataTables_scrollBody {
+        overflow-x: auto !important; /* Đảm bảo thanh cuộn ngang hiển thị */
+    }
+
+
     /* Thiết kế form filter thân thiện hơn */
     .filter-form {
         display: none; /* Mặc định ẩn form filter */
-        margin-top: 20px;
-        padding: 20px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        background-color: #f9f9f9;
+        margin-top: 25px; /* Tăng khoảng cách từ nút đến form */
+        padding: 25px; /* Tăng padding tổng thể của form */
+        border: 1px solid #cceeff; /* Viền màu xanh nhạt */
+        border-radius: 10px; /* Bo góc lớn hơn */
+        background-color: #e6f7ff; /* Nền màu xanh nhạt */
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Thêm đổ bóng nhẹ */
         display: grid; /* Sử dụng CSS Grid để bố cục các input */
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 2 cột responsive */
-        gap: 15px; /* Khoảng cách giữa các input */
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 2-3 cột responsive với min-width lớn hơn */
+        gap: 20px; /* Tăng khoảng cách giữa các input */
     }
     .filter-form label {
         font-weight: bold;
-        margin-bottom: 5px;
+        margin-bottom: 8px; /* Tăng khoảng cách từ label đến input */
         display: block; /* Đảm bảo label nằm trên input */
+        color: #333;
     }
     .filter-form input[type="text"] {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        box-sizing: border-box; /* Đảm bảo padding không làm tăng kích thước input */
+        width: calc(100% - 20px); /* Tính toán chiều rộng để trừ padding */
+        padding: 10px; /* Tăng padding input */
+        border: 1px solid #99d6ff; /* Viền input màu xanh đậm hơn */
+        border-radius: 5px; /* Bo góc input */
+        box-sizing: border-box;
+        font-size: 14px;
     }
+    .filter-form input[type="text"]::placeholder {
+        color: #888;
+    }
+
+    /* Nút Apply Filter */
     .filter-form button {
-        grid-column: span 2; /* Nút "Apply Filter" chiếm 2 cột */
-        padding: 10px 20px;
-        background-color: #007bff;
+        grid-column: 1 / -1; /* Nút "Apply Filter" chiếm toàn bộ chiều rộng của grid */
+        padding: 12px 25px; /* Tăng padding nút */
+        background-color: #008cba; /* Màu xanh dương đậm */
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: 6px;
         cursor: pointer;
         font-size: 16px;
-        margin-top: 10px;
+        font-weight: bold;
+        margin-top: 15px; /* Khoảng cách trên nút */
+        transition: background-color 0.3s ease; /* Hiệu ứng chuyển động khi hover */
     }
     .filter-form button:hover {
-        background-color: #0056b3;
+        background-color: #005f7f; /* Màu đậm hơn khi hover */
     }
-    /* Đặt nút 'Show filter form' ở trên cùng */
+
+    /* Nút Show Filter Form */
     #filterButton {
-        margin-bottom: 15px; /* Khoảng cách dưới nút */
-        padding: 10px 20px;
-        background-color: #28a745;
+        margin-bottom: 20px; /* Tăng khoảng cách dưới nút */
+        padding: 12px 25px; /* Tăng padding nút */
+        background-color: #4CAF50; /* Màu xanh lá cây */
         color: white;
         border: none;
-        border-radius: 5px;
+        border-radius: 6px;
         cursor: pointer;
         font-size: 16px;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
     }
     #filterButton:hover {
-        background-color: #218838;
+        background-color: #45a049; /* Màu đậm hơn khi hover */
     }
 
-    /* Đảm bảo thanh cuộn ngang hiển thị rõ hơn khi cần */
-    .dataTables_scrollBody {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* cải thiện trải nghiệm trên thiết bị di động */
-    }
-    /* Giúp các cột không bị quá hẹp khi có thanh cuộn ngang */
-    #logTable.dataTable {
-        table-layout: fixed; /* Giúp các cột có chiều rộng cố định */
-        width: 100% !important; /* Đảm bảo bảng chiếm toàn bộ chiều rộng có sẵn */
+    /* Thông báo không có kết quả */
+    #noResultMessage {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #ffe6e6; /* Nền màu đỏ nhạt */
+        border: 1px solid #ffcccc;
+        border-radius: 5px;
+        color: #cc0000;
+        font-weight: bold;
+        text-align: center;
     }
 
+    /* Kiểu dáng cho phần phân trang của DataTables */
+    .dataTables_paginate .paginate_button {
+        margin: 0 5px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #fff;
+        color: #337ab7;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .dataTables_paginate .paginate_button.current,
+    .dataTables_paginate .paginate_button:hover {
+        background-color: #337ab7;
+        color: white;
+        border-color: #337ab7;
+    }
+    .dataTables_paginate .paginate_button.disabled {
+        color: #ccc;
+        cursor: not-allowed;
+        background-color: #fff;
+    }
+    /* Đảm bảo khoảng cách giữa các phần tử phân trang và thông tin */
+    .dataTables_info, .dataTables_length {
+        margin-top: 15px;
+        margin-bottom: 15px;
+        font-size: 14px;
+        color: #555;
+    }
+    .dataTables_length label {
+        font-weight: normal;
+    }
 </style>
 {% endblock stylesheets %}
 
@@ -91,111 +165,111 @@
     <div class="filter-form" id="filterForm">
         <div>
             <label for="filterTimestamp">Timestamp:</label>
-            <input type="text" id="filterTimestamp" placeholder="Timestamp">
+            <input type="text" id="filterTimestamp" placeholder="Ex: 2023-01-01">
         </div>
         <div>
             <label for="filterNodeID">Node ID:</label>
-            <input type="text" id="filterNodeID" placeholder="Node ID">
+            <input type="text" id="filterNodeID" placeholder="Ex: node-01">
         </div>
         <div>
             <label for="filterNodeIP">Node IP:</label>
-            <input type="text" id="filterNodeIP" placeholder="Node IP">
+            <input type="text" id="filterNodeIP" placeholder="Ex: 192.168.1.100">
         </div>
         <div>
             <label for="filterHostname">Hostname:</label>
-            <input type="text" id="filterHostname" placeholder="Hostname">
+            <input type="text" id="filterHostname" placeholder="Ex: server-web">
         </div>
         <div>
             <label for="filterKernelTimestamp">Knl Timestamp:</label>
-            <input type="text" id="filterKernelTimestamp" placeholder="Knl Timestamp">
+            <input type="text" id="filterKernelTimestamp" placeholder="Ex: 1672531200.123456">
         </div>
         <div>
             <label for="filterChain">Chain:</label>
-            <input type="text" id="filterChain" placeholder="Chain">
+            <input type="text" id="filterChain" placeholder="Ex: INPUT">
         </div>
         <div>
             <label for="filterInInterface">In IF:</label>
-            <input type="text" id="filterInInterface" placeholder="In IF">
+            <input type="text" id="filterInInterface" placeholder="Ex: eth0">
         </div>
         <div>
             <label for="filterOutInterface">Out IF:</label>
-            <input type="text" id="filterOutInterface" placeholder="Out IF">
+            <input type="text" id="filterOutInterface" placeholder="Ex: docker0">
         </div>
         <div>
             <label for="filterMAC">MAC:</label>
-            <input type="text" id="filterMAC" placeholder="MAC">
+            <input type="text" id="filterMAC" placeholder="Ex: 00:11:22:33:44:55">
         </div>
         <div>
             <label for="filterSrcIP">Src IP:</label>
-            <input type="text" id="filterSrcIP" placeholder="Src IP">
+            <input type="text" id="filterSrcIP" placeholder="Ex: 10.0.0.5">
         </div>
         <div>
             <label for="filterDstIP">Dst IP:</label>
-            <input type="text" id="filterDstIP" placeholder="Dst IP">
+            <input type="text" id="filterDstIP" placeholder="Ex: 172.16.0.10">
         </div>
         <div>
             <label for="filterLength">Length:</label>
-            <input type="text" id="filterLength" placeholder="Length">
+            <input type="text" id="filterLength" placeholder="Ex: 120">
         </div>
         <div>
             <label for="filterTOS">TOS:</label>
-            <input type="text" id="filterTOS" placeholder="TOS">
+            <input type="text" id="filterTOS" placeholder="Ex: 0x00">
         </div>
         <div>
             <label for="filterPREC">PREC:</label>
-            <input type="text" id="filterPREC" placeholder="PREC">
+            <input type="text" id="filterPREC" placeholder="Ex: 0x00">
         </div>
         <div>
             <label for="filterTTL">TTL:</label>
-            <input type="text" id="filterTTL" placeholder="TTL">
+            <input type="text" id="filterTTL" placeholder="Ex: 64">
         </div>
         <div>
             <label for="filterID">ID:</label>
-            <input type="text" id="filterID" placeholder="ID">
+            <input type="text" id="filterID" placeholder="Ex: 12345">
         </div>
         <div>
             <label for="filterFlags">Flags:</label>
-            <input type="text" id="filterFlags" placeholder="Flags">
+            <input type="text" id="filterFlags" placeholder="Ex: DF">
         </div>
         <div>
             <label for="filterProtocol">Protocol:</label>
-            <input type="text" id="filterProtocol" placeholder="Protocol">
+            <input type="text" id="filterProtocol" placeholder="Ex: TCP">
         </div>
         <div>
             <label for="filterSrcPort">Src Port:</label>
-            <input type="text" id="filterSrcPort" placeholder="Src Port">
+            <input type="text" id="filterSrcPort" placeholder="Ex: 8080">
         </div>
         <div>
             <label for="filterDstPort">Dst Port:</label>
-            <input type="text" id="filterDstPort" placeholder="Dst Port">
+            <input type="text" id="filterDstPort" placeholder="Ex: 443">
         </div>
         <div>
             <label for="filterType">Type (ICMP):</label>
-            <input type="text" id="filterType" placeholder="Type (ICMP)">
+            <input type="text" id="filterType" placeholder="Ex: 8">
         </div>
         <div>
             <label for="filterCode">Code (ICMP):</label>
-            <input type="text" id="filterCode" placeholder="Code (ICMP)">
+            <input type="text" id="filterCode" placeholder="Ex: 0">
         </div>
         <div>
             <label for="filterIcmpID">ICMP ID:</label>
-            <input type="text" id="filterIcmpID" placeholder="ICMP ID">
+            <input type="text" id="filterIcmpID" placeholder="Ex: 123">
         </div>
         <div>
             <label for="filterIcmpSeq">ICMP Seq:</label>
-            <input type="text" id="filterIcmpSeq" placeholder="ICMP Seq">
+            <input type="text" id="filterIcmpSeq" placeholder="Ex: 1">
         </div>
         <div>
             <label for="filterWindow">Window:</label>
-            <input type="text" id="filterWindow" placeholder="Window">
+            <input type="text" id="filterWindow" placeholder="Ex: 29200">
         </div>
         <div>
             <label for="filterRES">RES:</label>
-            <input type="text" id="filterRES" placeholder="RES">
+            <input type="text" id="filterRES" placeholder="Ex: 0x00">
         </div>
         <div>
             <label for="filterDetail">Detail:</label>
-            <input type="text" id="filterDetail" placeholder="Detail">
+            <input type="text" id="filterDetail" placeholder="Enter any keyword">
         </div>
         <button id="applyFilterButton">Apply Filter</button>
     </div>
@@ -276,17 +350,19 @@
 {% block javascripts %}
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.5/js/dataTables.responsive.min.js"></script>
 
 <script>
     $(document).ready(function() {
         var table = $('#logTable').DataTable({
-            "order": [[0, "desc"]],
-            "searching": true,
-            "paging": true,
-            "info": true,
+            "order": [[0, "desc"]], /* Sắp xếp mặc định theo cột Timestamp giảm dần */
+            "searching": true, /* Cho phép tìm kiếm toàn cục */
+            "paging": true, /* Kích hoạt phân trang */
+            "info": true, /* Hiển thị thông tin bảng (vd: Showing 1 to 10 of 57 entries) */
             "scrollX": true, /* Kích hoạt thanh cuộn ngang */
             "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], /* Tùy chọn số lượng dòng mỗi trang */
-            "pageLength": 20 /* Mặc định 20 dòng mỗi trang */
+            "pageLength": 20, /* Mặc định 20 dòng mỗi trang */
+            "responsive": true /* Kích hoạt chế độ responsive của DataTables */
         });
 
         // Mặc định ẩn form filter khi tải trang
@@ -327,10 +403,11 @@
                 $('#filterDetail').val()
             ];
 
-            // Join non-empty filter values with a space for a broad search
+            // Nối các giá trị filter không rỗng với dấu cách cho tìm kiếm toàn cục
             var filterString = filterValues.filter(Boolean).join(' ');
             table.search(filterString).draw();
 
+            // Hiển thị thông báo "No result found" nếu không có kết quả
             if (table.rows({ filter: 'applied' }).data().length === 0) {
                 $('#noResultMessage').show();
             } else {
@@ -338,15 +415,13 @@
             }
         });
 
-        // Event listener cho việc sắp xếp cột (nếu cần)
+        // DataTables đã tự động xử lý việc sắp xếp khi click vào tiêu đề cột,
+        // nên đoạn code dưới đây là dư thừa và đã được loại bỏ.
         // $('#logTable thead th').on('click', function() {
         //     var column = table.column($(this).index());
         //     var order = column.order();
         //     column.order(order[0][1] === 'asc' ? 'desc' : 'asc').draw();
         // });
-        // DataTables đã tự động xử lý việc sắp xếp khi click vào tiêu đề cột,
-        // nên đoạn code trên có thể không cần thiết và có thể gây xung đột.
-        // Tôi đã comment nó lại.
     });
 </script>
 {% endblock javascripts %}
