@@ -293,7 +293,6 @@ import json
 @blueprint.route('/view_log')
 @login_required
 def view_log():
-    print("\nDEBUG_VIEW_LOG: Starting view_log function.")
     # Sử dụng dictionary để lưu trữ thông tin node_id và node_ip theo client_ip_dir
     # user_allowed_nodes_info = { "ip_address": {"node_id": X, "node_ip": "Y"} }
     user_allowed_nodes_info = {}
@@ -302,14 +301,11 @@ def view_log():
     for entry in node_entries:
         node = Nodes.query.get(entry.node_id)
         if node:
-            print(f"DEBUG_VIEW_LOG: User {current_user.id} allowed node: {node.hostname} ({node.ip_address}) - ID: {node.id}")
             # Lưu trữ thông tin node vào dictionary
             user_allowed_nodes_info[node.ip_address] = {
                 'node_id': node.id,
                 'node_ip': node.ip_address
             }
-    
-    print(f"DEBUG_VIEW_LOG: Found {len(node_entries)} node entries for user {current_user.id}.")
     base_log_dir = "/var/log/remote/"
     all_entries = []
 
@@ -334,10 +330,9 @@ def view_log():
         node_ip_for_log = current_node_info['node_ip']
 
         iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
-        print(f"DEBUG_VIEW_LOG: Checking file {iptables_log_path} for IP {client_ip_dir}.")
         
         if os.path.exists(iptables_log_path):
-            print(f"DEBUG_VIEW_LOG: File {iptables_log_path} exists. Reading...")
+
             try:
                 with open(iptables_log_path, 'r') as f:
                     for line in f:
@@ -352,7 +347,6 @@ def view_log():
                             # Cách 1: Thêm trực tiếp vào dictionary đã parse
                             entry['node_id'] = node_id_for_log
                             entry['node_ip'] = node_ip_for_log
-                            print(entry)
                             all_entries.append(entry)
 
                             # Cách 2 (Nếu bạn muốn kiểm soát chính xác thứ tự các key trong dict):
@@ -365,14 +359,10 @@ def view_log():
                             #     # ... thêm các trường khác theo thứ tự bạn muốn ...
                             # }
                             # all_entries.append(new_entry)
-
-                print(f"DEBUG_VIEW_LOG: Successfully processed logs from {iptables_log_path}.")
             except Exception as e:
                 flash(f"Lỗi khi đọc file log {iptables_log_path}: {e}", 'error')
-                print(f"ERROR_VIEW_LOG: Error reading log file {iptables_log_path}: {e}")
         else:
             flash(f"File '{iptables_log_path}' không tồn tại.", 'info')
-            print(f"DEBUG_VIEW_LOG: File '{iptables_log_path}' does not exist.")
 
     return render_template('home/view_log.html', log_entries=all_entries)
 

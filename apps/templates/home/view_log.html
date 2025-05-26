@@ -5,15 +5,67 @@
 {% block stylesheets %}
 <link href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet">
 <style>
+    /* Đảm bảo thanh cuộn ngang cho bảng */
     .dataTables_wrapper {
         overflow-x: auto;
     }
+    /* Khoảng cách giữa các cột trong bảng */
+    #logTable th,
+    #logTable td {
+        padding: 8px 15px; /* Tăng padding để tạo khoảng cách */
+        white-space: nowrap; /* Ngăn chặn xuống dòng cho các ô */
+    }
+    /* Thiết kế form filter thân thiện hơn */
     .filter-form {
         display: none;
         margin-top: 20px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+        display: grid; /* Sử dụng CSS Grid để bố cục các input */
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 2 cột responsive */
+        gap: 15px; /* Khoảng cách giữa các input */
     }
-    .filter-form input {
-        margin-bottom: 10px;
+    .filter-form label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: block; /* Đảm bảo label nằm trên input */
+    }
+    .filter-form input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box; /* Đảm bảo padding không làm tăng kích thước input */
+    }
+    .filter-form button {
+        grid-column: span 2; /* Nút "Apply Filter" chiếm 2 cột */
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 10px;
+    }
+    .filter-form button:hover {
+        background-color: #0056b3;
+    }
+    /* Đặt nút 'Show filter form' ở trên cùng */
+    #filterButton {
+        margin-bottom: 15px; /* Khoảng cách dưới nút */
+        padding: 10px 20px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    #filterButton:hover {
+        background-color: #218838;
     }
 </style>
 {% endblock stylesheets %}
@@ -21,6 +73,123 @@
 {% block content %}
 <div class="container-fluid">
     <h2>IPTables Logs</h2>
+
+    <button id="filterButton">Show Filter Form</button>
+
+    <div class="filter-form" id="filterForm">
+        <div>
+            <label for="filterTimestamp">Timestamp:</label>
+            <input type="text" id="filterTimestamp" placeholder="Timestamp">
+        </div>
+        <div>
+            <label for="filterNodeID">Node ID:</label>
+            <input type="text" id="filterNodeID" placeholder="Node ID">
+        </div>
+        <div>
+            <label for="filterNodeIP">Node IP:</label>
+            <input type="text" id="filterNodeIP" placeholder="Node IP">
+        </div>
+        <div>
+            <label for="filterHostname">Hostname:</label>
+            <input type="text" id="filterHostname" placeholder="Hostname">
+        </div>
+        <div>
+            <label for="filterKernelTimestamp">Knl Timestamp:</label>
+            <input type="text" id="filterKernelTimestamp" placeholder="Knl Timestamp">
+        </div>
+        <div>
+            <label for="filterChain">Chain:</label>
+            <input type="text" id="filterChain" placeholder="Chain">
+        </div>
+        <div>
+            <label for="filterInInterface">In IF:</label>
+            <input type="text" id="filterInInterface" placeholder="In IF">
+        </div>
+        <div>
+            <label for="filterOutInterface">Out IF:</label>
+            <input type="text" id="filterOutInterface" placeholder="Out IF">
+        </div>
+        <div>
+            <label for="filterMAC">MAC:</label>
+            <input type="text" id="filterMAC" placeholder="MAC">
+        </div>
+        <div>
+            <label for="filterSrcIP">Src IP:</label>
+            <input type="text" id="filterSrcIP" placeholder="Src IP">
+        </div>
+        <div>
+            <label for="filterDstIP">Dst IP:</label>
+            <input type="text" id="filterDstIP" placeholder="Dst IP">
+        </div>
+        <div>
+            <label for="filterLength">Length:</label>
+            <input type="text" id="filterLength" placeholder="Length">
+        </div>
+        <div>
+            <label for="filterTOS">TOS:</label>
+            <input type="text" id="filterTOS" placeholder="TOS">
+        </div>
+        <div>
+            <label for="filterPREC">PREC:</label>
+            <input type="text" id="filterPREC" placeholder="PREC">
+        </div>
+        <div>
+            <label for="filterTTL">TTL:</label>
+            <input type="text" id="filterTTL" placeholder="TTL">
+        </div>
+        <div>
+            <label for="filterID">ID:</label>
+            <input type="text" id="filterID" placeholder="ID">
+        </div>
+        <div>
+            <label for="filterFlags">Flags:</label>
+            <input type="text" id="filterFlags" placeholder="Flags">
+        </div>
+        <div>
+            <label for="filterProtocol">Protocol:</label>
+            <input type="text" id="filterProtocol" placeholder="Protocol">
+        </div>
+        <div>
+            <label for="filterSrcPort">Src Port:</label>
+            <input type="text" id="filterSrcPort" placeholder="Src Port">
+        </div>
+        <div>
+            <label for="filterDstPort">Dst Port:</label>
+            <input type="text" id="filterDstPort" placeholder="Dst Port">
+        </div>
+        <div>
+            <label for="filterType">Type (ICMP):</label>
+            <input type="text" id="filterType" placeholder="Type (ICMP)">
+        </div>
+        <div>
+            <label for="filterCode">Code (ICMP):</label>
+            <input type="text" id="filterCode" placeholder="Code (ICMP)">
+        </div>
+        <div>
+            <label for="filterIcmpID">ICMP ID:</label>
+            <input type="text" id="filterIcmpID" placeholder="ICMP ID">
+        </div>
+        <div>
+            <label for="filterIcmpSeq">ICMP Seq:</label>
+            <input type="text" id="filterIcmpSeq" placeholder="ICMP Seq">
+        </div>
+        <div>
+            <label for="filterWindow">Window:</label>
+            <input type="text" id="filterWindow" placeholder="Window">
+        </div>
+        <div>
+            <label for="filterRES">RES:</label>
+            <input type="text" id="filterRES" placeholder="RES">
+        </div>
+        <div>
+            <label for="filterDetail">Detail:</label>
+            <input type="text" id="filterDetail" placeholder="Detail">
+        </div>
+        <button id="applyFilterButton">Apply Filter</button>
+    </div>
+
+    <p id="noResultMessage" style="display:none;">No result found</p>
+
     <div class="table-wrapper">
         <table id="logTable" class="display nowrap" style="width:100%">
             <thead>
@@ -29,13 +198,13 @@
                     <th>Node ID</th>
                     <th>Node IP</th>
                     <th>Hostname</th>
-                    <th>Kernel Timestamp</th>
+                    <th>Knl Timestamp</th>
                     <th>Chain</th>
-                    <th>In Interface</th>
-                    <th>Out Interface</th>
+                    <th>In IF</th>
+                    <th>Out IF</th>
                     <th>MAC</th>
-                    <th>Source IP</th>
-                    <th>Destination IP</th>
+                    <th>Src IP</th>
+                    <th>Dst IP</th>
                     <th>Length</th>
                     <th>TOS</th>
                     <th>PREC</th>
@@ -43,8 +212,8 @@
                     <th>ID</th>
                     <th>Flags</th>
                     <th>Protocol</th>
-                    <th>Source Port</th>
-                    <th>Destination Port</th>
+                    <th>Src Port</th>
+                    <th>Dst Port</th>
                     <th>Type (ICMP)</th>
                     <th>Code (ICMP)</th>
                     <th>ICMP ID</th>
@@ -89,67 +258,6 @@
             </tbody>
         </table>
     </div>
-    <div>
-        <button id="filterButton">Show Filter Form</button>
-        <div class="filter-form" id="filterForm">
-            <label for="filterTimestamp">Timestamp:</label>
-            <input type="text" id="filterTimestamp" placeholder="Enter timestamp">
-            <label for="filterNodeID">Node ID:</label>
-            <input type="text" id="filterNodeID" placeholder="Enter Node ID">
-            <label for="filterNodeIP">Node IP:</label>
-            <input type="text" id="filterNodeIP" placeholder="Enter Node IP">
-            <label for="filterHostname">Hostname:</label>
-            <input type="text" id="filterHostname" placeholder="Enter hostname">
-            <label for="filterKernelTimestamp">Kernel Timestamp:</label>
-            <input type="text" id="filterKernelTimestamp" placeholder="Enter kernel timestamp">
-            <label for="filterChain">Chain:</label>
-            <input type="text" id="filterChain" placeholder="Enter chain">
-            <label for="filterInInterface">In Interface:</label>
-            <input type="text" id="filterInInterface" placeholder="Enter in interface">
-            <label for="filterOutInterface">Out Interface:</label>
-            <input type="text" id="filterOutInterface" placeholder="Enter out interface">
-            <label for="filterMAC">MAC:</label>
-            <input type="text" id="filterMAC" placeholder="Enter MAC address">
-            <label for="filterSrcIP">Source IP:</label>
-            <input type="text" id="filterSrcIP" placeholder="Enter source IP">
-            <label for="filterDstIP">Destination IP:</label>
-            <input type="text" id="filterDstIP" placeholder="Enter destination IP">
-            <label for="filterLength">Length:</label>
-            <input type="text" id="filterLength" placeholder="Enter length">
-            <label for="filterTOS">TOS:</label>
-            <input type="text" id="filterTOS" placeholder="Enter TOS">
-            <label for="filterPREC">PREC:</label>
-            <input type="text" id="filterPREC" placeholder="Enter PREC">
-            <label for="filterTTL">TTL:</label>
-            <input type="text" id="filterTTL" placeholder="Enter TTL">
-            <label for="filterID">ID:</label>
-            <input type="text" id="filterID" placeholder="Enter ID">
-            <label for="filterFlags">Flags:</label>
-            <input type="text" id="filterFlags" placeholder="Enter flags">
-            <label for="filterProtocol">Protocol:</label>
-            <input type="text" id="filterProtocol" placeholder="Enter protocol">
-            <label for="filterSrcPort">Source Port:</label>
-            <input type="text" id="filterSrcPort" placeholder="Enter source port">
-            <label for="filterDstPort">Destination Port:</label>
-            <input type="text" id="filterDstPort" placeholder="Enter destination port">
-            <label for="filterType">Type (ICMP):</label>
-            <input type="text" id="filterType" placeholder="Enter ICMP type">
-            <label for="filterCode">Code (ICMP):</label>
-            <input type="text" id="filterCode" placeholder="Enter ICMP code">
-            <label for="filterIcmpID">ICMP ID:</label>
-            <input type="text" id="filterIcmpID" placeholder="Enter ICMP ID">
-            <label for="filterIcmpSeq">ICMP Seq:</label>
-            <input type="text" id="filterIcmpSeq" placeholder="Enter ICMP sequence">
-            <label for="filterWindow">Window:</label>
-            <input type="text" id="filterWindow" placeholder="Enter window">
-            <label for="filterRES">RES:</label>
-            <input type="text" id="filterRES" placeholder="Enter RES">
-            <label for="filterDetail">Detail:</label>
-            <input type="text" id="filterDetail" placeholder="Enter detail">
-            <button id="applyFilterButton">Apply Filter</button>
-        </div>
-        <p id="noResultMessage" style="display:none;">No result found</p>
-    </div>
 </div>
 {% endblock content %}
 
@@ -162,7 +270,7 @@
             "searching": true,
             "paging": true,
             "info": true,
-            "scrollX": true
+            "scrollX": true /* Kích hoạt thanh cuộn ngang */
         });
 
         $('#filterButton').on('click', function() {
@@ -200,7 +308,6 @@
                 $('#filterDetail').val()
             ];
 
-            // Join non-empty filter values with a space for a broad search
             var filterString = filterValues.filter(Boolean).join(' ');
             table.search(filterString).draw();
 
