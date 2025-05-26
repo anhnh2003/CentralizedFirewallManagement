@@ -349,4 +349,76 @@
 {% endblock content %}
 
 {% block javascripts %}
-    {% endblock javascripts %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.2.5/js/dataTables.responsive.min.js"></script>
+
+<script>
+    // Sử dụng jQuery.noConflict(true) để đảm bảo không có xung đột với bất kỳ phiên bản jQuery nào khác
+    // được tải bởi base.html. Chúng ta sẽ sử dụng 'jQ' hoặc 'jQuery' thay vì '$'.
+    var jQ = jQuery.noConflict(true);
+
+    jQ(document).ready(function() {
+        var table = jQ('#logTable').DataTable({
+            "order": [[0, "desc"]], /* Sắp xếp mặc định theo cột Timestamp giảm dần */
+            "searching": true, /* Cho phép tìm kiếm toàn cục */
+            "paging": true, /* Kích hoạt phân trang */
+            "info": true, /* Hiển thị thông tin bảng (vd: Showing 1 to 10 of 57 entries) */
+            "scrollX": true, /* Kích hoạt thanh cuộn ngang */
+            "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], /* Tùy chọn số lượng dòng mỗi trang */
+            "pageLength": 20, /* Mặc định 20 dòng mỗi trang */
+            "responsive": true /* Kích hoạt chế độ responsive của DataTables */
+        });
+
+        // Mặc định ẩn form filter khi tải trang
+        jQ('#filterForm').hide();
+
+        jQ('#filterButton').on('click', function() {
+            jQ('#filterForm').toggle(); // Chuyển đổi trạng thái hiển thị của form
+        });
+
+        jQ('#applyFilterButton').on('click', function() {
+            var filterValues = [
+                jQ('#filterTimestamp').val(),
+                jQ('#filterNodeID').val(),
+                jQ('#filterNodeIP').val(),
+                jQ('#filterHostname').val(),
+                jQ('#filterKernelTimestamp').val(),
+                jQ('#filterChain').val(),
+                jQ('#filterInInterface').val(),
+                jQ('#filterOutInterface').val(),
+                jQ('#filterMAC').val(),
+                jQ('#filterSrcIP').val(),
+                jQ('#filterDstIP').val(),
+                jQ('#filterLength').val(),
+                jQ('#filterTOS').val(),
+                jQ('#filterPREC').val(),
+                jQ('#filterTTL').val(),
+                jQ('#filterID').val(),
+                jQ('#filterFlags').val(),
+                jQ('#filterProtocol').val(),
+                jQ('#filterSrcPort').val(),
+                jQ('#filterDstPort').val(),
+                jQ('#filterType').val(),
+                jQ('#filterCode').val(),
+                jQ('#filterIcmpID').val(),
+                jQ('#filterIcmpSeq').val(),
+                jQ('#filterWindow').val(),
+                jQ('#filterRES').val(),
+                jQ('#filterDetail').val()
+            ];
+
+            // Nối các giá trị filter không rỗng với dấu cách cho tìm kiếm toàn cục
+            var filterString = filterValues.filter(Boolean).join(' ');
+            table.search(filterString).draw();
+
+            // Hiển thị thông báo "No result found" nếu không có kết quả
+            if (table.rows({ filter: 'applied' }).data().length === 0) {
+                jQ('#noResultMessage').show();
+            } else {
+                jQ('#noResultMessage').hide();
+            }
+        });
+    });
+</script>
+{% endblock javascripts %}
