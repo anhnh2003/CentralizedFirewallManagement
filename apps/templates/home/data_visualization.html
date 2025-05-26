@@ -64,44 +64,81 @@
 {% block scripts %}
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    // Serialize the aggregated_data object into JSON
     const aggregatedData = JSON.parse(`{{ aggregated_data | tojson | safe }}`);
 
+    console.log("DEBUG JS: aggregatedData nhận được từ Flask:", aggregatedData);
+    console.log("DEBUG JS: Kiểu dữ liệu của aggregatedData:", typeof aggregatedData);
+    console.log("DEBUG JS: aggregatedData có rỗng không?", Object.keys(aggregatedData).length === 0);
+
+    if (Object.keys(aggregatedData).length === 0) {
+        console.warn("Không có dữ liệu tổng hợp nào để vẽ biểu đồ.");
+    }
+
     Object.entries(aggregatedData).forEach(([field, data]) => {
+      console.log(`DEBUG JS: Đang xử lý trường: ${field} với dữ liệu thô:`, data);
+
       const ctx = document.getElementById(`chart-${field}`).getContext('2d');
+
+      if (!ctx) {
+          console.error(`Lỗi: Không tìm thấy canvas với ID: chart-${field}. Đảm bảo ID khớp với HTML.`);
+          return;
+      }
+
       const labels = data.map(item => item[0] || '(empty)');
       const counts = data.map(item => item[1]);
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: '# of occurrences',
-            data: counts,
-            backgroundColor: 'rgba(54, 162, 235, 0.6)',
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 },
-              title: { display: true, text: field.replace('_',' ').toUpperCase() }
-            },
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: 'Count' }
-            }
+
+      // --- Thêm các dòng DEBUG mới này ---
+      console.log(`DEBUG JS: Labels cho ${field}:`, labels);
+      console.log(`DEBUG JS: Counts cho ${field}:`, counts);
+      console.log(`DEBUG JS: Kiểm tra data cho Chart.js: labels.length=<span class="math-inline">\{labels\.length\}, counts\.length\=</span>{counts.length}`);
+      console.log(`DEBUG JS: Canvas element cho ${field}:`, document.getElementById(`chart-${field}`));
+      console.log(`DEBUG JS: Kích thước của canvas container cho ${field}:`, document.getElementById(`chart-${field}`).parentElement.offsetWidth, 'x', document.getElementById(`chart-${field}`).parentElement.offsetHeight);
+      // --- Kết thúc các dòng DEBUG mới ---
+
+      // Chỉ vẽ biểu đồ nếu có dữ liệu
+      if (labels.length > 0 && counts.length > 0) {
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: '# of occurrences',
+              data: counts,
+              backgroundColor: 'rgba(54, 162, 235, 0.6)',
+              borderColor: 'rgba(54, 162, 235, 1)',
+              borderWidth: 1
+            }]
           },
-          plugins: {
-            tooltip: { mode: 'index', intersect: false },
-            legend: { display: false }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                ticks: { autoSkip: false, maxRotation: 45, minRotation: 0 },
+                title: { display: true, text: field.replace('_',' ').toUpperCase() }
+              },
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: 'Count' }
+              }
+            },
+            plugins: {
+              tooltip: { mode: 'index', intersect: false },
+              legend: { display: false }
+            }
           }
-        }
-      });
+        });
+      } else {
+        console.warn(`Không có đủ dữ liệu cho biểu đồ ${field}. Labels:`, labels, "Counts:", counts);
+        // Có thể hiển thị một thông báo "Không có dữ liệu cho biểu đồ này" trong canvas
+        const noDataMessage = document.createElement('p');
+        noDataMessage.textContent = 'Không có dữ liệu để hiển thị biểu đồ này.';
+        noDataMessage.style.textAlign = 'center';
+        noDataMessage.style.marginTop = '20px';
+        const chartContainer = document.getElementById(`chart-${field}`).parentElement;
+        chartContainer.innerHTML = ''; // Xóa canvas rỗng
+        chartContainer.appendChild(noDataMessage);
+      }
     });
   </script>
 {% endblock scripts %}
