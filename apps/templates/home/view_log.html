@@ -159,135 +159,136 @@
 <div class="container-fluid">
     <h2>IPTables Logs</h2>
 
-    <button id="filterButton" class="btn btn-primary mb-3">Show Filter Form</button>
+    <button id="filterButton">Show Filter Form</button>
 
-    <div class="filter-form card card-body mb-3" id="filterForm">
-        <div class="row">
-            <div class="col-md-4 mb-3">
-                <label for="filterTimestampStart" class="form-label">Timestamp (Start):</label>
-                <input type="datetime-local" class="form-control" id="filterTimestampStart">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterTimestampEnd" class="form-label">Timestamp (End):</label>
-                <input type="datetime-local" class="form-control" id="filterTimestampEnd">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterNodeID" class="form-label">Node ID:</label>
-                <input type="text" class="form-control" id="filterNodeID" placeholder="Ex: node-01">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterNodeIP" class="form-label">Node IP:</label>
-                <input type="text" class="form-control" id="filterNodeIP" placeholder="Ex: 192.168.1.100">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterHostname" class="form-label">Hostname:</label>
-                <input type="text" class="form-control" id="filterHostname" placeholder="Ex: server-web">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterChain" class="form-label">Chain:</label>
-                <input type="text" class="form-control" id="filterChain" placeholder="Ex: INPUT">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterInInterface" class="form-label">In IF:</label>
-                <input type="text" class="form-control" id="filterInInterface" placeholder="Ex: eth0">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterOutInterface" class="form-label">Out IF:</label>
-                <input type="text" class="form-control" id="filterOutInterface" placeholder="Ex: docker0">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterMAC" class="form-label">MAC:</label>
-                <input type="text" class="form-control" id="filterMAC" placeholder="Ex: 00:11:22:33:44:55">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterSrcIP" class="form-label">Src IP:</label>
-                <input type="text" class="form-control" id="filterSrcIP" placeholder="Ex: 10.0.0.5">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterDstIP" class="form-label">Dst IP:</label>
-                <input type="text" class="form-control" id="filterDstIP" placeholder="Ex: 172.16.0.10">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterLength" class="form-label">Length:</label>
-                <input type="text" class="form-control" id="filterLength" placeholder="Ex: 120">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterTOS" class="form-label">TOS:</label>
-                <input type="text" class="form-control" id="filterTOS" placeholder="Ex: 0x00">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterPREC" class="form-label">PREC:</label>
-                <input type="text" class="form-control" id="filterPREC" placeholder="Ex: 0x00">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterTTL" class="form-label">TTL:</label>
-                <input type="text" class="form-control" id="filterTTL" placeholder="Ex: 64">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterID" class="form-label">ID:</label>
-                <input type="text" class="form-control" id="filterID" placeholder="Ex: 12345">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterFlags" class="form-label">Flags:</label>
-                <input type="text" class="form-control" id="filterFlags" placeholder="Ex: DF">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterProtocol" class="form-label">Protocol:</label>
-                <input type="text" class="form-control" id="filterProtocol" placeholder="Ex: TCP">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterSrcPort" class="form-label">Src Port:</label>
-                <input type="text" class="form-control" id="filterSrcPort" placeholder="Ex: 8080">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterDstPort" class="form-label">Dst Port:</label>
-                <input type="text" class="form-control" id="filterDstPort" placeholder="Ex: 443">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterType" class="form-label">Type (ICMP):</label>
-                <input type="text" class="form-control" id="filterType" placeholder="Ex: 8">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterCode" class="form-label">Code (ICMP):</label>
-                <input type="text" class="form-control" id="filterCode" placeholder="Ex: 0">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterIcmpID" class="form-label">ICMP ID:</label>
-                <input type="text" class="form-control" id="filterIcmpID" placeholder="Ex: 123">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterIcmpSeq" class="form-label">ICMP Seq:</label>
-                <input type="text" class="form-control" id="filterIcmpSeq" placeholder="Ex: 1">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterWindow" class="form-label">Window:</label>
-                <input type="text" class="form-control" id="filterWindow" placeholder="Ex: 29200">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterRES" class="form-label">RES:</label>
-                <input type="text" class="form-control" id="filterRES" placeholder="Ex: 0x00">
-            </div>
-            <div class="col-md-4 mb-3">
-                <label for="filterDetail" class="form-label">Detail:</label>
-                <input type="text" class="form-control" id="filterDetail" placeholder="Enter any keyword">
-            </div>
+    <div class="filter-form" id="filterForm">
+        <div>
+            <label for="filterTimestampStart">Timestamp (Start):</label>
+            <input type="datetime-local" id="filterTimestampStart">
         </div>
-        <div class="d-flex justify-content-end">
-            <button id="applyFilterButton" class="btn btn-success me-2">Apply Filter</button>
-            <button id="clearFilterButton" class="btn btn-secondary">Clear Filter</button>
+        <div>
+            <label for="filterTimestampEnd">Timestamp (End):</label>
+            <input type="datetime-local" id="filterTimestampEnd">
         </div>
+        <div>
+            <label for="filterNodeID">Node ID:</label>
+            <input type="text" id="filterNodeID" placeholder="Ex: node-01">
+        </div>
+        <div>
+            <label for="filterNodeIP">Node IP:</label>
+            <input type="text" id="filterNodeIP" placeholder="Ex: 192.168.1.100">
+        </div>
+        <div>
+            <label for="filterHostname">Hostname:</label>
+            <input type="text" id="filterHostname" placeholder="Ex: server-web">
+        </div>
+        <div>
+            <label for="filterKernelTimestamp">Knl Timestamp:</label>
+            <input type="text" id="filterKernelTimestamp" placeholder="Ex: 1672531200.123456">
+        </div>
+        <div>
+            <label for="filterChain">Chain:</label>
+            <input type="text" id="filterChain" placeholder="Ex: INPUT">
+        </div>
+        <div>
+            <label for="filterInInterface">In IF:</label>
+            <input type="text" id="filterInInterface" placeholder="Ex: eth0">
+        </div>
+        <div>
+            <label for="filterOutInterface">Out IF:</label>
+            <input type="text" id="filterOutInterface" placeholder="Ex: docker0">
+        </div>
+        <div>
+            <label for="filterMAC">MAC:</label>
+            <input type="text" id="filterMAC" placeholder="Ex: 00:11:22:33:44:55">
+        </div>
+        <div>
+            <label for="filterSrcIP">Src IP:</label>
+            <input type="text" id="filterSrcIP" placeholder="Ex: 10.0.0.5">
+        </div>
+        <div>
+            <label for="filterDstIP">Dst IP:</label>
+            <input type="text" id="filterDstIP" placeholder="Ex: 172.16.0.10">
+        </div>
+        <div>
+            <label for="filterLength">Length:</label>
+            <input type="text" id="filterLength" placeholder="Ex: 120">
+        </div>
+        <div>
+            <label for="filterTOS">TOS:</label>
+            <input type="text" id="filterTOS" placeholder="Ex: 0x00">
+        </div>
+        <div>
+            <label for="filterPREC">PREC:</label>
+            <input type="text" id="filterPREC" placeholder="Ex: 0x00">
+        </div>
+        <div>
+            <label for="filterTTL">TTL:</label>
+            <input type="text" id="filterTTL" placeholder="Ex: 64">
+        </div>
+        <div>
+            <label for="filterID">ID:</label>
+            <input type="text" id="filterID" placeholder="Ex: 12345">
+        </div>
+        <div>
+            <label for="filterFlags">Flags:</label>
+            <input type="text" id="filterFlags" placeholder="Ex: DF">
+        </div>
+        <div>
+            <label for="filterProtocol">Protocol:</label>
+            <input type="text" id="filterProtocol" placeholder="Ex: TCP">
+        </div>
+        <div>
+            <label for="filterSrcPort">Src Port:</label>
+            <input type="text" id="filterSrcPort" placeholder="Ex: 8080">
+        </div>
+        <div>
+            <label for="filterDstPort">Dst Port:</label>
+            <input type="text" id="filterDstPort" placeholder="Ex: 443">
+        </div>
+        <div>
+            <label for="filterType">Type (ICMP):</label>
+            <input type="text" id="filterType" placeholder="Ex: 8">
+        </div>
+        <div>
+            <label for="filterCode">Code (ICMP):</label>
+            <input type="text" id="filterCode" placeholder="Ex: 0">
+        </div>
+        <div>
+            <label for="filterIcmpID">ICMP ID:</label>
+            <input type="text" id="filterIcmpID" placeholder="Ex: 123">
+        </div>
+        <div>
+            <label for="filterIcmpSeq">ICMP Seq:</label>
+            <input type="text" id="filterIcmpSeq" placeholder="Ex: 1">
+        </div>
+        <div>
+            <label for="filterWindow">Window:</label>
+            <input type="text" id="filterWindow" placeholder="Ex: 29200">
+        </div>
+        <div>
+            <label for="filterRES">RES:</label>
+            <input type="text" id="filterRES" placeholder="Ex: 0x00">
+        </div>
+        <div>
+            <label for="filterDetail">Detail:</label>
+            <input type="text" id="filterDetail" placeholder="Enter any keyword">
+        </div>
+        <button id="applyFilterButton">Apply Filter</button>
+        <button id="clearFilterButton">Clear Filter</button>
     </div>
 
-    <p id="noResultMessage" class="alert alert-warning" style="display:none;">No result found</p>
+    <p id="noResultMessage" style="display:none;">No result found</p>
 
     <div class="table-wrapper">
-        <table id="logTable" class="display nowrap table table-striped table-bordered" style="width:100%">
+        <table id="logTable" class="display nowrap" style="width:100%">
             <thead>
                 <tr>
                     <th>Timestamp</th>
                     <th>Node ID</th>
                     <th>Node IP</th>
                     <th>Hostname</th>
+                    <th>Knl Timestamp</th>
                     <th>Chain</th>
                     <th>In IF</th>
                     <th>Out IF</th>
@@ -319,6 +320,7 @@
                     <td>{{ entry.node_id }}</td>
                     <td>{{ entry.node_ip }}</td>
                     <td>{{ entry.hostname }}</td>
+                    <td>{{ entry.kernel_timestamp }}</td>
                     <td>{{ entry.chain }}</td>
                     <td>{{ entry.in_interface }}</td>
                     <td>{{ entry.out_interface }}</td>
@@ -359,88 +361,87 @@
 
     jQ(document).ready(function() {
         if (typeof jQ.fn.DataTable === 'undefined') {
-            console.error("Error: DataTables not loaded or initialized. Please check local scripts and paths.");
-            jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Error loading table: DataTables not available. Please check local file paths or contact administrator.</p>');
+            console.error("Lỗi: DataTables chưa được tải hoặc khởi tạo. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
+            jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
             return;
         }
 
         var table = jQ('#logTable').DataTable({
             "order": [[0, "desc"]],
-            "searching": false, // Disable global search
+            "searching": false, // Tắt tìm kiếm toàn cục của DataTables
             "paging": true,
             "info": true,
             "scrollX": true,
             "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
             "pageLength": 20,
-            "responsive": true,
-            "columnDefs": [
-                { "visible": false, "targets": [4] } // Hide "Knl Timestamp" column (index 4)
-            ]
+            "responsive": true
         });
 
-        // Utility function to escape special regex characters
-        function escapeRegex(value) {
-            return value.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        }
+        // Hàm escapeRegex không còn cần thiết nếu chúng ta dùng smart: true
+        // function escapeRegex(value) {
+        //     return value.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        // }
 
-        // Adjust column mapping after removing "Knl Timestamp"
         var columnMapping = {
             'filterNodeID': 1,
             'filterNodeIP': 2,
             'filterHostname': 3,
-            // 'filterKernelTimestamp': 4, // Removed
-            'filterChain': 4, // Shifted
-            'filterInInterface': 5, // Shifted
-            'filterOutInterface': 6, // Shifted
-            'filterMAC': 7, // Shifted
-            'filterSrcIP': 8, // Shifted
-            'filterDstIP': 9, // Shifted
-            'filterLength': 10, // Shifted
-            'filterTOS': 11, // Shifted
-            'filterPREC': 12, // Shifted
-            'filterTTL': 13, // Shifted
-            'filterID': 14, // Shifted
-            'filterFlags': 15, // Shifted
-            'filterProtocol': 16, // Shifted
-            'filterSrcPort': 17, // Shifted
-            'filterDstPort': 18, // Shifted
-            'filterType': 19, // Shifted
-            'filterCode': 20, // Shifted
-            'filterIcmpID': 21, // Shifted
-            'filterIcmpSeq': 22, // Shifted
-            'filterWindow': 23, // Shifted
-            'filterRES': 24, // Shifted
-            'filterDetail': 25  // Shifted
+            'filterKernelTimestamp': 4,
+            'filterChain': 5,
+            'filterInInterface': 6,
+            'filterOutInterface': 7,
+            'filterMAC': 8,
+            'filterSrcIP': 9,
+            'filterDstIP': 10,
+            'filterLength': 11,
+            'filterTOS': 12,
+            'filterPREC': 13,
+            'filterTTL': 14,
+            'filterID': 15,
+            'filterFlags': 16,
+            'filterProtocol': 17,
+            'filterSrcPort': 18,
+            'filterDstPort': 19,
+            'filterType': 20,
+            'filterCode': 21,
+            'filterIcmpID': 22,
+            'filterIcmpSeq': 23,
+            'filterWindow': 24,
+            'filterRES': 25,
+            'filterDetail': 26
         };
 
-        jQ('#filterForm').hide(); // Hide filter form by default
+        jQ('#filterForm').hide();
 
         jQ('#filterButton').on('click', function() {
-            jQ('#filterForm').toggle(); // Toggle visibility of the filter form
+            jQ('#filterForm').toggle();
         });
 
         jQ('#applyFilterButton').on('click', function() {
-            console.log("Apply Filter button clicked.");
+            console.log("Nút Apply Filter đã được nhấn.");
 
-            // 1. Clear all existing filters
-            table.columns().search(''); // Clear search for each column
-            jQ.fn.dataTable.ext.search = []; // Clear custom filter functions (important for timestamp)
+            // Bước 1: Xóa tất cả các bộ lọc hiện có
+            table.columns().search(''); // Xóa bộ lọc cho từng cột
+            jQ.fn.dataTable.ext.search = []; // Xóa các hàm lọc tùy chỉnh (quan trọng cho timestamp)
 
-            // 2. Filter by Timestamp range
+            // Bước 2: Lọc theo khoảng thời gian Timestamp
             var startDateVal = jQ('#filterTimestampStart').val();
             var endDateVal = jQ('#filterTimestampEnd').val();
 
             if (startDateVal || endDateVal) {
                 jQ.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
-                        var timestampStr = data[0]; // Timestamp column is the first column (index 0)
-                        var tableDate = new Date(timestampStr.replace(/-/g, '/')); // Handle potential date format issues
+                        var timestampStr = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
+                        // Đảm bảo định dạng Date khớp với dữ liệu từ Flask.
+                        // Ví dụ: "2023-01-01 12:30:00" cần chuyển thành "2023/01/01 12:30:00" để tương thích tốt hơn
+                        var tableDate = new Date(timestampStr.replace(/-/g, '/'));
 
                         var filterStartDate = startDateVal ? new Date(startDateVal) : null;
                         var filterEndDate = endDateVal ? new Date(endDateVal) : null;
 
                         if (filterEndDate) {
-                            filterEndDate.setHours(23, 59, 59, 999); // Set to end of the day for inclusive range
+                            // Điều chỉnh endDate đến cuối ngày để bao gồm tất cả các bản ghi trong ngày đó
+                            filterEndDate.setHours(23, 59, 59, 999);
                         }
 
                         if (filterStartDate && filterEndDate) {
@@ -450,54 +451,56 @@
                         } else if (filterEndDate) {
                             return tableDate <= filterEndDate;
                         }
-                        return true;
+                        return true; // Nếu không có ngày bắt đầu/kết thúc được nhập, không lọc theo timestamp
                     }
                 );
             }
 
-            // 3. Filter by individual columns based on other inputs
+            // Bước 3: Lọc theo từng cột dựa trên các input khác
             for (var inputId in columnMapping) {
                 var columnIndex = columnMapping[inputId];
                 var filterValue = jQ('#' + inputId).val().trim();
 
                 if (filterValue) {
-                    var escapedFilterValue = escapeRegex(filterValue);
-                    // Apply filter to each column. 'true' for regex, 'false' for smart search (more precise with regex)
-                    table.column(columnIndex).search(escapedFilterValue, true, false);
+                    // CẬP NHẬT QUAN TRỌNG:
+                    // Sử dụng regex: false và smart: true để DataTables tự động tìm kiếm "chứa"
+                    // và xử lý các ký tự đặc biệt một cách thông minh.
+                    // Không cần escapeRegex nữa cho các trường hợp này.
+                    table.column(columnIndex).search(filterValue, false, true);
                 }
             }
 
-            // 4. Redraw the table once after applying all filters
+            // Bước 4: Sau khi áp dụng tất cả các bộ lọc, chỉ vẽ lại bảng một lần
             table.draw();
-            console.log("Filters applied and table redrawn.");
+            console.log("Đã áp dụng filter và vẽ lại bảng.");
 
-            // 5. Display "No result found" message if no results
+            // Bước 5: Hiển thị thông báo "No result found" nếu không có kết quả
             if (table.rows({ filter: 'applied' }).data().length === 0) {
                 jQ('#noResultMessage').show();
-                console.log("No results found.");
+                console.log("Không tìm thấy kết quả.");
             } else {
                 jQ('#noResultMessage').hide();
-                console.log("Found " + table.rows({ filter: 'applied' }).data().length + " results.");
+                console.log("Tìm thấy " + table.rows({ filter: 'applied' }).data().length + " kết quả.");
             }
         });
 
-        // Clear Filter button functionality
+        // Nút Clear Filter (Lọc lại bảng về trạng thái ban đầu)
         jQ('#clearFilterButton').on('click', function() {
-            console.log("Clear Filter button clicked.");
-            // Clear values of all input fields in the form
+            console.log("Nút Clear Filter đã được nhấn.");
+            // Xóa giá trị của tất cả các input fields trong form
             jQ('.filter-form input[type="text"]').val('');
             jQ('.filter-form input[type="datetime-local"]').val('');
 
-            // Clear all DataTables filters
+            // Xóa tất cả các bộ lọc của DataTables
             table.columns().search('');
-            jQ.fn.dataTable.ext.search = []; // Clear custom timestamp filter
+            jQ.fn.dataTable.ext.search = []; // Xóa bộ lọc tùy chỉnh cho Timestamp
 
-            // Redraw the table
+            // Vẽ lại bảng
             table.draw();
 
-            // Hide "No result found" message
+            // Ẩn thông báo "No result found"
             jQ('#noResultMessage').hide();
-            console.log("Filters cleared and table redrawn.");
+            console.log("Đã xóa filter và vẽ lại bảng.");
         });
     });
 </script>
