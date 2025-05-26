@@ -1,36 +1,6 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<style>
-  .page-content {
-    margin-left: 0px; /* Adjust for sidebar */
-    padding: 2rem;
-    background: #f8f9fa;
-  }
-  .card {
-    height: 100%;
-  }
-  /* Specific styles for Chartist charts */
-  .ct-chart {
-    height: 250px; /* Ensure charts have a height */
-    width: 100%;
-  }
-  .card-header {
-    font-weight: bold;
-    text-transform: capitalize;
-  }
-  /* Chartist custom styling (optional, you can override default Chartist.css) */
-  .ct-series-a .ct-line, .ct-series-a .ct-point {
-    stroke: #ff6384; /* Reddish for CPU/Listen */
-  }
-  .ct-series-b .ct-line, .ct-series-b .ct-point {
-    stroke: #36a2eb; /* Bluish for Disk/Established */
-  }
-  .ct-series-c .ct-line, .ct-series-c .ct-point {
-    stroke: #ffcd56; /* Yellowish for RAM */
-  }
-  /* Add more series colors if needed for multiple metrics */
-</style>
 
 <div class="page-content">
   <h2>Performance Charts</h2>
