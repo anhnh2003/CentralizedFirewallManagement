@@ -354,20 +354,7 @@
     var table; // Khai báo biến table ở phạm vi toàn cục của script để dễ truy cập
 
     jQ(document).ready(function() {
-        if ( ! jQ.fn.dataTable.isDataTable( '#logTable' ) ) {
-            console.log("Khởi tạo DataTables cho #logTable...");
-            table = jQ('#logTable').DataTable({
-                // Your DataTable options here...
-            });
-            // --- THÊM CÁC DÒNG NÀY VÀO ĐÂY ---
-            console.log("Giá trị của 'table' ngay sau khởi tạo:", table);
-            console.log("table có phải là truthy (tồn tại) không?", !!table);
-            // --- KẾT THÚC CÁC DÒNG MỚI ---
-            console.log("DataTables đã được khởi tạo thành công. table instanceof jQ.fn.DataTable:", table instanceof jQ.fn.DataTable);
-        } else {
-            console.log("DataTables đã được khởi tạo trước đó. Lấy instance hiện có.");
-            table = jQ('#logTable').DataTable();
-        }
+        
         if (typeof jQ.fn.DataTable === 'undefined') {
             console.error("Lỗi: DataTables chưa được tải hoặc không có sẵn. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
             jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
