@@ -348,48 +348,34 @@
 {% block javascripts %}
 <script src="{{ config.ASSETS_ROOT }}/plugins/jquery/jquery.min.js"></script>
 <script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/dataTables.min.js"></script>
-
 <script>
     var jQ = jQuery.noConflict(true);
     var table; // Khai báo biến table ở phạm vi toàn cục của script để dễ truy cập
 
     jQ(document).ready(function() {
-        if ( ! jQ.fn.dataTable.isDataTable( '#logTable' ) ) {
-            console.log("Khởi tạo DataTables cho #logTable...");
-            table = jQ('#logTable').DataTable({
-                // Your DataTable options here...
-            });
-            // --- THÊM CÁC DÒNG NÀY VÀO ĐÂY ---
-            console.log("Giá trị của 'table' ngay sau khởi tạo:", table);
-            console.log("table có phải là truthy (tồn tại) không?", !!table);
-            // --- KẾT THÚC CÁC DÒNG MỚI ---
-            console.log("DataTables đã được khởi tạo thành công. table instanceof jQ.fn.DataTable:", table instanceof jQ.fn.DataTable);
-        } else {
-            console.log("DataTables đã được khởi tạo trước đó. Lấy instance hiện có.");
-            table = jQ('#logTable').DataTable();
-        }
+        // LUÔN LUÔN kiểm tra xem DataTables có được tải hay không
         if (typeof jQ.fn.DataTable === 'undefined') {
             console.error("Lỗi: DataTables chưa được tải hoặc không có sẵn. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
             jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
-            return;
+            return; // Dừng thực thi nếu DataTables không có
         }
 
-        // --- BƯỚC KHỞI TẠO DATATABLES CỰC KỲ QUAN TRỌNG ---
-        // Kiểm tra xem DataTables đã được khởi tạo trên #logTable chưa
+        // --- KHỞI TẠO DATATABLES CHỈ MỘT LẦN DUY NHẤT ---
         if ( ! jQ.fn.dataTable.isDataTable( '#logTable' ) ) {
             console.log("Khởi tạo DataTables cho #logTable...");
             table = jQ('#logTable').DataTable({
+                // Dưới đây là CÁC TÙY CHỌN CẤU HÌNH CỦA BẠN
                 "order": [[0, "desc"]],
-                "searching": false, // Tắt tìm kiếm toàn cục của DataTables
+                "searching": false, // Tắt tìm kiếm toàn cục
                 "paging": true,
                 "info": true,
-                "scrollX": true,
-                "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
+                "scrollX": true, // Thanh cuộn ngang
+                "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]], // 'Entries per page'
                 "pageLength": 20,
-                "responsive": true, // Có thể gây vấn đề với scrollX, thử tắt nếu có lỗi hiển thị
+                "responsive": true, // Bật Responsive plugin
                 "columns": [
-                    { "type": "datetime" }, // Timestamp - Cột 0
-                    { "type": "string" },  // Node ID - Cột 1 (Để string để chấp nhận cả "node-01" và "1", sau đó lọc số sẽ xử lý)
+                    { "type": "string" }, // Timestamp - Cột 0 (giữ là string để tự xử lý định dạng)
+                    { "type": "string" },  // Node ID - Cột 1
                     { "type": "string" },   // Node IP - Cột 2
                     { "type": "string" },   // Hostname - Cột 3
                     { "type": "string" },   // Chain - Cột 4
@@ -418,13 +404,19 @@
             });
             console.log("DataTables đã được khởi tạo thành công. table instanceof jQ.fn.DataTable:", table instanceof jQ.fn.DataTable);
         } else {
-            console.log("DataTables đã được khởi tạo. Lấy instance hiện có.");
+            console.log("DataTables đã được khởi tạo trước đó. Lấy instance hiện có.");
             table = jQ('#logTable').DataTable();
         }
 
-        // Cập nhật columnMapping với các chỉ số cột mới sau khi xóa Kernel Timestamp
-        // Ghi chú: Chỉ số cột bắt đầu từ 0
+        // --- Các dòng console.log debug thêm (có thể giữ hoặc xóa sau) ---
+        console.log("Giá trị của 'table' ngay sau khởi tạo:", table);
+        console.log("table có phải là truthy (tồn tại) không?", !!table);
+        // --- Kết thúc các dòng console.log debug thêm ---
+
+
+        // Cập nhật columnMapping với các chỉ số cột mới (đảm bảo đúng với cấu trúc HTML của bạn)
         var columnMapping = {
+            'filterTimestamp': 0, // Cột Timestamp là 0
             'filterNodeID': 1,
             'filterNodeIP': 2,
             'filterHostname': 3,
@@ -454,7 +446,7 @@
 
         // Danh sách các cột mà chúng ta muốn lọc theo kiểu số nguyên dương
         var numericFilterInputs = [
-            'filterNodeID', // Vẫn coi là số nếu người dùng nhập số, nhưng chấp nhận chuỗi cho "node-01"
+            'filterNodeID', // Vẫn coi là số nếu user nhập số, nhưng chấp nhận chuỗi cho "node-01"
             'filterLength', 'filterTTL', 'filterID',
             'filterSrcPort', 'filterDstPort', 'filterType', 'filterCode',
             'filterIcmpID', 'filterIcmpSeq', 'filterWindow'
@@ -473,7 +465,7 @@
             table.columns().search(''); // Xóa bộ lọc cho từng cột
             jQ.fn.dataTable.ext.search = []; // Xóa các hàm lọc tùy chỉnh (quan trọng cho timestamp)
 
-            // Bước 2: Lọc theo khoảng thời gian Timestamp
+            // Bước 2: Lọc theo khoảng thời gian Timestamp (đã được sửa đổi để xử lý định dạng)
             var startDateVal = jQ('#filterTimestampStart').val();
             var endDateVal = jQ('#filterTimestampEnd').val();
 
@@ -485,7 +477,7 @@
 
                         // --- Bắt đầu phần chuyển đổi định dạng Timestamp từ bảng ---
                         // Ví dụ: 'May 23 15:03:27'
-                        // Cần chuyển đổi thành một định dạng có năm để new Date() hiểu đúng.
+                        // Cần chuyển đổi thành một định dạng có năm để new Date() hiểu.
                         // Giả định rằng các log entry thiếu năm thuộc về năm hiện tại.
                         var currentYear = new Date().getFullYear();
                         var formattedTimestampStr;
@@ -504,8 +496,8 @@
                             // Tạo định dạng 'YYYY/MM/DD HH:MM:SS' để new Date() hiểu tốt nhất
                             formattedTimestampStr = currentYear + '/' + month + '/' + day + ' ' + time;
                         } else {
-                            // Nếu timestamp không khớp định dạng 'Mon DD HH:MM:SS',
-                            // thử định dạng lại các dấu gạch ngang (cho YYYY-MM-DD HH:MM:SS)
+                            // Nếu timestamp không khớp định dạng 'Mon DD HH:MM:SS' (ví dụ: là YYYY-MM-DD HH:MM:SS),
+                            // thử định dạng lại các dấu gạch ngang
                             formattedTimestampStr = timestampStr.replace(/-/g, '/');
                         }
 
@@ -547,6 +539,10 @@
 
             // Bước 3: Lọc theo từng cột dựa trên các input khác
             for (var inputId in columnMapping) {
+                // Bỏ qua filterTimestamp (vì nó đã được xử lý bởi custom search function)
+                if (inputId === 'filterTimestampStart' || inputId === 'filterTimestampEnd') {
+                    continue;
+                }
                 var columnIndex = columnMapping[inputId];
                 var filterValue = jQ('#' + inputId).val().trim();
 
@@ -556,23 +552,13 @@
                     if (numericFilterInputs.includes(inputId)) {
                         var numValue = parseInt(filterValue);
                         if (!isNaN(numValue) && numValue >= 0) {
-                            // Đối với Node ID, nếu user nhập số, thì tìm chính xác số đó.
-                            // Nếu Node ID có thể là chuỗi (ex: node-01), thì cần regex linh hoạt hơn,
-                            // hoặc định nghĩa riêng cho Node ID.
-                            // Hiện tại, Node ID được định nghĩa là string, nên cách lọc chuỗi sẽ phù hợp hơn cho "node-01".
-                            // Nếu bạn muốn Node ID LÀ SỐ, thì chỉ cần input num, và code này ok.
-                            // Nếu Node ID CÓ THỂ LÀ CHUỖI VÀ SỐ, thì dùng regex '.*' + escapeRegex(filterValue) + '.*'
-                            // Hoặc giữ nguyên type: "string" và chỉ dùng search(filterValue, false, true); cho Node ID.
-                            // VỚI YÊU CẦU LÀ SỐ NGUYÊN DƯƠNG: Dùng '^' + numValue + '$' là đúng.
                             table.column(columnIndex).search('^' + numValue + '$', true, false);
                             console.log("DEBUG: Áp dụng lọc số cho cột " + columnIndex + ": '^" + numValue + "$'");
                         } else {
-                            // Nếu người dùng nhập chữ vào ô số, hoặc số âm, coi như không tìm thấy
                             table.column(columnIndex).search('^$', true, false); // Tìm kiếm không có gì
                             console.warn("DEBUG: Giá trị không hợp lệ cho trường số '" + inputId + "': '" + filterValue + "'. Đã lọc ra không có gì.");
                         }
                     } else {
-                        // Đối với các cột chuỗi, sử dụng tìm kiếm thông minh (contains)
                         table.column(columnIndex).search(filterValue, false, true);
                         console.log("DEBUG: Áp dụng lọc chuỗi cho cột " + columnIndex + ": '" + filterValue + "'");
                     }
