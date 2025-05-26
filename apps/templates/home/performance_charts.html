@@ -86,6 +86,8 @@
 {% block javascripts %}
   {# Chartist CSS #}
   <link rel="stylesheet" href="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.css">
+  {# Chartist init CSS #}
+  <link rel="stylesheet" href="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist-init.min.css">
   {# Chartist JS #}
   <script src="{{ config.ASSETS_ROOT }}/plugins/chartist-js/dist/chartist.min.js"></script>
   {# Chartist Init JS (if you have specific init scripts, otherwise skip) #}
@@ -102,9 +104,13 @@
 
         // Helper function to create a Chartist Line Chart
         function createChartistLineChart(elementId, data, options) {
+          // getElementById không cần escape
           const chartElement = document.getElementById(elementId);
+          
           if (chartElement) {
-            new Chartist.Line(`#${elementId}`, data, options);
+            // Chartist.Line sử dụng querySelector, nên cần escape các dấu chấm trong ID
+            const chartSelector = `#${elementId.replace(/\./g, '\\.')}`; // Dòng đã sửa
+            new Chartist.Line(chartSelector, data, options);
           } else {
             console.error(`Chartist element with ID ${elementId} not found.`);
           }
@@ -114,29 +120,20 @@
         if (chartData[ip]['cpu'] && chartData[ip]['cpu'].labels.length > 0) {
           const cpuChartData = chartData[ip]['cpu'];
           const cpuOptions = {
-            // Options for CPU chart
             fullWidth: true,
-            chartPadding: {
-              right: 20
-            },
+            chartPadding: { right: 20 },
             axisX: {
-              // Show only a few labels on the x-axis for readability
               labelInterpolationFnc: function(value, index) {
-                // Display label only for every Nth element, adjust N as needed
-                // This is a basic example; for more advanced time series, you might
-                // want to use Chartist's axisX.type option with a custom axis type
                 return index % Math.ceil(cpuChartData.labels.length / 5) === 0 ? value : null;
               },
-              showGrid: true // Show vertical grid lines
+              showGrid: true
             },
             axisY: {
-              labelInterpolationFnc: function(value) {
-                return value + '%';
-              },
-              scaleMinSpace: 20, // Minimum space between labels
-              onlyInteger: true, // Only show integer values
+              labelInterpolationFnc: function(value) { return value + '%'; },
+              scaleMinSpace: 20,
+              onlyInteger: true,
               low: 0,
-              high: 100 // CPU max is 100%
+              high: 100
             }
           };
           createChartistLineChart(`cpu-chart-${ip}`, cpuChartData, cpuOptions);
@@ -189,7 +186,7 @@
               labelInterpolationFnc: function(value) { return value + 'MB'; },
               scaleMinSpace: 20,
               onlyInteger: true,
-              low: 0 // RAM usage can start from 0
+              low: 0
             }
           };
           createChartistLineChart(`ram-chart-${ip}`, ramChartData, ramOptions);
