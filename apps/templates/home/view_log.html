@@ -460,7 +460,7 @@
             for (var inputId in columnMapping) {
                 var columnIndex = columnMapping[inputId];
                 var filterValue = jQ('#' + inputId).val().trim();
-
+                console.log("Input ID:", inputId, " - Column Index:", columnIndex, " - Filter Value:", filterValue); // Thêm dòng này để kiểm tra
                 if (filterValue) {
                     // CẬP NHẬT QUAN TRỌNG:
                     // Sử dụng regex: false và smart: true để DataTables tự động tìm kiếm "chứa"
