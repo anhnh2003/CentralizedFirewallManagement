@@ -3,8 +3,8 @@
 {% block title %} View Logs {% endblock %}
 
 {% block stylesheets %}
-<link href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet">
-<link href="https://cdn.datatables.net/responsive/2.2.5/css/responsive.dataTables.min.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/jquery.dataTables.min.css" rel="stylesheet">
+<link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/responsive.dataTables.min.css" rel="stylesheet">
 
 <style>
     /* Tổng quan bảng */
@@ -165,7 +165,7 @@
     <div class="filter-form" id="filterForm">
         <div>
             <label for="filterTimestamp">Timestamp:</label>
-            <input type="text" id="filterTimestamp" placeholder="Ex: 2023-01-01">
+            <input type="text" id="filterTimestamp" placeholder="Ex: YYYY-MM-DD HH:MM:SS">
         </div>
         <div>
             <label for="filterNodeID">Node ID:</label>
@@ -349,16 +349,24 @@
 {% endblock content %}
 
 {% block javascripts %}
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.2.5/js/dataTables.responsive.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/jquery/jquery.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/jquery.dataTables.min.js"></script>
+<script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/dataTables.responsive.min.js"></script>
 
 <script>
     // Sử dụng jQuery.noConflict(true) để đảm bảo không có xung đột với bất kỳ phiên bản jQuery nào khác
-    // được tải bởi base.html. Chúng ta sẽ sử dụng 'jQ' hoặc 'jQuery' thay vì '$'.
+    // được tải bởi base.html. Chúng ta sẽ sử dụng 'jQ' thay vì '$'.
     var jQ = jQuery.noConflict(true);
 
     jQ(document).ready(function() {
+        // Kiểm tra xem DataTables đã được khởi tạo thành công chưa
+        if (typeof jQ.fn.DataTable === 'undefined') {
+            console.error("Lỗi: DataTables chưa được tải hoặc khởi tạo. Vui lòng kiểm tra các script cục bộ.");
+            // Có thể hiển thị một thông báo lỗi thân thiện với người dùng tại đây
+            jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
+            return; // Dừng thực thi script nếu DataTables không có
+        }
+
         var table = jQ('#logTable').DataTable({
             "order": [[0, "desc"]], /* Sắp xếp mặc định theo cột Timestamp giảm dần */
             "searching": true, /* Cho phép tìm kiếm toàn cục */
