@@ -357,42 +357,7 @@
         if ( ! jQ.fn.dataTable.isDataTable( '#logTable' ) ) {
             console.log("Khởi tạo DataTables cho #logTable...");
             table = jQ('#logTable').DataTable({
-                "order": [[0, "desc"]],
-                "searching": false, // Tắt tìm kiếm toàn cục của DataTables
-                "paging": true,
-                "info": true,
-                "scrollX": true,
-                "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
-                "pageLength": 20,
-                "responsive": true, // Có thể gây vấn đề với scrollX, thử tắt nếu có lỗi hiển thị
-                "columns": [
-                    { "type": "datetime" }, // Timestamp - Cột 0
-                    { "type": "string" },  // Node ID - Cột 1 (Để string để chấp nhận cả "node-01" và "1", sau đó lọc số sẽ xử lý)
-                    { "type": "string" },   // Node IP - Cột 2
-                    { "type": "string" },   // Hostname - Cột 3
-                    { "type": "string" },   // Chain - Cột 4
-                    { "type": "string" },   // In IF - Cột 5
-                    { "type": "string" },   // Out IF - Cột 6
-                    { "type": "string" },   // MAC - Cột 7
-                    { "type": "string" },   // Src IP - Cột 8
-                    { "type": "string" },   // Dst IP - Cột 9
-                    { "type": "num-fmt" },  // Length - Cột 10
-                    { "type": "string" },   // TOS - Cột 11
-                    { "type": "string" },   // PREC - Cột 12
-                    { "type": "num-fmt" },  // TTL - Cột 13
-                    { "type": "num-fmt" },  // ID - Cột 14
-                    { "type": "string" },   // Flags - Cột 15
-                    { "type": "string" },   // Protocol - Cột 16
-                    { "type": "num-fmt" },  // Src Port - Cột 17
-                    { "type": "num-fmt" },  // Dst Port - Cột 18
-                    { "type": "num-fmt" },  // Type (ICMP) - Cột 19
-                    { "type": "num-fmt" },  // Code (ICMP) - Cột 20
-                    { "type": "num-fmt" },  // ICMP ID - Cột 21
-                    { "type": "num-fmt" },  // ICMP Seq - Cột 22
-                    { "type": "num-fmt" },  // Window - Cột 23
-                    { "type": "string" },   // RES - Cột 24
-                    { "type": "string" }    // Detail - Cột 25
-                ]
+                // Your DataTable options here...
             });
             // --- THÊM CÁC DÒNG NÀY VÀO ĐÂY ---
             console.log("Giá trị của 'table' ngay sau khởi tạo:", table);
