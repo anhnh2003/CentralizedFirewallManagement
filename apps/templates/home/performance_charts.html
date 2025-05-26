@@ -1,0 +1,230 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<style>
+  .page-content {
+    margin-left: 0px; /* Adjust for sidebar */
+    padding: 2rem;
+    background: #f8f9fa;
+  }
+  .card {
+    height: 100%;
+  }
+  /* Specific styles for Chartist charts */
+  .ct-chart {
+    height: 250px; /* Ensure charts have a height */
+    width: 100%;
+  }
+  .card-header {
+    font-weight: bold;
+    text-transform: capitalize;
+  }
+  /* Chartist custom styling (optional, you can override default Chartist.css) */
+  .ct-series-a .ct-line, .ct-series-a .ct-point {
+    stroke: #ff6384; /* Reddish for CPU/Listen */
+  }
+  .ct-series-b .ct-line, .ct-series-b .ct-point {
+    stroke: #36a2eb; /* Bluish for Disk/Established */
+  }
+  .ct-series-c .ct-line, .ct-series-c .ct-point {
+    stroke: #ffcd56; /* Yellowish for RAM */
+  }
+  /* Add more series colors if needed for multiple metrics */
+</style>
+
+<div class="page-content">
+  <h2>Performance Charts</h2>
+  <p>CPU, Disk, RAM, and Network performance over time for your nodes.</p>
+
+  {% for ip, log_type_data in chart_data.items() %}
+    <h3>Node: {{ ip }}</h3>
+
+    {# CPU Chart #}
+    {% if log_type_data['cpu'] %}
+      <div class="card mb-4">
+        <div class="card-header">CPU Usage</div>
+        <div class="card-body">
+          <div class="ct-chart ct-perfect-fourth" id="cpu-chart-{{ ip }}"></div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# Disk Chart #}
+    {% if log_type_data['disk'] %}
+      <div class="card mb-4">
+        <div class="card-header">Disk Usage (ROOT_USAGE)</div>
+        <div class="card-body">
+          <div class="ct-chart ct-perfect-fourth" id="disk-chart-{{ ip }}"></div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# RAM Chart #}
+    {% if log_type_data['ram'] %}
+      <div class="card mb-4">
+        <div class="card-header">RAM Usage (Used MB)</div>
+        <div class="card-body">
+          <div class="ct-chart ct-perfect-fourth" id="ram-chart-{{ ip }}"></div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# Network Chart #}
+    {% if log_type_data['network'] %}
+      <div class="card mb-4">
+        <div class="card-header">Network Connections (TCP Listen & Established)</div>
+        <div class="card-body">
+          <div class="ct-chart ct-perfect-fourth" id="network-chart-{{ ip }}"></div>
+        </div>
+      </div>
+    {% endif %}
+
+  {% endfor %}
+</div>
+{% endblock content %}
+
+{% block javascripts %}
+  {# Chartist CSS #}
+  <link rel="stylesheet" href="{{ config.ASSETS_ROOT }}/plugins/chartist/chartist.min.css">
+  {# Chartist JS #}
+  <script src="{{ config.ASSETS_ROOT }}/plugins/chartist/chartist.min.js"></script>
+  {# Chartist Init JS (if you have specific init scripts, otherwise skip) #}
+  {# <script src="{{ config.ASSETS_ROOT }}/plugins/chartist/chartist-init.js"></script> #}
+
+  <script>
+    // Parse data from Flask
+    const chartData = JSON.parse(`{{ chart_data | tojson | safe }}`);
+
+    console.log("DEBUG JS: chartData for Chartist:", chartData);
+
+    for (const ip in chartData) {
+      if (chartData.hasOwnProperty(ip)) {
+
+        // Helper function to create a Chartist Line Chart
+        function createChartistLineChart(elementId, data, options) {
+          const chartElement = document.getElementById(elementId);
+          if (chartElement) {
+            new Chartist.Line(`#${elementId}`, data, options);
+          } else {
+            console.error(`Chartist element with ID ${elementId} not found.`);
+          }
+        }
+
+        // --- CPU Chart ---
+        if (chartData[ip]['cpu'] && chartData[ip]['cpu'].labels.length > 0) {
+          const cpuChartData = chartData[ip]['cpu'];
+          const cpuOptions = {
+            // Options for CPU chart
+            fullWidth: true,
+            chartPadding: {
+              right: 20
+            },
+            axisX: {
+              // Show only a few labels on the x-axis for readability
+              labelInterpolationFnc: function(value, index) {
+                // Display label only for every Nth element, adjust N as needed
+                // This is a basic example; for more advanced time series, you might
+                // want to use Chartist's axisX.type option with a custom axis type
+                return index % Math.ceil(cpuChartData.labels.length / 5) === 0 ? value : null;
+              },
+              showGrid: true // Show vertical grid lines
+            },
+            axisY: {
+              labelInterpolationFnc: function(value) {
+                return value + '%';
+              },
+              scaleMinSpace: 20, // Minimum space between labels
+              onlyInteger: true, // Only show integer values
+              low: 0,
+              high: 100 // CPU max is 100%
+            }
+          };
+          createChartistLineChart(`cpu-chart-${ip}`, cpuChartData, cpuOptions);
+        } else {
+          console.warn(`No CPU data for IP ${ip} or data is empty.`);
+          const container = document.getElementById(`cpu-chart-${ip}`);
+          if(container) container.innerHTML = '<p style="text-align:center;">No CPU data available.</p>';
+        }
+
+        // --- Disk Chart ---
+        if (chartData[ip]['disk'] && chartData[ip]['disk'].labels.length > 0) {
+          const diskChartData = chartData[ip]['disk'];
+          const diskOptions = {
+            fullWidth: true,
+            chartPadding: { right: 20 },
+            axisX: {
+              labelInterpolationFnc: function(value, index) {
+                return index % Math.ceil(diskChartData.labels.length / 5) === 0 ? value : null;
+              },
+              showGrid: true
+            },
+            axisY: {
+              labelInterpolationFnc: function(value) { return value + '%'; },
+              scaleMinSpace: 20,
+              onlyInteger: true,
+              low: 0,
+              high: 100
+            }
+          };
+          createChartistLineChart(`disk-chart-${ip}`, diskChartData, diskOptions);
+        } else {
+          console.warn(`No Disk data for IP ${ip} or data is empty.`);
+          const container = document.getElementById(`disk-chart-${ip}`);
+          if(container) container.innerHTML = '<p style="text-align:center;">No Disk data available.</p>';
+        }
+
+        // --- RAM Chart ---
+        if (chartData[ip]['ram'] && chartData[ip]['ram'].labels.length > 0) {
+          const ramChartData = chartData[ip]['ram'];
+          const ramOptions = {
+            fullWidth: true,
+            chartPadding: { right: 20 },
+            axisX: {
+              labelInterpolationFnc: function(value, index) {
+                return index % Math.ceil(ramChartData.labels.length / 5) === 0 ? value : null;
+              },
+              showGrid: true
+            },
+            axisY: {
+              labelInterpolationFnc: function(value) { return value + 'MB'; },
+              scaleMinSpace: 20,
+              onlyInteger: true,
+              low: 0 // RAM usage can start from 0
+            }
+          };
+          createChartistLineChart(`ram-chart-${ip}`, ramChartData, ramOptions);
+        } else {
+          console.warn(`No RAM data for IP ${ip} or data is empty.`);
+          const container = document.getElementById(`ram-chart-${ip}`);
+          if(container) container.innerHTML = '<p style="text-align:center;">No RAM data available.</p>';
+        }
+
+        // --- Network Chart (TCP_LISTEN and TCP_ESTABLISHED) ---
+        if (chartData[ip]['network'] && chartData[ip]['network'].labels.length > 0) {
+          const networkChartData = chartData[ip]['network'];
+          const networkOptions = {
+            fullWidth: true,
+            chartPadding: { right: 20 },
+            axisX: {
+              labelInterpolationFnc: function(value, index) {
+                return index % Math.ceil(networkChartData.labels.length / 5) === 0 ? value : null;
+              },
+              showGrid: true
+            },
+            axisY: {
+              labelInterpolationFnc: function(value) { return value; },
+              scaleMinSpace: 20,
+              onlyInteger: true,
+              low: 0
+            }
+          };
+          createChartistLineChart(`network-chart-${ip}`, networkChartData, networkOptions);
+        } else {
+          console.warn(`No Network data for IP ${ip} or data is empty.`);
+          const container = document.getElementById(`network-chart-${ip}`);
+          if(container) container.innerHTML = '<p style="text-align:center;">No Network data available.</p>';
+        }
+      }
+    }
+  </script>
+{% endblock javascripts %}

@@ -7,7 +7,7 @@ from jinja2 import TemplateNotFound
 import subprocess, tempfile, os, stat
 import re
 import html
-from collections import Counter
+from collections import Counter, defaultdict
 import logging
 from apps.home.util import role_required
 from apps.authentication.util import hash_pass
@@ -422,6 +422,83 @@ def data_visualization():
         'home/data_visualization.html',
         aggregated_data=aggregated_data # Bỏ json.dumps() 
     )
+def performance_charts():
+    user_allowed_ips = set()
+    node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
+    for entry in node_entries:
+        node = Nodes.query.get(entry.node_id)
+        if node:
+            user_allowed_ips.add(node.ip_address)
+
+    base_log_dir = "/var/log/remote/"
+    all_log_data = defaultdict(lambda: defaultdict(list))
+
+    if not os.path.exists(base_log_dir):
+        flash(f"Thư mục log từ xa '{base_log_dir}' không tồn tại.", 'warning')
+        return render_template('home/performance_charts.html', chart_data={})
+
+    log_types = ["cpu", "disk", "network", "ram"]
+
+    for client_ip_dir in os.listdir(base_log_dir):
+        if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
+            continue
+
+        if client_ip_dir not in user_allowed_ips:
+            continue
+
+        for log_type in log_types:
+            log_path = os.path.join(base_log_dir, client_ip_dir, f"{log_type}.log")
+            if os.path.exists(log_path):
+                try:
+                    with open(log_path, 'r') as f:
+                        for line in f:
+                            entry = parse_log_line(line, log_type)
+                            if entry:
+                                all_log_data[client_ip_dir][log_type].append(entry)
+                except Exception as e:
+                    print(f"Error reading log file {log_path}: {e}")
+
+    # Process and aggregate data for Chartist.js
+    # Structure: {ip: {log_type: {labels: [], series: [[]]}}}
+    chart_data_for_chartist = {}
+    for ip, log_type_data in all_log_data.items():
+        chart_data_for_chartist[ip] = {}
+        for log_type, log_entries in log_type_data.items():
+            # Sort entries by timestamp to ensure chronological order for charts
+            # You might need to parse to actual datetime objects for robust sorting
+            # For simplicity, sorting by raw timestamp string (assuming consistent format)
+            log_entries.sort(key=lambda x: x['timestamp'])
+
+            timestamps = [entry['timestamp'] for entry in log_entries]
+
+            if log_type == "cpu":
+                usage_values = [entry['cpu_usage'] for entry in log_entries]
+                chart_data_for_chartist[ip][log_type] = {
+                    "labels": timestamps,
+                    "series": [usage_values] # CPU has one series
+                }
+            elif log_type == "disk":
+                 usage_values = [entry['root_usage'] for entry in log_entries]
+                 chart_data_for_chartist[ip][log_type] = {
+                    "labels": timestamps,
+                    "series": [usage_values] # Disk has one series
+                 }
+            elif log_type == "ram":
+                used_ram_values = [entry['used_ram'] for entry in log_entries]
+                chart_data_for_chartist[ip][log_type] = {
+                    "labels": timestamps,
+                    "series": [used_ram_values] # RAM (Used) has one series
+                }
+            elif log_type == "network":
+                tcp_listen_values = [entry['tcp_listen'] for entry in log_entries]
+                tcp_established_values = [entry['tcp_established'] for entry in log_entries]
+                chart_data_for_chartist[ip][log_type] = {
+                    "labels": timestamps,
+                    "series": [tcp_listen_values, tcp_established_values] # Network has two series
+                }
+
+    return render_template('home/performance_charts.html', chart_data=chart_data_for_chartist)
+
 # Hiển thị và xử lý người dùng
 from sqlalchemy.orm import joinedload
 @blueprint.route('/manage_users', methods=['GET', 'POST'])
