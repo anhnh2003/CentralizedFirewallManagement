@@ -422,6 +422,8 @@ def data_visualization():
         'home/data_visualization.html',
         aggregated_data=aggregated_data # Bỏ json.dumps() 
     )
+@blueprint.route('/performance_charts')
+@login_required
 def performance_charts():
     user_allowed_ips = set()
     node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
