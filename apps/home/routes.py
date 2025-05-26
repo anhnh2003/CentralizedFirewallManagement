@@ -12,6 +12,7 @@ import logging
 from apps.home.util import role_required
 from apps.authentication.util import hash_pass
 from apps.authentication.models import Users, Nodes, UserNodes
+from datetime import datetime, timedelta
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,  # Log messages of level DEBUG and above
@@ -423,54 +424,112 @@ def data_visualization():
         aggregated_data=aggregated_data # Bỏ json.dumps() 
     )
 def parse_perf_log_line(line, log_type): # Enhanced log parsing
+    # Lấy năm hiện tại và xử lý nếu ngày log có thể từ năm trước
+    current_year = datetime.now().year
     try:
         match log_type:
             case "disk":
                 match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?ROOT_USAGE:(\d+)%", line)
                 if match:
-                    return {"timestamp": match.group(1), "root_usage": int(match.group(2))}
+                    # Tạo datetime object ngay tại đây để dễ dàng so sánh và sắp xếp
+                    # Cần cẩn thận với năm nếu log vượt qua ranh giới năm
+                    try:
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year}", "%b %d %H:%M:%S %Y")
+                    except ValueError: # Xử lý trường hợp log là cuối năm trước nhưng năm hiện tại là năm sau
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year - 1}", "%b %d %H:%M:%S %Y")
+                    return {"timestamp": dt_obj, "root_usage": int(match.group(2))}
             case "cpu":
                  match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?CPU_PERF.*?(\d+)%", line)
                  if match:
-                    return {"timestamp": match.group(1), "cpu_usage": int(match.group(2))}
+                    try:
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year}", "%b %d %H:%M:%S %Y")
+                    except ValueError:
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year - 1}", "%b %d %H:%M:%S %Y")
+                    return {"timestamp": dt_obj, "cpu_usage": int(match.group(2))}
             case "ram":
                 match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?RAM_PERF.*?Total:(\d+)MB, Used:(\d+)MB, Free:(\d+)MB", line)
                 if match:
-                    return {"timestamp": match.group(1), "total_ram": int(match.group(2)), "used_ram": int(match.group(3)), "free_ram": int(match.group(4))}
-            #network log parsing
+                    try:
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year}", "%b %d %H:%M:%S %Y")
+                    except ValueError:
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year - 1}", "%b %d %H:%M:%S %Y")
+                    return {"timestamp": dt_obj, "total_ram": int(match.group(2)), "used_ram": int(match.group(3)), "free_ram": int(match.group(4))}
             case "network":
                 match = re.match(r"(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2}).*?NETWORK_PERF.*?TCP_LISTEN:(\d+), TCP_ESTABLISHED:(\d+)", line)
                 if match:
-                    return {"timestamp": match.group(1), "tcp_listen": int(match.group(2)), "tcp_established": int(match.group(3))}
+                    try:
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year}", "%b %d %H:%M:%S %Y")
+                    except ValueError:
+                        dt_obj = datetime.strptime(f"{match.group(1)} {current_year - 1}", "%b %d %H:%M:%S %Y")
+                    return {"timestamp": dt_obj, "tcp_listen": int(match.group(2)), "tcp_established": int(match.group(3))}
             case _:
-                return None  # Or raise an exception for unknown log types
+                return None
     except Exception as e:
-        print(f"Error parsing log line: {e}")
+        print(f"Error parsing log line: {e} for line: {line}")
         return None
 @blueprint.route('/performance_charts')
 @login_required
 def performance_charts():
-    user_allowed_ips = set()
-    node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
-    for entry in node_entries:
+    # Lấy danh sách các IP nodes mà user có quyền manager
+    manager_node_ips = []
+    manager_user_nodes = UserNodes.query.filter_by(user_id=current_user.id, role='manager').all()
+    for entry in manager_user_nodes:
         node = Nodes.query.get(entry.node_id)
         if node:
-            user_allowed_ips.add(node.ip_address)
+            manager_node_ips.append(node.ip_address)
+    
+    # Lấy các tham số từ request (khi user submit form)
+    selected_ips = request.args.getlist('nodes') # 'nodes' là tên của checkbox group
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    # Xử lý ngày bắt đầu và kết thúc mặc định
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=10) # Mặc định 10 ngày trước
+
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+        except ValueError:
+            flash("Ngày bắt đầu không hợp lệ. Sử dụng định dạng YYYY-MM-DD.", 'danger')
+            start_date_str = start_date.strftime('%Y-%m-%d') # Reset to default for form
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d')
+            # Thêm 1 ngày để bao gồm toàn bộ ngày cuối cùng
+            end_date = end_date + timedelta(days=1, seconds=-1) # Đến cuối ngày
+        except ValueError:
+            flash("Ngày kết thúc không hợp lệ. Sử dụng định dạng YYYY-MM-DD.", 'danger')
+            end_date_str = end_date.strftime('%Y-%m-%d') # Reset to default for form
+
+    # Nếu không có nodes nào được chọn, mặc định chọn tất cả các nodes mà user quản lý
+    if not selected_ips:
+        selected_ips = manager_node_ips
 
     base_log_dir = "/var/log/remote/"
-    all_log_data = defaultdict(lambda: defaultdict(list))
+    all_log_data = defaultdict(lambda: defaultdict(list)) # Structure: {ip: {cpu: [], disk: [], ...}}
 
     if not os.path.exists(base_log_dir):
         flash(f"Thư mục log từ xa '{base_log_dir}' không tồn tại.", 'warning')
-        return render_template('home/performance_charts.html', chart_data={})
+        # Vẫn render template để hiện thị form chọn node
+        return render_template(
+            'home/performance_charts.html',
+            chart_data={},
+            available_nodes=manager_node_ips,
+            selected_nodes=selected_ips,
+            start_date_val=start_date.strftime('%Y-%m-%d'),
+            end_date_val=end_date.strftime('%Y-%m-%d')
+        )
 
     log_types = ["cpu", "disk", "network", "ram"]
 
     for client_ip_dir in os.listdir(base_log_dir):
-        if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
+        # Chỉ xử lý các nodes mà người dùng đã chọn
+        if client_ip_dir not in selected_ips:
             continue
-
-        if client_ip_dir not in user_allowed_ips:
+        
+        # Bỏ qua 127.0.0.1 và các thư mục không phải IP
+        if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
             continue
 
         for log_type in log_types:
@@ -479,52 +538,59 @@ def performance_charts():
                 try:
                     with open(log_path, 'r') as f:
                         for line in f:
-                            entry = parse_perf_log_line(line, log_type)
-                            if entry:
+                            entry = parse_log_line(line, log_type)
+                            if entry and start_date <= entry['timestamp'] <= end_date:
                                 all_log_data[client_ip_dir][log_type].append(entry)
                 except Exception as e:
                     print(f"Error reading log file {log_path}: {e}")
 
     # Process and aggregate data for Chartist.js
-    # Structure: {ip: {log_type: {labels: [], series: [[]]}}}
     chart_data_for_chartist = {}
     for ip, log_type_data in all_log_data.items():
         chart_data_for_chartist[ip] = {}
         for log_type, log_entries in log_type_data.items():
-            # Sort entries by timestamp to ensure chronological order for charts
-            # You might need to parse to actual datetime objects for robust sorting
-            # For simplicity, sorting by raw timestamp string (assuming consistent format)
+            # Sắp xếp entries theo timestamp
             log_entries.sort(key=lambda x: x['timestamp'])
 
-            timestamps = [entry['timestamp'] for entry in log_entries]
+            # Lấy timestamp đã được định dạng cho labels
+            # Chú ý: Dòng này quan trọng để Chartist.js có thể hiển thị.
+            # Bạn có thể điều chỉnh định dạng hiển thị cho dễ đọc hơn
+            timestamps_formatted = [entry['timestamp'].strftime('%b %d %H:%M') for entry in log_entries]
 
             if log_type == "cpu":
                 usage_values = [entry['cpu_usage'] for entry in log_entries]
                 chart_data_for_chartist[ip][log_type] = {
-                    "labels": timestamps,
-                    "series": [usage_values] # CPU has one series
+                    "labels": timestamps_formatted,
+                    "series": [usage_values]
                 }
             elif log_type == "disk":
                  usage_values = [entry['root_usage'] for entry in log_entries]
                  chart_data_for_chartist[ip][log_type] = {
-                    "labels": timestamps,
-                    "series": [usage_values] # Disk has one series
+                    "labels": timestamps_formatted,
+                    "series": [usage_values]
                  }
             elif log_type == "ram":
                 used_ram_values = [entry['used_ram'] for entry in log_entries]
                 chart_data_for_chartist[ip][log_type] = {
-                    "labels": timestamps,
-                    "series": [used_ram_values] # RAM (Used) has one series
+                    "labels": timestamps_formatted,
+                    "series": [used_ram_values]
                 }
             elif log_type == "network":
                 tcp_listen_values = [entry['tcp_listen'] for entry in log_entries]
                 tcp_established_values = [entry['tcp_established'] for entry in log_entries]
                 chart_data_for_chartist[ip][log_type] = {
-                    "labels": timestamps,
-                    "series": [tcp_listen_values, tcp_established_values] # Network has two series
+                    "labels": timestamps_formatted,
+                    "series": [tcp_listen_values, tcp_established_values]
                 }
 
-    return render_template('home/performance_charts.html', chart_data=chart_data_for_chartist)
+    return render_template(
+        'home/performance_charts.html',
+        chart_data=chart_data_for_chartist,
+        available_nodes=manager_node_ips, # Danh sách các node mà user có thể chọn
+        selected_nodes=selected_ips,       # Các node đã được chọn từ form
+        start_date_val=start_date.strftime('%Y-%m-%d'), # Giá trị ngày bắt đầu để hiển thị trong input
+        end_date_val=(end_date - timedelta(days=1, seconds=-1)).strftime('%Y-%m-%d') # Giá trị ngày kết thúc hiển thị trong input
+    )
 
 # Hiển thị và xử lý người dùng
 from sqlalchemy.orm import joinedload
