@@ -172,7 +172,7 @@
         </div>
         <div>
             <label for="filterNodeID">Node ID:</label>
-            <input type="text" id="filterNodeID" placeholder="Ex: node-01">
+            <input type="text" id="filterNodeID" placeholder="Ex: 1, 2, node-01">
         </div>
         <div>
             <label for="filterNodeIP">Node IP:</label>
@@ -181,10 +181,6 @@
         <div>
             <label for="filterHostname">Hostname:</label>
             <input type="text" id="filterHostname" placeholder="Ex: server-web">
-        </div>
-        <div>
-            <label for="filterKernelTimestamp">Knl Timestamp:</label>
-            <input type="text" id="filterKernelTimestamp" placeholder="Ex: 1672531200.123456">
         </div>
         <div>
             <label for="filterChain">Chain:</label>
@@ -288,7 +284,6 @@
                     <th>Node ID</th>
                     <th>Node IP</th>
                     <th>Hostname</th>
-                    <th>Knl Timestamp</th>
                     <th>Chain</th>
                     <th>In IF</th>
                     <th>Out IF</th>
@@ -320,7 +315,6 @@
                     <td>{{ entry.node_id }}</td>
                     <td>{{ entry.node_ip }}</td>
                     <td>{{ entry.hostname }}</td>
-                    <td>{{ entry.kernel_timestamp }}</td>
                     <td>{{ entry.chain }}</td>
                     <td>{{ entry.in_interface }}</td>
                     <td>{{ entry.out_interface }}</td>
@@ -351,7 +345,6 @@
 </div>
 
 {% endblock content %}
-
 {% block javascripts %}
 <script src="{{ config.ASSETS_ROOT }}/plugins/jquery/jquery.min.js"></script>
 <script src="{{ config.ASSETS_ROOT }}/plugins/datatables/js/dataTables.min.js"></script>
@@ -366,6 +359,8 @@
             return;
         }
 
+        // Định nghĩa các cột và kiểu dữ liệu của chúng
+        // Đây là bước quan trọng để DataTables hiểu cách xử lý dữ liệu trong từng cột
         var table = jQ('#logTable').DataTable({
             "order": [[0, "desc"]],
             "searching": false, // Tắt tìm kiếm toàn cục của DataTables
@@ -374,42 +369,76 @@
             "scrollX": true,
             "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
             "pageLength": 20,
-            "responsive": true
+            "responsive": true,
+            "columns": [
+                { "type": "datetime" }, // Timestamp - Cột 0
+                { "type": "num-fmt" },  // Node ID - Cột 1 (sẽ được xử lý như số để lọc)
+                { "type": "string" },   // Node IP - Cột 2
+                { "type": "string" },   // Hostname - Cột 3
+                // Đã xóa Kernel Timestamp (index 4 cũ)
+                { "type": "string" },   // Chain - Cột 4 (index 5 cũ)
+                { "type": "string" },   // In IF - Cột 5 (index 6 cũ)
+                { "type": "string" },   // Out IF - Cột 6 (index 7 cũ)
+                { "type": "string" },   // MAC - Cột 7 (index 8 cũ)
+                { "type": "string" },   // Src IP - Cột 8 (index 9 cũ)
+                { "type": "string" },   // Dst IP - Cột 9 (index 10 cũ)
+                { "type": "num-fmt" },  // Length - Cột 10
+                { "type": "string" },   // TOS - Cột 11 (thường là hex, tốt nhất là string)
+                { "type": "string" },   // PREC - Cột 12 (thường là hex, tốt nhất là string)
+                { "type": "num-fmt" },  // TTL - Cột 13
+                { "type": "num-fmt" },  // ID - Cột 14
+                { "type": "string" },   // Flags - Cột 15
+                { "type": "string" },   // Protocol - Cột 16
+                { "type": "num-fmt" },  // Src Port - Cột 17
+                { "type": "num-fmt" },  // Dst Port - Cột 18
+                { "type": "num-fmt" },  // Type (ICMP) - Cột 19
+                { "type": "num-fmt" },  // Code (ICMP) - Cột 20
+                { "type": "num-fmt" },  // ICMP ID - Cột 21
+                { "type": "num-fmt" },  // ICMP Seq - Cột 22
+                { "type": "num-fmt" },  // Window - Cột 23
+                { "type": "string" },   // RES - Cột 24 (thường là hex, tốt nhất là string)
+                { "type": "string" }    // Detail - Cột 25
+            ]
         });
 
-        // Hàm escapeRegex không còn cần thiết nếu chúng ta dùng smart: true
-        // function escapeRegex(value) {
-        //     return value.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-        // }
-
+        // Cập nhật columnMapping với các chỉ số cột mới sau khi xóa Kernel Timestamp
+        // Ghi chú: Chỉ số cột bắt đầu từ 0
         var columnMapping = {
             'filterNodeID': 1,
             'filterNodeIP': 2,
             'filterHostname': 3,
-            'filterKernelTimestamp': 4,
-            'filterChain': 5,
-            'filterInInterface': 6,
-            'filterOutInterface': 7,
-            'filterMAC': 8,
-            'filterSrcIP': 9,
-            'filterDstIP': 10,
-            'filterLength': 11,
-            'filterTOS': 12,
-            'filterPREC': 13,
-            'filterTTL': 14,
-            'filterID': 15,
-            'filterFlags': 16,
-            'filterProtocol': 17,
-            'filterSrcPort': 18,
-            'filterDstPort': 19,
-            'filterType': 20,
-            'filterCode': 21,
-            'filterIcmpID': 22,
-            'filterIcmpSeq': 23,
-            'filterWindow': 24,
-            'filterRES': 25,
-            'filterDetail': 26
+            // Kernel Timestamp đã bị xóa, các cột sau đó sẽ lùi chỉ số về
+            'filterChain': 4,
+            'filterInInterface': 5,
+            'filterOutInterface': 6,
+            'filterMAC': 7,
+            'filterSrcIP': 8,
+            'filterDstIP': 9,
+            'filterLength': 10,
+            'filterTOS': 11,
+            'filterPREC': 12,
+            'filterTTL': 13,
+            'filterID': 14,
+            'filterFlags': 15,
+            'filterProtocol': 16,
+            'filterSrcPort': 17,
+            'filterDstPort': 18,
+            'filterType': 19,
+            'filterCode': 20,
+            'filterIcmpID': 21,
+            'filterIcmpSeq': 22,
+            'filterWindow': 23,
+            'filterRES': 24,
+            'filterDetail': 25
         };
+
+        // Danh sách các cột mà chúng ta muốn lọc theo kiểu số nguyên dương
+        // Sử dụng ID của input field để dễ tham chiếu
+        var numericFilterInputs = [
+            'filterNodeID', 'filterLength', 'filterTTL', 'filterID',
+            'filterSrcPort', 'filterDstPort', 'filterType', 'filterCode',
+            'filterIcmpID', 'filterIcmpSeq', 'filterWindow'
+        ];
 
         jQ('#filterForm').hide();
 
@@ -433,7 +462,7 @@
                     function(settings, data, dataIndex) {
                         var timestampStr = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
                         // Đảm bảo định dạng Date khớp với dữ liệu từ Flask.
-                        // Ví dụ: "2023-01-01 12:30:00" cần chuyển thành "2023/01/01 12:30:00" để tương thích tốt hơn
+                        // Ví dụ: "2023-01-01 12:30:00" cần chuyển thành "2023/01/01 12:30:00"
                         var tableDate = new Date(timestampStr.replace(/-/g, '/'));
 
                         var filterStartDate = startDateVal ? new Date(startDateVal) : null;
@@ -460,13 +489,28 @@
             for (var inputId in columnMapping) {
                 var columnIndex = columnMapping[inputId];
                 var filterValue = jQ('#' + inputId).val().trim();
-                console.log("Input ID:", inputId, " - Column Index:", columnIndex, " - Filter Value:", filterValue); // Thêm dòng này để kiểm tra
+
+                console.log("Input ID:", inputId, " - Column Index:", columnIndex, " - Filter Value:", filterValue);
+
                 if (filterValue) {
-                    // CẬP NHẬT QUAN TRỌNG:
-                    // Sử dụng regex: false và smart: true để DataTables tự động tìm kiếm "chứa"
-                    // và xử lý các ký tự đặc biệt một cách thông minh.
-                    // Không cần escapeRegex nữa cho các trường hợp này.
-                    table.column(columnIndex).search(filterValue, false, true);
+                    // Kiểm tra xem đây có phải là cột số hay không
+                    if (numericFilterInputs.includes(inputId)) {
+                        // Nếu là cột số, cố gắng chuyển đổi giá trị sang số nguyên
+                        var numValue = parseInt(filterValue);
+                        if (!isNaN(numValue) && numValue >= 0) { // Đảm bảo là số nguyên dương
+                            // Tạo regex để tìm kiếm chính xác số đó trong cột
+                            // Sử dụng ^ và $ để khớp toàn bộ nội dung ô
+                            table.column(columnIndex).search('^' + numValue + '$', true, false);
+                        } else {
+                            // Nếu không phải số hợp lệ, hoặc không phải số nguyên dương,
+                            // chúng ta có thể coi như không tìm thấy gì để không hiển thị toàn bộ bảng
+                            table.column(columnIndex).search('^$', true, false); // Tìm kiếm chuỗi rỗng để không có kết quả
+                            console.warn("Giá trị không hợp lệ cho trường số '" + inputId + "': " + filterValue);
+                        }
+                    } else {
+                        // Đối với các cột chuỗi, sử dụng tìm kiếm thông minh (contains)
+                        table.column(columnIndex).search(filterValue, false, true);
+                    }
                 }
             }
 
