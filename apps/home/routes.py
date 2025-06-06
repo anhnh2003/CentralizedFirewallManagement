@@ -58,38 +58,6 @@ def get_segment(request):
 
     except:
         return None
-@blueprint.route('/input_status')
-@login_required
-def input_status():
-    input_status = query_iptables('INPUT')
-    #parse the output into a list of lists, where each inner list represents a row of the iptables output
-    table_data = parse_iptables_output(input_status)
-    return render_template('home/status.html', table_data=table_data, chain='INPUT')
-
-
-
-@blueprint.route('/output_status')
-@login_required
-def output_status():
-    output_status = query_iptables('OUTPUT')
-    #parse the output into a list of lists, where each inner list represents a row of the iptables output
-    table_data = parse_iptables_output(output_status)
-    return render_template('home/status.html', table_data=table_data, chain='OUTPUT')
-
-@blueprint.route('/forward_status')
-@login_required
-def forward_status():
-    forward_status = query_iptables('FORWARD')
-    #parse the output into a list of lists, where each inner list represents a row of the iptables output
-    table_data = parse_iptables_output(forward_status)
-    return render_template('home/status.html', table_data=table_data,   chain='FORWARD')
-
-
-def query_iptables(chain):
-    command = "echo {} | sudo -S iptables -L {} --line-numbers".format(sudo_password, chain)
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=None, shell=True)
-    output = process.communicate()
-    return output[0].decode('utf-8')
 def parse_iptables_output(output):
     """
     Parses the output of 'sudo iptables -L <chain> --line-numbers'.
