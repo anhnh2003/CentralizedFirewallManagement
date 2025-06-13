@@ -54,11 +54,11 @@
 
     <div class="card mb-4 shadow-sm">
         <div class="card-header">
-            Chọn Nodes để hiển thị luật
+            Select Nodes to Display Rules
         </div>
         <div class="card-body">
             <div class="form-group">
-                <label for="nodeSelector">Chọn Node(s):</label>
+                <label for="nodeSelector">Select Node(s):</label>
                 <div id="nodeSelector" class="form-check">
                     {% for node_id, node_info in nodes_with_roles.items() %}
                         {% set node = node_info.object %}
@@ -72,13 +72,13 @@
                         </div>
                     {% endfor %}
                     {% if not nodes_with_roles %}
-                        <p class="text-muted">Bạn không có quyền truy cập vào bất kỳ node nào.</p>
+                        <p class="text-muted">You do not have access to any nodes.</p>
                     {% endif %}
                 </div>
             </div>
-            <button type="button" class="btn btn-primary mt-3" id="showSelectedNodes">Hiển thị luật của Nodes đã chọn</button>
-            <button type="button" class="btn btn-secondary mt-3" id="showAllNodes">Hiển thị tất cả Nodes</button>
-            <button type="button" class="btn btn-secondary mt-3" id="hideAllNodes">Ẩn tất cả Nodes</button>
+            <button type="button" class="btn btn-primary mt-3" id="showSelectedNodes">Show Selected Nodes' Rules</button>
+            <button type="button" class="btn btn-secondary mt-3" id="showAllNodes">Show All Nodes' Rules</button>
+            <button type="button" class="btn btn-secondary mt-3" id="hideAllNodes">Hide All Nodes' Rules</button>
         </div>
     </div>
 
@@ -124,14 +124,14 @@
                                             <td>{{ rule_data[6] or '' }}</td> {# Dpt #}
                                             <td>{{ rule_data[7] or '' }}</td> {# Detail #}
                                             <td>
-                                                {# Chỉ hiển thị nút Delete nếu người dùng là manager của node này #}
+                                                {# Only display Delete button if user is manager of this node #}
                                                 {% if role == 'manager' %}
                                                 <form action="{{ url_for('home_blueprint.delete_rule') }}" method="post" style="display:inline;">
                                                     <input type="hidden" name="node_id" value="{{ node.id }}">
                                                     <input type="hidden" name="chain_name" value="{{ chain }}">
                                                     <input type="hidden" name="rule_index" value="{{ rule_index }}">
                                                     <button type="submit" class="btn btn-danger btn-sm"
-                                                            onclick="return confirm('Bạn có chắc chắn muốn xóa luật này không?');">
+                                                            onclick="return confirm('Are you sure you want to delete this rule?');">
                                                         Delete
                                                     </button>
                                                 </form>
@@ -143,7 +143,7 @@
                                         {% endfor %}
                                     {% else %}
                                         <tr>
-                                            <td colspan="10" class="text-center">Không có luật nào trong chain này.</td>
+                                            <td colspan="10" class="text-center">No rules in this chain.</td>
                                         </tr>
                                     {% endif %}
                                 </tbody>
@@ -151,7 +151,7 @@
                         </div>
                         {% endfor %}
                     {% else %}
-                        <p class="text-muted">Không thể tải trạng thái IPTables cho node này hoặc không có luật nào.</p>
+                        <p class="text-muted">Could not load IPTables status for this node or no rules found.</p>
                     {% endif %}
                 </div>
             </div>
@@ -161,7 +161,7 @@
 {% endblock content %}
 {% block javascripts %}
 <script>
-    // Đảm bảo script được chạy sau khi DOM đã tải hoàn chỉnh
+    // Ensure the script runs after the DOM is fully loaded
     document.addEventListener('DOMContentLoaded', function() {
         console.log("JavaScript loaded and DOM content loaded!");
         const nodeCheckboxes = document.querySelectorAll('.node-checkbox');
@@ -170,14 +170,14 @@
         const hideAllNodesBtn = document.getElementById('hideAllNodes');
         const nodeRuleContainer = document.getElementById('nodeRuleContainer');
 
-        // Hàm ẩn tất cả các section node
+        // Function to hide all node sections
         function hideAllNodeSections() {
             nodeRuleContainer.querySelectorAll('.node-table').forEach(section => {
                 section.classList.add('hidden');
             });
         }
 
-        // Hàm hiển thị một section node cụ thể
+        // Function to show a specific node section
         function showNodeSection(nodeId) {
             const section = document.getElementById(`node-${nodeId}-section`);
             if (section) {
@@ -185,15 +185,15 @@
             }
         }
 
-        // --- Khởi tạo ban đầu: Ẩn tất cả các node khi trang tải ---
+        // --- Initial setup: Hide all nodes when the page loads ---
         hideAllNodeSections();
 
-        // --- Gắn sự kiện cho nút "Hiển thị luật của Nodes đã chọn" ---
-        // Kiểm tra xem nút có tồn tại không trước khi gắn sự kiện
+        // --- Attach event for "Show Selected Nodes' Rules" button ---
+        // Check if the button exists before attaching the event
         if (showSelectedNodesBtn) {
-            console.log("showSelectedNodesBtn found!"); // <--- THÊM DÒNG NÀY
+            console.log("showSelectedNodesBtn found!");
             showSelectedNodesBtn.addEventListener('click', function() {
-                hideAllNodeSections(); // Ẩn tất cả trước
+                hideAllNodeSections(); // Hide all first
                 nodeCheckboxes.forEach(checkbox => {
                     if (checkbox.checked) {
                         showNodeSection(checkbox.value);
@@ -205,13 +205,13 @@
         }
 
 
-        // --- Gắn sự kiện cho nút "Hiển thị tất cả Nodes" ---
+        // --- Attach event for "Show All Nodes' Rules" button ---
         if (showAllNodesBtn) {
-            console.log("showAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
+            console.log("showAllNodesBtn found!");
             showAllNodesBtn.addEventListener('click', function() {
                 nodeCheckboxes.forEach(checkbox => {
                     showNodeSection(checkbox.value);
-                    checkbox.checked = true; // Tự động tick vào tất cả các checkbox
+                    checkbox.checked = true; // Automatically check all checkboxes
                 });
             });
         } else {
@@ -219,13 +219,13 @@
         }
 
 
-        // --- Gắn sự kiện cho nút "Ẩn tất cả Nodes" ---
+        // --- Attach event for "Hide All Nodes' Rules" button ---
         if (hideAllNodesBtn) {
-            console.log("hideAllNodesBtn found!"); // <--- THÊM DÒNG NÀY
+            console.log("hideAllNodesBtn found!");
             hideAllNodesBtn.addEventListener('click', function() {
                 hideAllNodeSections();
                 nodeCheckboxes.forEach(checkbox => {
-                    checkbox.checked = false; // Bỏ tick tất cả các checkbox
+                    checkbox.checked = false; // Uncheck all checkboxes
                 });
             });
         } else {
@@ -233,10 +233,10 @@
         }
 
 
-        // --- Tùy chọn: Khi click vào tiêu đề node, ẩn/hiện nội dung của node đó ---
+        // --- Optional: When clicking on a node header, toggle the content visibility ---
         nodeRuleContainer.querySelectorAll('.node-header').forEach(header => {
             header.addEventListener('click', function() {
-                const nodeContent = this.nextElementSibling; // Lấy div .node-content
+                const nodeContent = this.nextElementSibling; // Get the .node-content div
                 if (nodeContent) {
                     nodeContent.classList.toggle('hidden');
                 }

@@ -3,7 +3,7 @@
 {% block content %}
 <style>
   .page-content {
-    margin-left: 0px;  /* điều chỉnh cho khớp sidebar */
+    margin-left: 0px;  /* Adjust for sidebar */
     padding: 2rem;
     background: #f8f9fa;
   }
@@ -22,7 +22,7 @@
 
 <div class="page-content">
   <h2 class="mb-4">Firewall Log Analytics</h2>
-  <p>Thống kê và cảnh báo từ tất cả các node bạn được phân quyền.</p>
+  <p>Statistics and alerts from all nodes you are authorized to manage.</p>
 
   <div class="row">
     {% for field, data in aggregated_data.items() %}
@@ -66,36 +66,22 @@
   <script>
     const aggregatedData = JSON.parse(`{{ aggregated_data | tojson | safe }}`);
 
-    console.log("DEBUG JS: aggregatedData nhận được từ Flask:", aggregatedData);
-    console.log("DEBUG JS: Kiểu dữ liệu của aggregatedData:", typeof aggregatedData);
-    console.log("DEBUG JS: aggregatedData có rỗng không?", Object.keys(aggregatedData).length === 0);
-
     if (Object.keys(aggregatedData).length === 0) {
-        console.warn("Không có dữ liệu tổng hợp nào để vẽ biểu đồ.");
+        // No aggregated data to draw charts.
     }
 
     Object.entries(aggregatedData).forEach(([field, data]) => {
-      console.log(`DEBUG JS: Đang xử lý trường: ${field} với dữ liệu thô:`, data);
-
       const ctx = document.getElementById(`chart-${field}`).getContext('2d');
 
       if (!ctx) {
-          console.error(`Lỗi: Không tìm thấy canvas với ID: chart-${field}. Đảm bảo ID khớp với HTML.`);
+          // Error: Canvas with ID: chart-${field} not found. Ensure ID matches HTML.
           return;
       }
 
       const labels = data.map(item => item[0] || '(empty)');
       const counts = data.map(item => item[1]);
 
-      // --- Thêm các dòng DEBUG mới này ---
-      console.log(`DEBUG JS: Labels cho ${field}:`, labels);
-      console.log(`DEBUG JS: Counts cho ${field}:`, counts);
-      console.log(`DEBUG JS: Kiểm tra data cho Chart.js: labels.length=<span class="math-inline">\{labels\.length\}, counts\.length\=</span>{counts.length}`);
-      console.log(`DEBUG JS: Canvas element cho ${field}:`, document.getElementById(`chart-${field}`));
-      console.log(`DEBUG JS: Kích thước của canvas container cho ${field}:`, document.getElementById(`chart-${field}`).parentElement.offsetWidth, 'x', document.getElementById(`chart-${field}`).parentElement.offsetHeight);
-      // --- Kết thúc các dòng DEBUG mới ---
-
-      // Chỉ vẽ biểu đồ nếu có dữ liệu
+      // Only draw the chart if data exists
       if (labels.length > 0 && counts.length > 0) {
         new Chart(ctx, {
           type: 'bar',
@@ -129,14 +115,14 @@
           }
         });
       } else {
-        console.warn(`Không có đủ dữ liệu cho biểu đồ ${field}. Labels:`, labels, "Counts:", counts);
-        // Có thể hiển thị một thông báo "Không có dữ liệu cho biểu đồ này" trong canvas
+        // No data to display for this chart.
+        // You can display a "No data for this chart" message in the canvas area.
         const noDataMessage = document.createElement('p');
-        noDataMessage.textContent = 'Không có dữ liệu để hiển thị biểu đồ này.';
+        noDataMessage.textContent = 'No data to display for this chart.';
         noDataMessage.style.textAlign = 'center';
         noDataMessage.style.marginTop = '20px';
         const chartContainer = document.getElementById(`chart-${field}`).parentElement;
-        chartContainer.innerHTML = ''; // Xóa canvas rỗng
+        chartContainer.innerHTML = ''; // Clear the empty canvas
         chartContainer.appendChild(noDataMessage);
       }
     });

@@ -3,14 +3,14 @@
 {% block content %}
   <style>
     .page-content {
-      margin-left: 0px; /* điều chỉnh dựa trên sidebar */
+      margin-left: 0px; /* Adjust for sidebar */
       padding: 2rem;
       background: #fff;
     }
     .add-node-form {
       background: #f7f7f7;
       border-radius: 4px;
-      position: relative; /* Để định vị nút đóng */
+      position: relative; /* For positioning the close button */
     }
     .add-node-form .close-btn {
       position: absolute;
@@ -27,10 +27,10 @@
   </style>
 
   <div class="page-content">
-    <h2 class="mb-4">Quản lý Nodes</h2>
-    {# CHỈ HIỂN THỊ NÚT "THÊM NODE" NẾU LÀ ADMIN #}
+    <h2 class="mb-4">Manage Nodes</h2>
+    {# ONLY DISPLAY "ADD NODE" BUTTON IF USER IS ADMIN #}
     {% if current_user.role == 'admin' %}
-    <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Thêm Node</button>
+    <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Add Node</button>
     {% endif %}
     <div id="addNodeFormsContainer"></div>
 
@@ -40,11 +40,11 @@
           <tr>
             <th>ID</th>
             <th>Hostname</th>
-            <th>Địa chỉ IP</th>
-            <th>Người dùng SSH</th>
-            <th>Người quản lý</th>
-            <th>Người xem</th>
-            <th>Hành động</th>
+            <th>IP Address</th>
+            <th>SSH User</th>
+            <th>Managers</th>
+            <th>Viewers</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
@@ -65,14 +65,14 @@
               {% endfor %}
             </td>
             <td>
-              {# CHỈ HIỂN THỊ NẾU LÀ ADMIN #}
+              {# ONLY DISPLAY IF USER IS ADMIN #}
     {% if current_user.role == 'admin' %}
-              <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Sửa</button>
+              <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Edit</button>
               <form method="POST"
                     action="{{ url_for('home_blueprint.delete_node', node_id=n.id) }}"
                     style="display:inline;"
-                    onsubmit="return confirm('Xóa Node {{ n.hostname }}?');">
-                <button type="submit" class="btn btn-sm btn-danger">Xóa</button>
+                    onsubmit="return confirm('Delete Node {{ n.hostname }}?');">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
               </form>
             </td>
             {% endif %}
@@ -88,7 +88,7 @@
       <div class="modal-content">
         <form id="editNodeForm" method="POST" action="">
           <div class="modal-header">
-            <h5 class="modal-title" id="editNodeModalLabel">Sửa Node</h5>
+            <h5 class="modal-title" id="editNodeModalLabel">Edit Node</h5>
             <button type="button" class="close" data-dismiss="modal" data-bs-dismiss="modal">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -99,26 +99,26 @@
               <input type="text" class="form-control" id="edit_hostname" name="hostname" required>
             </div>
             <div class="form-group">
-              <label for="edit_ip">Địa chỉ IP</label>
+              <label for="edit_ip">IP Address</label>
               <input type="text" class="form-control" id="edit_ip" name="ip_address" required>
             </div>
             <div class="form-group">
-              <label for="edit_ssh_user">Người dùng SSH</label>
+              <label for="edit_ssh_user">SSH User</label>
               <input type="text" class="form-control" id="edit_ssh_user" name="ssh_user" required>
             </div>
             <div class="form-group">
-              <label for="edit_password">Mật khẩu (để thiết lập SSH Key)</label>
+              <label for="edit_password">Password (for SSH Key setup)</label>
               <textarea class="form-control" id="edit_password" name="password" rows="3"
-                        placeholder="Nhập mật khẩu để ssh-copy-id, hoặc để trống nếu dùng key hiện có."></textarea>
-              <small class="form-text text-muted">Mật khẩu này chỉ dùng cho thiết lập SSH Key ban đầu và sẽ không được lưu trữ.</small>
+                        placeholder="Enter password for ssh-copy-id, or leave empty if using existing key."></textarea>
+              <small class="form-text text-muted">This password is only used for initial SSH Key setup and will not be stored.</small>
             </div>
             <div class="form-group">
-              <label>Người quản lý</label>
+              <label>Managers</label>
               <div>
                 {% for u in users %}
                 <div class="form-check">
                   <input class="form-check-input node-manager-checkbox" type="checkbox"
-                         id="edit_manager_{{ u.id }}" name="managers" value="{{ u.id }}">
+                             id="edit_manager_{{ u.id }}" name="managers" value="{{ u.id }}">
                   <label class="form-check-label" for="edit_manager_{{ u.id }}">
                     {{ u.username }}
                   </label>
@@ -127,12 +127,12 @@
               </div>
             </div>
             <div class="form-group">
-              <label>Người xem</label>
+              <label>Viewers</label>
               <div>
                 {% for u in users %}
                 <div class="form-check">
                   <input class="form-check-input node-viewer-checkbox" type="checkbox"
-                         id="edit_viewer_{{ u.id }}" name="viewers" value="{{ u.id }}">
+                             id="edit_viewer_{{ u.id }}" name="viewers" value="{{ u.id }}">
                   <label class="form-check-label" for="edit_viewer_{{ u.id }}">
                     {{ u.username }}
                   </label>
@@ -143,8 +143,8 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary"
-                    data-dismiss="modal" data-bs-dismiss="modal">Hủy</button>
-            <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+                            data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save changes</button>
           </div>
         </form>
       </div>
@@ -157,7 +157,7 @@
     const addNodeFormsContainer = document.getElementById('addNodeFormsContainer');
     let addNodeCount = 0;
 
-    // Hàm thiết lập loại trừ lẫn nhau cho checkbox manager/viewer
+    // Function to set up mutual exclusion for manager/viewer checkboxes
     function setupNodeCheckboxListeners(formElement) {
       const managedCheckboxes = formElement.querySelectorAll('.node-manager-checkbox');
       const viewedCheckboxes = formElement.querySelectorAll('.node-viewer-checkbox');
@@ -165,7 +165,7 @@
       managedCheckboxes.forEach(managerCheckbox => {
         managerCheckbox.addEventListener('change', function() {
           const userId = this.value;
-          // Tìm checkbox viewer tương ứng trong cùng một form
+          // Find the corresponding viewer checkbox in the same form
           const correspondingViewerCheckbox = formElement.querySelector(`[id$="_viewer_${userId}"]`);
           if (this.checked && correspondingViewerCheckbox) {
             correspondingViewerCheckbox.checked = false;
@@ -176,7 +176,7 @@
       viewedCheckboxes.forEach(viewerCheckbox => {
         viewerCheckbox.addEventListener('change', function() {
           const userId = this.value;
-          // Tìm checkbox manager tương ứng trong cùng một form
+          // Find the corresponding manager checkbox in the same form
           const correspondingManagerCheckbox = formElement.querySelector(`[id$="_manager_${userId}"]`);
           if (this.checked && correspondingManagerCheckbox) {
             correspondingManagerCheckbox.checked = false;
@@ -185,7 +185,7 @@
       });
     }
 
-    // Sửa Node
+    // Edit Node
     document.querySelectorAll('.editNodeBtn').forEach(btn => {
       btn.addEventListener('click', () => {
         const nid = btn.dataset.id;
@@ -196,15 +196,15 @@
             form.action = updateNodeUrlTpl.replace('/0','/'+nid);
 
             document.getElementById('edit_hostname').value = data.hostname;
-            document.getElementById('edit_ip').value      = data.ip_address;
+            document.getElementById('edit_ip').value       = data.ip_address;
             document.getElementById('edit_ssh_user').value = data.ssh_user;
-            document.getElementById('edit_password').value = ''; // Mật khẩu không được lưu, xóa nó
+            document.getElementById('edit_password').value = ''; // Password is not stored, clear it
 
-            // Reset tất cả checkbox manager/viewer
+            // Reset all manager/viewer checkboxes
             document.querySelectorAll('#editNodeForm .node-manager-checkbox').forEach(ch => ch.checked = false);
             document.querySelectorAll('#editNodeForm .node-viewer-checkbox').forEach(ch => ch.checked = false);
 
-            // Điền người quản lý
+            // Populate managers
             if (data.managers) {
               data.managers.forEach(uid => {
                 const ch = document.getElementById('edit_manager_' + uid);
@@ -212,7 +212,7 @@
               });
             }
 
-            // Điền người xem
+            // Populate viewers
             if (data.viewers) {
               data.viewers.forEach(uid => {
                 const ch = document.getElementById('edit_viewer_' + uid);
@@ -221,16 +221,16 @@
             }
 
             $('#editNodeModal').modal('show');
-            // Thiết lập lắng nghe cho form modal sửa sau khi nội dung được tải
+            // Set up listeners for the edit modal form after content is loaded
             setupNodeCheckboxListeners(form);
           })
           .catch(error => {
-            console.error('Lỗi khi lấy dữ liệu node:', error);
+            console.error('Error fetching node data:', error);
           });
       });
     });
 
-    // Thêm Node Động
+    // Add Node Dynamically
     document.getElementById('addNodeBtn').addEventListener('click', () => {
       const i = addNodeCount++;
       const html = `
@@ -245,30 +245,30 @@
                    id="hostname_${i}" name="hostname_${i}" required>
           </div>
           <div class="form-group">
-            <label for="ip_address_${i}">Địa chỉ IP</label>
+            <label for="ip_address_${i}">IP Address</label>
             <input type="text" class="form-control"
                    id="ip_address_${i}" name="ip_address_${i}" required>
           </div>
           <div class="form-group">
-            <label for="ssh_user_${i}">Người dùng SSH</label>
+            <label for="ssh_user_${i}">SSH User</label>
             <input type="text" class="form-control"
                    id="ssh_user_${i}" name="ssh_user_${i}" required>
           </div>
           <div class="form-group">
-            <label for="password_${i}">Mật khẩu (để thiết lập SSH Key)</label>
+            <label for="password_${i}">Password (for SSH Key setup)</label>
             <textarea class="form-control"
                       id="password_${i}" name="password_${i}" rows="2"
-                      placeholder="Nhập mật khẩu để ssh-copy-id. Mật khẩu này sẽ không được lưu trữ."></textarea>
-            <small class="form-text text-muted">Mật khẩu này chỉ dùng cho thiết lập SSH Key ban đầu và sẽ không được lưu trữ.</small>
+                      placeholder="Enter password for ssh-copy-id. This password will not be stored."></textarea>
+            <small class="form-text text-muted">This password is only used for initial SSH Key setup and will not be stored.</small>
           </div>
           <div class="form-group">
-            <label>Người quản lý</label>
+            <label>Managers</label>
             <div>
               {% for u in users %}
               <div class="form-check">
                 <input class="form-check-input node-manager-checkbox" type="checkbox"
-                       id="add_node_${i}_manager_${u.id}"
-                       name="managers_${i}" value="{{ u.id }}">
+                             id="add_node_${i}_manager_${u.id}"
+                             name="managers_${i}" value="{{ u.id }}">
                 <label class="form-check-label" for="add_node_${i}_manager_${u.id}">
                   {{ u.username }}
                 </label>
@@ -277,13 +277,13 @@
             </div>
           </div>
           <div class="form-group">
-            <label>Người xem</label>
+            <label>Viewers</label>
             <div>
               {% for u in users %}
               <div class="form-check">
                 <input class="form-check-input node-viewer-checkbox" type="checkbox"
-                       id="add_node_${i}_viewer_${u.id}"
-                       name="viewers_${i}" value="{{ u.id }}">
+                             id="add_node_${i}_viewer_${u.id}"
+                             name="viewers_${i}" value="{{ u.id }}">
                 <label class="form-check-label" for="add_node_${i}_viewer_${u.id}">
                   {{ u.username }}
                 </label>
@@ -291,10 +291,10 @@
               {% endfor %}
             </div>
           </div>
-          <button type="submit" class="btn btn-success">Thêm</button>
+          <button type="submit" class="btn btn-success">Add</button>
         </form>`;
       addNodeFormsContainer.insertAdjacentHTML('beforeend', html);
-      // Thiết lập lắng nghe cho form vừa thêm
+      // Set up listeners for the newly added form
       const newForm = addNodeFormsContainer.lastElementChild;
       setupNodeCheckboxListeners(newForm);
     });

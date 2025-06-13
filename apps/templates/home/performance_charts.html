@@ -67,7 +67,7 @@
   <div class="filter-form">
     <form method="GET" action="{{ url_for('home_blueprint.performance_charts') }}">
       <div class="form-group">
-        <label>Chọn Nodes:</label>
+        <label>Select Nodes:</label>
         <div class="node-checkbox-group">
           {% if available_nodes %}
             {% for ip in available_nodes %}
@@ -78,32 +78,32 @@
               </div>
             {% endfor %}
           {% else %}
-            <p>Bạn không có quyền quản lý nodes nào.</p>
+            <p>You do not have permission to manage any nodes.</p>
           {% endif %}
         </div>
       </div>
 
       <div class="form-row">
         <div class="form-group col-md-6">
-          <label for="start_date">Ngày Bắt Đầu:</label>
+          <label for="start_date">Start Date:</label>
           <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date_val }}">
         </div>
         <div class="form-group col-md-6">
-          <label for="end_date">Ngày Kết Thúc:</label>
+          <label for="end_date">End Date:</label>
           <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date_val }}">
         </div>
       </div>
 
-      <button type="submit" class="btn btn-primary">Xem Biểu Đồ</button>
+      <button type="submit" class="btn btn-primary">View Charts</button>
     </form>
   </div>
 
   {# Charts will be displayed below the form #}
   <div id="charts-container">
     {% if not chart_data and selected_nodes %}
-        <p class="text-center">Không có dữ liệu cho các node được chọn trong khoảng thời gian này.</p>
+        <p class="text-center">No data available for the selected nodes in this time range.</p>
     {% elif not selected_nodes %}
-        <p class="text-center">Vui lòng chọn ít nhất một node để xem biểu đồ.</p>
+        <p class="text-center">Please select at least one node to view charts.</p>
     {% elif chart_data %}
       {% for ip in selected_nodes %} {# Loop through selected_nodes to maintain order and presence #}
         {% if chart_data[ip] %} {# Check if data exists for this specific IP #}
@@ -149,7 +149,7 @@
             </div>
           {% endif %}
         {% else %}
-          <p class="text-center">Không tìm thấy dữ liệu log cho Node: {{ ip }} trong khoảng thời gian này.</p>
+          <p class="text-center">No log data found for Node: {{ ip }} in this time range.</p>
         {% endif %}
       {% endfor %}
     {% endif %}
@@ -176,6 +176,9 @@
     function createChartistLineChart(elementId, data, options) {
       const chartElement = document.getElementById(elementId);
       if (chartElement) {
+        // Chartist selectors use '.' for classes, need to escape it if ID contains dots
+        // This is important if your IP addresses contain dots and are used directly in IDs.
+        // Assuming IDs are simple here, but for robustness, it's good practice to escape.
         const chartSelector = `#${elementId.replace(/\./g, '\\.')}`;
         new Chartist.Line(chartSelector, data, options);
       } else {
@@ -193,15 +196,16 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
+              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = cpuChartData.labels.length;
-                if (index === 0 || index === totalLabels - 1) { // Hiển thị nhãn đầu và cuối
+                // Display first and last labels for better context over time
+                if (index === 0 || index === totalLabels - 1) { 
                   return value;
                 }
-                return null; // Ẩn các nhãn khác
+                return null; // Hide other labels to prevent clutter
               },
-              showGrid: true // Có thể ẩn grid lines nếu bạn không muốn
+              showGrid: true // Can hide grid lines if you don't want to
             },
             axisY: {
               labelInterpolationFnc: function(value) { return value + '%'; },
@@ -214,7 +218,7 @@
           createChartistLineChart(`cpu-chart-${ip}`, cpuChartData, cpuOptions);
         } else {
           const container = document.getElementById(`cpu-chart-${ip}`);
-          if(container) container.innerHTML = '<p style="text-align:center;">Không có dữ liệu CPU cho node này.</p>';
+          if(container) container.innerHTML = '<p style="text-align:center;">No CPU data for this node.</p>';
         }
 
         // --- Disk Chart ---
@@ -224,7 +228,7 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
+              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = diskChartData.labels.length;
                 if (index === 0 || index === totalLabels - 1) {
@@ -245,7 +249,7 @@
           createChartistLineChart(`disk-chart-${ip}`, diskChartData, diskOptions);
         } else {
           const container = document.getElementById(`disk-chart-${ip}`);
-          if(container) container.innerHTML = '<p style="text-align:center;">Không có dữ liệu Disk cho node này.</p>';
+          if(container) container.innerHTML = '<p style="text-align:center;">No Disk data for this node.</p>';
         }
 
         // --- RAM Chart ---
@@ -255,7 +259,7 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
+              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = ramChartData.labels.length;
                 if (index === 0 || index === totalLabels - 1) {
@@ -275,7 +279,7 @@
           createChartistLineChart(`ram-chart-${ip}`, ramChartData, ramOptions);
         } else {
           const container = document.getElementById(`ram-chart-${ip}`);
-          if(container) container.innerHTML = '<p style="text-align:center;">Không có dữ liệu RAM cho node này.</p>';
+          if(container) container.innerHTML = '<p style="text-align:center;">No RAM data for this node.</p>';
         }
 
         // --- Network Chart (TCP_LISTEN and TCP_ESTABLISHED) ---
@@ -285,7 +289,7 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // **CHỈNH SỬA Ở ĐÂY: Hiển thị nhãn đầu và cuối**
+              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = networkChartData.labels.length;
                 if (index === 0 || index === totalLabels - 1) {
@@ -305,7 +309,7 @@
           createChartistLineChart(`network-chart-${ip}`, networkChartData, networkOptions);
         } else {
           const container = document.getElementById(`network-chart-${ip}`);
-          if(container) container.innerHTML = '<p style="text-align:center;">Không có dữ liệu Network cho node này.</p>';
+          if(container) container.innerHTML = '<p style="text-align:center;">No Network data for this node.</p>';
         }
       }
     });

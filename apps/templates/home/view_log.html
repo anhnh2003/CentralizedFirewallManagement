@@ -6,66 +6,66 @@
 <link href="{{ config.ASSETS_ROOT }}/plugins/datatables/css/dataTables.min.css" rel="stylesheet">
 
 <style>
-    /* Tổng quan bảng */
+    /* Table General */
     #logTable {
-        width: 100% !important; /* Đảm bảo bảng chiếm toàn bộ chiều rộng có sẵn */
-        border-collapse: collapse; /* Xóa khoảng trống giữa các ô */
+        width: 100% !important; /* Ensure table occupies full available width */
+        border-collapse: collapse; /* Remove space between cells */
     }
 
-    /* Khoảng cách giữa các cột trong bảng và căn chỉnh */
+    /* Column spacing in table and alignment */
     #logTable th,
     #logTable td {
-        padding: 10px 18px; /* Tăng padding để tạo khoảng cách lớn hơn */
-        white-space: nowrap; /* Ngăn chặn xuống dòng cho các ô */
-        text-align: left; /* Căn trái nội dung trong ô */
-        border-bottom: 1px solid #ddd; /* Thêm đường kẻ dưới cho mỗi hàng */
+        padding: 10px 18px; /* Increase padding for more space */
+        white-space: nowrap; /* Prevent wrapping for cells */
+        text-align: left; /* Align content to the left */
+        border-bottom: 1px solid #ddd; /* Add bottom border for each row */
     }
 
     #logTable th {
-        background-color: #f2f2f2; /* Màu nền cho tiêu đề cột */
+        background-color: #f2f2f2; /* Background color for column headers */
         font-weight: bold;
         color: #333;
     }
 
     #logTable tbody tr:hover {
-        background-color: #f5f5f5; /* Hiệu ứng hover khi rê chuột qua hàng */
+        background-color: #f5f5f5; /* Hover effect when mouse over row */
     }
 
-    /* Đảm bảo thanh cuộn ngang cho bảng chính DataTables */
+    /* Ensure horizontal scrollbar for the main DataTables table */
     .dataTables_wrapper {
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* Cải thiện trải nghiệm trên thiết bị di động */
-        padding-bottom: 15px; /* Thêm khoảng trống dưới để dễ thấy thanh cuộn */
+        -webkit-overflow-scrolling: touch; /* Improve experience on mobile devices */
+        padding-bottom: 15px; /* Add space below for better scrollbar visibility */
     }
     .dataTables_scrollBody {
-        overflow-x: auto !important; /* Đảm bảo thanh cuộn ngang hiển thị */
+        overflow-x: auto !important; /* Ensure horizontal scrollbar is visible */
     }
 
 
-    /* Thiết kế form filter thân thiện hơn */
+    /* More user-friendly filter form design */
     .filter-form {
-        display: none; /* Mặc định ẩn form filter */
-        margin-top: 25px; /* Tăng khoảng cách từ nút đến form */
-        padding: 25px; /* Tăng padding tổng thể của form */
-        border: 1px solid #cceeff; /* Viền màu xanh nhạt */
-        border-radius: 10px; /* Bo góc lớn hơn */
-        background-color: #e6f7ff; /* Nền màu xanh nhạt */
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Thêm đổ bóng nhẹ */
-        display: grid; /* Sử dụng CSS Grid để bố cục các input */
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 2-3 cột responsive với min-width lớn hơn */
-        gap: 20px; /* Tăng khoảng cách giữa các input */
+        display: none; /* Hide filter form by default */
+        margin-top: 25px; /* Increase distance from button to form */
+        padding: 25px; /* Increase overall form padding */
+        border: 1px solid #cceeff; /* Light blue border */
+        border-radius: 10px; /* Larger border-radius */
+        background-color: #e6f7ff; /* Light blue background */
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Add subtle shadow */
+        display: grid; /* Use CSS Grid for input layout */
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 2-3 responsive columns with larger min-width */
+        gap: 20px; /* Increase space between inputs */
     }
     .filter-form label {
         font-weight: bold;
-        margin-bottom: 8px; /* Tăng khoảng cách từ label đến input */
-        display: block; /* Đảm bảo label nằm trên input */
+        margin-bottom: 8px; /* Increase space from label to input */
+        display: block; /* Ensure label is above input */
         color: #333;
     }
     .filter-form input[type="text"], .filter-form input[type="datetime-local"] {
-        width: calc(100% - 20px); /* Tính toán chiều rộng để trừ padding */
-        padding: 10px; /* Tăng padding input */
-        border: 1px solid #99d6ff; /* Viền input màu xanh đậm hơn */
-        border-radius: 5px; /* Bo góc input */
+        width: calc(100% - 20px); /* Calculate width to subtract padding */
+        padding: 10px; /* Increase input padding */
+        border: 1px solid #99d6ff; /* Darker blue input border */
+        border-radius: 5px; /* Input border-radius */
         box-sizing: border-box;
         font-size: 14px;
     }
@@ -73,29 +73,29 @@
         color: #888;
     }
 
-    /* Nút Apply Filter */
+    /* Apply Filter Button */
     .filter-form button {
-        grid-column: 1 / -1; /* Nút "Apply Filter" chiếm toàn bộ chiều rộng của grid */
-        padding: 12px 25px; /* Tăng padding nút */
-        background-color: #008cba; /* Màu xanh dương đậm */
+        grid-column: 1 / -1; /* "Apply Filter" button spans full grid width */
+        padding: 12px 25px; /* Increase button padding */
+        background-color: #008cba; /* Dark blue color */
         color: white;
         border: none;
         border-radius: 6px;
         cursor: pointer;
         font-size: 16px;
         font-weight: bold;
-        margin-top: 15px; /* Khoảng cách trên nút */
-        transition: background-color 0.3s ease; /* Hiệu ứng chuyển động khi hover */
+        margin-top: 15px; /* Space above button */
+        transition: background-color 0.3s ease; /* Transition effect on hover */
     }
     .filter-form button:hover {
-        background-color: #005f7f; /* Màu đậm hơn khi hover */
+        background-color: #005f7f; /* Darker color on hover */
     }
 
-    /* Nút Show Filter Form */
+    /* Show Filter Form Button */
     #filterButton {
-        margin-bottom: 20px; /* Tăng khoảng cách dưới nút */
-        padding: 12px 25px; /* Tăng padding nút */
-        background-color: #4CAF50; /* Màu xanh lá cây */
+        margin-bottom: 20px; /* Increase space below button */
+        padding: 12px 25px; /* Increase button padding */
+        background-color: #4CAF50; /* Green color */
         color: white;
         border: none;
         border-radius: 6px;
@@ -105,14 +105,14 @@
         transition: background-color 0.3s ease;
     }
     #filterButton:hover {
-        background-color: #45a049; /* Màu đậm hơn khi hover */
+        background-color: #45a049; /* Darker color on hover */
     }
 
-    /* Thông báo không có kết quả */
+    /* No result message */
     #noResultMessage {
         margin-top: 20px;
         padding: 15px;
-        background-color: #ffe6e6; /* Nền màu đỏ nhạt */
+        background-color: #ffe6e6; /* Light red background */
         border: 1px solid #ffcccc;
         border-radius: 5px;
         color: #cc0000;
@@ -120,7 +120,7 @@
         text-align: center;
     }
 
-    /* Kiểu dáng cho phần phân trang của DataTables */
+    /* DataTables pagination styling */
     .dataTables_paginate .paginate_button {
         margin: 0 5px;
         padding: 8px 12px;
@@ -142,7 +142,7 @@
         cursor: not-allowed;
         background-color: #fff;
     }
-    /* Đảm bảo khoảng cách giữa các phần tử phân trang và thông tin */
+    /* Ensure spacing between pagination and info elements */
     .dataTables_info, .dataTables_length {
         margin-top: 15px;
         margin-bottom: 15px;
@@ -351,11 +351,10 @@
 
 <script>
     var jQ = jQuery.noConflict(true);
-    var table; // Khai báo biến table ở phạm vi toàn cục của script để dễ truy cập
+    var table; // Declare table variable in global scope for easier access
 
     jQ(document).ready(function() {
         if ( ! jQ.fn.dataTable.isDataTable( '#logTable' ) ) {
-            console.log("Khởi tạo DataTables cho #logTable...");
             table = jQ('#logTable').DataTable({
                 "order": [[0, "desc"]],
                 "paging": true,
@@ -363,27 +362,47 @@
                 "scrollX": true,
                 "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
                 "pageLength": 20,
-                "responsive": true, // Có thể gây vấn đề với scrollX, thử tắt nếu có lỗi hiển thị
+                "responsive": true, // May cause issues with scrollX, try disabling if display errors occur
+                "columns": [
+                    { "type": "datetime" }, // Timestamp - Column 0
+                    { "type": "string" },   // Node ID - Column 1 (Keep as string to accept "node-01" and "1", number filtering will handle later)
+                    { "type": "string" },   // Node IP - Column 2
+                    { "type": "string" },   // Hostname - Column 3
+                    { "type": "string" },   // Chain - Column 4
+                    { "type": "string" },   // In IF - Column 5
+                    { "type": "string" },   // Out IF - Column 6
+                    { "type": "string" },   // MAC - Column 7
+                    { "type": "string" },   // Src IP - Column 8
+                    { "type": "string" },   // Dst IP - Column 9
+                    { "type": "num-fmt" },  // Length - Column 10
+                    { "type": "string" },   // TOS - Column 11
+                    { "type": "string" },   // PREC - Column 12
+                    { "type": "num-fmt" },  // TTL - Column 13
+                    { "type": "num-fmt" },  // ID - Column 14
+                    { "type": "string" },   // Flags - Column 15
+                    { "type": "string" },   // Protocol - Column 16
+                    { "type": "num-fmt" },  // Src Port - Column 17
+                    { "type": "num-fmt" },  // Dst Port - Column 18
+                    { "type": "num-fmt" },  // Type (ICMP) - Column 19
+                    { "type": "num-fmt" },  // Code (ICMP) - Column 20
+                    { "type": "num-fmt" },  // ICMP ID - Column 21
+                    { "type": "num-fmt" },  // ICMP Seq - Column 22
+                    { "type": "num-fmt" },  // Window - Column 23
+                    { "type": "string" },   // RES - Column 24
+                    { "type": "string" }    // Detail - Column 25
+                ]
             });
-            // --- THÊM CÁC DÒNG NÀY VÀO ĐÂY ---
-            console.log("Giá trị của 'table' ngay sau khởi tạo:", table);
-            console.log("table có phải là truthy (tồn tại) không?", !!table);
-            // --- KẾT THÚC CÁC DÒNG MỚI ---
-            console.log("DataTables đã được khởi tạo thành công. table instanceof jQ.fn.DataTable:", table instanceof jQ.fn.DataTable);
         } else {
-            console.log("DataTables đã được khởi tạo trước đó. Lấy instance hiện có.");
             table = jQ('#logTable').DataTable();
         }
         if (typeof jQ.fn.DataTable === 'undefined') {
-            console.error("Lỗi: DataTables chưa được tải hoặc không có sẵn. Vui lòng kiểm tra các script cục bộ và đường dẫn.");
-            jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Lỗi tải bảng: DataTables không khả dụng. Vui lòng kiểm tra đường dẫn file cục bộ hoặc liên hệ quản trị viên.</p>');
+            jQ('#logTable').html('<p style="color: red; text-align: center; font-weight: bold;">Error loading table: DataTables not available. Please check local script paths or contact administrator.</p>');
             return;
         }
 
-        // --- BƯỚC KHỞI TẠO DATATABLES CỰC KỲ QUAN TRỌNG ---
-        // Kiểm tra xem DataTables đã được khởi tạo trên #logTable chưa
+        // IMPORTANT DATATABLES INITIALIZATION STEP
+        // Check if DataTables has already been initialized on #logTable
         if ( ! jQ.fn.dataTable.isDataTable( '#logTable' ) ) {
-            console.log("Khởi tạo DataTables cho #logTable...");
             table = jQ('#logTable').DataTable({
                 "order": [[0, "desc"]],
                 "paging": true,
@@ -391,44 +410,42 @@
                 "scrollX": true,
                 "lengthMenu": [[20, 50, 100, 200, -1], [20, 50, 100, 200, "All"]],
                 "pageLength": 20,
-                "responsive": true, // Có thể gây vấn đề với scrollX, thử tắt nếu có lỗi hiển thị
+                "responsive": true, // May cause issues with scrollX, try disabling if display errors occur
                 "columns": [
-                    { "type": "datetime" }, // Timestamp - Cột 0
-                    { "type": "string" },  // Node ID - Cột 1 (Để string để chấp nhận cả "node-01" và "1", sau đó lọc số sẽ xử lý)
-                    { "type": "string" },   // Node IP - Cột 2
-                    { "type": "string" },   // Hostname - Cột 3
-                    { "type": "string" },   // Chain - Cột 4
-                    { "type": "string" },   // In IF - Cột 5
-                    { "type": "string" },   // Out IF - Cột 6
-                    { "type": "string" },   // MAC - Cột 7
-                    { "type": "string" },   // Src IP - Cột 8
-                    { "type": "string" },   // Dst IP - Cột 9
-                    { "type": "num-fmt" },  // Length - Cột 10
-                    { "type": "string" },   // TOS - Cột 11
-                    { "type": "string" },   // PREC - Cột 12
-                    { "type": "num-fmt" },  // TTL - Cột 13
-                    { "type": "num-fmt" },  // ID - Cột 14
-                    { "type": "string" },   // Flags - Cột 15
-                    { "type": "string" },   // Protocol - Cột 16
-                    { "type": "num-fmt" },  // Src Port - Cột 17
-                    { "type": "num-fmt" },  // Dst Port - Cột 18
-                    { "type": "num-fmt" },  // Type (ICMP) - Cột 19
-                    { "type": "num-fmt" },  // Code (ICMP) - Cột 20
-                    { "type": "num-fmt" },  // ICMP ID - Cột 21
-                    { "type": "num-fmt" },  // ICMP Seq - Cột 22
-                    { "type": "num-fmt" },  // Window - Cột 23
-                    { "type": "string" },   // RES - Cột 24
-                    { "type": "string" }    // Detail - Cột 25
+                    { "type": "datetime" }, // Timestamp - Column 0
+                    { "type": "string" },   // Node ID - Column 1 (Keep as string to accept "node-01" and "1", number filtering will handle later)
+                    { "type": "string" },   // Node IP - Column 2
+                    { "type": "string" },   // Hostname - Column 3
+                    { "type": "string" },   // Chain - Column 4
+                    { "type": "string" },   // In IF - Column 5
+                    { "type": "string" },   // Out IF - Column 6
+                    { "type": "string" },   // MAC - Column 7
+                    { "type": "string" },   // Src IP - Column 8
+                    { "type": "string" },   // Dst IP - Column 9
+                    { "type": "num-fmt" },  // Length - Column 10
+                    { "type": "string" },   // TOS - Column 11
+                    { "type": "string" },   // PREC - Column 12
+                    { "type": "num-fmt" },  // TTL - Column 13
+                    { "type": "num-fmt" },  // ID - Column 14
+                    { "type": "string" },   // Flags - Column 15
+                    { "type": "string" },   // Protocol - Column 16
+                    { "type": "num-fmt" },  // Src Port - Column 17
+                    { "type": "num-fmt" },  // Dst Port - Column 18
+                    { "type": "num-fmt" },  // Type (ICMP) - Column 19
+                    { "type": "num-fmt" },  // Code (ICMP) - Column 20
+                    { "type": "num-fmt" },  // ICMP ID - Column 21
+                    { "type": "num-fmt" },  // ICMP Seq - Column 22
+                    { "type": "num-fmt" },  // Window - Column 23
+                    { "type": "string" },   // RES - Column 24
+                    { "type": "string" }    // Detail - Column 25
                 ]
             });
-            console.log("DataTables đã được khởi tạo thành công. table instanceof jQ.fn.DataTable:", table instanceof jQ.fn.DataTable);
         } else {
-            console.log("DataTables đã được khởi tạo. Lấy instance hiện có.");
             table = jQ('#logTable').DataTable();
         }
 
-        // Cập nhật columnMapping với các chỉ số cột mới sau khi xóa Kernel Timestamp
-        // Ghi chú: Chỉ số cột bắt đầu từ 0
+        // Update columnMapping with new column indices after removing Kernel Timestamp
+        // Note: Column indices start from 0
         var columnMapping = {
             'filterNodeID': 1,
             'filterNodeIP': 2,
@@ -457,9 +474,9 @@
             'filterDetail': 25
         };
 
-        // Danh sách các cột mà chúng ta muốn lọc theo kiểu số nguyên dương
+        // List of columns we want to filter by positive integer type
         var numericFilterInputs = [
-            'filterNodeID', // Vẫn coi là số nếu người dùng nhập số, nhưng chấp nhận chuỗi cho "node-01"
+            'filterNodeID', // Still treat as number if user enters a number, but accept string for "node-01"
             'filterLength', 'filterTTL', 'filterID',
             'filterSrcPort', 'filterDstPort', 'filterType', 'filterCode',
             'filterIcmpID', 'filterIcmpSeq', 'filterWindow'
@@ -472,30 +489,28 @@
         });
 
         jQ('#applyFilterButton').on('click', function() {
-            console.log("Nút Apply Filter đã được nhấn. Bắt đầu lọc...");
+            // Step 1: Clear all existing filters
+            table.columns().search(''); // Clear filter for each column
+            jQ.fn.dataTable.ext.search = []; // Clear custom filter functions (important for timestamp)
 
-            // Bước 1: Xóa tất cả các bộ lọc hiện có
-            table.columns().search(''); // Xóa bộ lọc cho từng cột
-            jQ.fn.dataTable.ext.search = []; // Xóa các hàm lọc tùy chỉnh (quan trọng cho timestamp)
-
-            // Bước 2: Lọc theo khoảng thời gian Timestamp
+            // Step 2: Filter by Timestamp range
             var startDateVal = jQ('#filterTimestampStart').val();
             var endDateVal = jQ('#filterTimestampEnd').val();
 
             if (startDateVal || endDateVal) {
                 jQ.fn.dataTable.ext.search.push(
                     function(settings, data, dataIndex) {
-                        var timestampStr = data[0]; // Cột Timestamp là cột đầu tiên (chỉ số 0)
+                        var timestampStr = data[0]; // Timestamp column is the first column (index 0)
                         var tableDate;
 
-                        // --- Bắt đầu phần chuyển đổi định dạng Timestamp từ bảng ---
-                        // Ví dụ: 'May 23 15:03:27'
-                        // Cần chuyển đổi thành một định dạng có năm để new Date() hiểu đúng.
-                        // Giả định rằng các log entry thiếu năm thuộc về năm hiện tại.
+                        // --- Start of Timestamp format conversion from table ---
+                        // Example: 'May 23 15:03:27'
+                        // Need to convert to a format with year for new Date() to understand correctly.
+                        // Assume log entries missing year belong to the current year.
                         var currentYear = new Date().getFullYear();
                         var formattedTimestampStr;
 
-                        // Regex để khớp với định dạng 'Mon DD HH:MM:SS'
+                        // Regex to match 'Mon DD HH:MM:SS' format
                         var match = timestampStr.match(/([A-Za-z]{3})\s+(\d+)\s+(\d{2}:\d{2}:\d{2})/);
 
                         if (match) {
@@ -506,38 +521,27 @@
                             var month = monthNames[match[1]];
                             var day = match[2];
                             var time = match[3];
-                            // Tạo định dạng 'YYYY/MM/DD HH:MM:SS' để new Date() hiểu tốt nhất
+                            // Create 'YYYY/MM/DD HH:MM:SS' format for better Date() parsing
                             formattedTimestampStr = currentYear + '/' + month + '/' + day + ' ' + time;
                         } else {
-                            // Nếu timestamp không khớp định dạng 'Mon DD HH:MM:SS',
-                            // thử định dạng lại các dấu gạch ngang (cho YYYY-MM-DD HH:MM:SS)
+                            // If timestamp doesn't match 'Mon DD HH:MM:SS' format,
+                            // try reformatting hyphens (for YYYY-MM-DD HH:MM:SS)
                             formattedTimestampStr = timestampStr.replace(/-/g, '/');
                         }
 
                         tableDate = new Date(formattedTimestampStr);
-                        // --- Kết thúc phần chuyển đổi định dạng Timestamp từ bảng ---
+                        // --- End of Timestamp format conversion from table ---
 
 
                         var filterStartDate = startDateVal ? new Date(startDateVal) : null;
                         var filterEndDate = endDateVal ? new Date(endDateVal) : null;
 
-                        // --- DEBUGGING LOGS (có thể xóa sau khi hoạt động) ---
-                        console.log("DEBUG Timestamp Filter - Original Timestamp:", timestampStr);
-                        console.log("DEBUG Timestamp Filter - Formatted Timestamp for tableDate:", formattedTimestampStr);
-                        console.log("DEBUG Timestamp Filter - Parsed tableDate:", tableDate);
-                        console.log("DEBUG Timestamp Filter - Parsed filterStartDate:", filterStartDate);
-                        console.log("DEBUG Timestamp Filter - Parsed filterEndDate:", filterEndDate);
-                        console.log("DEBUG Timestamp Filter - tableDate is valid?", !isNaN(tableDate.getTime()));
-                        console.log("DEBUG Timestamp Filter - filterStartDate is valid?", !isNaN(filterStartDate && filterStartDate.getTime()));
-                        console.log("DEBUG Timestamp Filter - filterEndDate is valid?", !isNaN(filterEndDate && filterEndDate.getTime()));
-                        // --- KẾT THÚC DEBUGGING LOGS ---
-
                         if (filterEndDate) {
-                            // Điều chỉnh endDate đến cuối ngày để bao gồm tất cả các bản ghi trong ngày đó
+                            // Adjust endDate to the end of the day to include all records on that day
                             filterEndDate.setHours(23, 59, 59, 999);
                         }
 
-                        // So sánh ngày tháng
+                        // Compare dates
                         if (filterStartDate && filterEndDate) {
                             return tableDate >= filterStartDate && tableDate <= filterEndDate;
                         } else if (filterStartDate) {
@@ -545,52 +549,45 @@
                         } else if (filterEndDate) {
                             return tableDate <= filterEndDate;
                         }
-                        return true; // Nếu không có ngày bắt đầu/kết thúc được nhập, không lọc theo timestamp
+                        return true; // If no start/end date entered, don't filter by timestamp
                     }
                 );
             }
 
-            // Bước 3: Lọc theo từng cột dựa trên các input khác
+            // Step 3: Filter by each column based on other inputs
             for (var inputId in columnMapping) {
                 var columnIndex = columnMapping[inputId];
                 var filterValue = jQ('#' + inputId).val().trim();
-
-                console.log("DEBUG: Input ID:", inputId, "| Column Index:", columnIndex, "| Filter Value:", "'" + filterValue + "'");
 
                 if (filterValue) {
                     if (numericFilterInputs.includes(inputId)) {
                         var numValue = parseInt(filterValue);
                         if (!isNaN(numValue) && numValue >= 0) {
-                            // Đối với Node ID, nếu user nhập số, thì tìm chính xác số đó.
-                            // Nếu Node ID có thể là chuỗi (ex: node-01), thì cần regex linh hoạt hơn,
-                            // hoặc định nghĩa riêng cho Node ID.
-                            // Hiện tại, Node ID được định nghĩa là string, nên cách lọc chuỗi sẽ phù hợp hơn cho "node-01".
-                            // Nếu bạn muốn Node ID LÀ SỐ, thì chỉ cần input num, và code này ok.
-                            // Nếu Node ID CÓ THỂ LÀ CHUỖI VÀ SỐ, thì dùng regex '.*' + escapeRegex(filterValue) + '.*'
-                            // Hoặc giữ nguyên type: "string" và chỉ dùng search(filterValue, false, true); cho Node ID.
-                            // VỚI YÊU CẦU LÀ SỐ NGUYÊN DƯƠNG: Dùng '^' + numValue + '$' là đúng.
+                            // For Node ID, if user enters a number, search for that exact number.
+                            // If Node ID can be a string (e.g., node-01), a more flexible regex is needed,
+                            // or define it separately for Node ID.
+                            // Currently, Node ID is defined as a string, so string filtering would be more suitable for "node-01".
+                            // If you want Node ID to be a NUMBER, then only number input, and this code is okay.
+                            // If Node ID CAN BE BOTH STRING AND NUMBER, then use regex '.*' + escapeRegex(filterValue) + '.*'
+                            // Or keep type: "string" and just use search(filterValue, false, true); for Node ID.
+                            // FOR POSITIVE INTEGER REQUIREMENT: Using '^' + numValue + '$' is correct.
                             table.column(columnIndex).search('^' + numValue + '$', true, false);
-                            console.log("DEBUG: Áp dụng lọc số cho cột " + columnIndex + ": '^" + numValue + "$'");
                         } else {
-                            // Nếu người dùng nhập chữ vào ô số, hoặc số âm, coi như không tìm thấy
-                            table.column(columnIndex).search('^$', true, false); // Tìm kiếm không có gì
-                            console.warn("DEBUG: Giá trị không hợp lệ cho trường số '" + inputId + "': '" + filterValue + "'. Đã lọc ra không có gì.");
+                            // If user enters text in a number field, or a negative number, treat as no match
+                            table.column(columnIndex).search('^$', true, false); // Search for nothing
                         }
                     } else {
-                        // Đối với các cột chuỗi, sử dụng tìm kiếm thông minh (contains)
+                        // For string columns, use smart search (contains)
                         table.column(columnIndex).search(filterValue, false, true);
-                        console.log("DEBUG: Áp dụng lọc chuỗi cho cột " + columnIndex + ": '" + filterValue + "'");
                     }
                 }
             }
 
-            // Bước 4: Sau khi áp dụng tất cả các bộ lọc, chỉ vẽ lại bảng một lần
+            // Step 4: After applying all filters, redraw the table once
             table.draw();
-            console.log("Đã áp dụng filter và vẽ lại bảng.");
             var appliedRowsCount = table.rows({ filter: 'applied' }).data().length;
-            console.log("Số hàng sau khi lọc:", appliedRowsCount);
 
-            // Bước 5: Hiển thị thông báo "No result found" nếu không có kết quả
+            // Step 5: Show "No result found" message if no results
             if (appliedRowsCount === 0) {
                 jQ('#noResultMessage').show();
             } else {
@@ -598,23 +595,21 @@
             }
         });
 
-        // Nút Clear Filter (Lọc lại bảng về trạng thái ban đầu)
+        // Clear Filter Button (Reset table to initial state)
         jQ('#clearFilterButton').on('click', function() {
-            console.log("Nút Clear Filter đã được nhấn.");
-            // Xóa giá trị của tất cả các input fields trong form
+            // Clear values of all input fields in the form
             jQ('.filter-form input[type="text"]').val('');
             jQ('.filter-form input[type="datetime-local"]').val('');
 
-            // Xóa tất cả các bộ lọc của DataTables
+            // Clear all DataTables filters
             table.columns().search('');
-            jQ.fn.dataTable.ext.search = []; // Xóa bộ lọc tùy chỉnh cho Timestamp
+            jQ.fn.dataTable.ext.search = []; // Clear custom filter for Timestamp
 
-            // Vẽ lại bảng
+            // Redraw the table
             table.draw();
 
-            // Ẩn thông báo "No result found"
+            // Hide "No result found" message
             jQ('#noResultMessage').hide();
-            console.log("Đã xóa filter và vẽ lại bảng.");
         });
     });
 </script>
