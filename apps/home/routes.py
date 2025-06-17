@@ -1022,7 +1022,7 @@ def update_node(node_id):
 
     # --- SSH Key Update Logic ---
     # Kiểm tra và Tạo SSH Keys nếu chưa tồn tại trước khi cố gắng sao chép
-    key_gen_success, key_gen_message = generate_ssh_keys()
+    key_gen_success, key_gen_message, local_ssh_public_key_path = generate_ssh_keys()
     if not key_gen_success:
         flash(f"Lỗi thiết lập SSH key cục bộ: {key_gen_message}. Không thể cập nhật node.", 'danger')
         return redirect(url_for('home_blueprint.manage_nodes'))
