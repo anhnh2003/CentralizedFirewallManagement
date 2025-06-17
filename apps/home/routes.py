@@ -681,7 +681,6 @@ def update_user(user_id):
     flash("Account updated.", 'success')
     return redirect(url_for('home_blueprint.manage_users'))
 import pexpect 
-
 def run_ssh_copy_id(user, ip, password):
     """
     Thực thi lệnh ssh-copy-id với mật khẩu sử dụng pexpect.
@@ -689,12 +688,8 @@ def run_ssh_copy_id(user, ip, password):
     """
     command = f"ssh-copy-id {user}@{ip}"
     try:
-        # Tăng timeout lên 60 giây để đảm bảo đủ thời gian cho phản hồi
         child = pexpect.spawn(command, encoding='utf-8', timeout=60)
 
-        # Danh sách các mẫu mà chúng ta mong đợi từ ssh-copy-id.
-        # Chúng ta sẽ ưu tiên các thông báo thành công / đã tồn tại lên đầu.
-        # Đồng thời bao gồm pexpect.EOF ở cuối để xử lý khi lệnh kết thúc sớm.
         index = child.expect([
             "All keys were already added",                     # 0: Key đã tồn tại (thông báo rõ ràng)
             "Number of key(s) added:        1",               # 1: Thành công (key được thêm)
@@ -711,8 +706,9 @@ def run_ssh_copy_id(user, ip, password):
 
         # Lấy toàn bộ output trước khi khớp để kiểm tra sau này
         full_output_before_match = child.before.strip()
-        # Lấy output sau khi khớp (nếu có, thường là rỗng với EOF)
-        full_output_after_match = child.after.strip()
+        
+        # Loại bỏ dòng gây lỗi: full_output_after_match = child.after.strip()
+        # Thay vào đó, chúng ta sẽ chỉ kiểm tra child.before ở các điểm cần thiết.
 
         # --- Xử lý các trường hợp ---
 
@@ -723,20 +719,18 @@ def run_ssh_copy_id(user, ip, password):
             return True, "SSH key đã được sao chép thành công."
         
         elif index == 2: # "Number of key(s) added: 0"
-            # Nếu 0 key được thêm, kiểm tra output để xác định lý do (đã tồn tại hay lỗi khác)
-            if "All keys were skipped because they already exist on the remote system" in full_output_before_match or "already exists" in full_output_before_match.lower():
+            if "All keys were skipped because they already exist on the remote system" in full_output_before_match or "already exists" in full_output_before_match.lower() or "not added" in full_output_before_match.lower():
                 return True, "SSH key đã tồn tại trên máy chủ đích."
             else:
                 return False, f"ssh-copy-id không thêm key nào: {full_output_before_match}"
 
         elif index in [3, 4, 5]: # Match prompt mật khẩu
             child.sendline(password)
-            # Chờ kết quả cuối cùng sau khi gửi mật khẩu
             final_index = child.expect([
                 pexpect.TIMEOUT,
                 "Number of key(s) added:        1",
                 "All keys were already added",
-                "Number of key(s) added:        0", # Có thể xảy ra sau khi nhập pass
+                "Number of key(s) added:        0",
                 "Permission denied",
                 "password authentication failed",
                 pexpect.EOF
@@ -744,31 +738,30 @@ def run_ssh_copy_id(user, ip, password):
             
             output_after_password = child.before.strip()
 
-            if final_index in [1, 2]: # Key added or already added
+            if final_index in [1, 2]:
                 return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
-            elif final_index == 3: # Number of keys added: 0 (sau khi nhập pass)
-                if "already exists" in output_after_password.lower() or "skipped" in output_after_password.lower():
+            elif final_index == 3:
+                if "already exists" in output_after_password.lower() or "skipped" in output_after_password.lower() or "not added" in output_after_password.lower():
                     return True, "SSH key đã tồn tại trên máy chủ đích (sau nhập mật khẩu)."
                 else:
                     return False, f"Không thể sao chép key: {output_after_password}"
-            elif final_index in [4, 5]: # Permission denied / Auth failed
+            elif final_index in [4, 5]:
                 return False, f"Xác thực mật khẩu không thành công hoặc bị từ chối: {output_after_password}"
-            elif final_index == 0: # Timeout after password
+            elif final_index == 0:
                 return False, f"Timeout sau khi gửi mật khẩu. Output: {output_after_password}"
             else: # EOF - command finished, check its output
-                if "Number of key(s) added: 1" in output_after_password or "All keys were already added" in output_after_password or ("Number of key(s) added: 0" in output_after_password and ("already exists" in output_after_password.lower() or "skipped" in output_after_password.lower())):
+                if "Number of key(s) added: 1" in output_after_password or "All keys were already added" in output_after_password or ("Number of key(s) added: 0" in output_after_password and ("already exists" in output_after_password.lower() or "skipped" in output_after_password.lower() or "not added" in output_after_password.lower())):
                     return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
                 return False, f"Không thể sao chép key: {output_after_password}"
         
         elif index == 6: # Host key not known (Nếu prompt này xuất hiện)
             child.sendline("yes")
-            # Sau khi gửi 'yes', chúng ta lại chờ prompt mật khẩu hoặc kết thúc
             sub_index = child.expect([
                 pexpect.TIMEOUT,
                 f"{user}@{ip}'s password:",
                 "password:",
                 "Password:",
-                pexpect.EOF # Quan trọng: bắt EOF sau khi gửi 'yes'
+                pexpect.EOF
             ])
             
             output_after_yes = child.before.strip()
@@ -777,7 +770,6 @@ def run_ssh_copy_id(user, ip, password):
                 return False, f"Timeout sau khi xác nhận khóa host SSH. Output cuối: {output_after_yes}"
             elif sub_index in [1, 2, 3]: # Got password prompt
                 child.sendline(password)
-                # Sau khi gửi mật khẩu, lại chờ kết quả cuối cùng
                 final_index_after_yes_pass = child.expect([
                     pexpect.TIMEOUT,
                     "Number of key(s) added:        1",
@@ -791,7 +783,7 @@ def run_ssh_copy_id(user, ip, password):
                 if final_index_after_yes_pass in [1, 2]:
                     return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
                 elif final_index_after_yes_pass == 3:
-                     if "already exists" in output_after_final_pass.lower() or "skipped" in output_after_final_pass.lower():
+                     if "already exists" in output_after_final_pass.lower() or "skipped" in output_after_final_pass.lower() or "not added" in output_after_final_pass.lower():
                          return True, "SSH key đã tồn tại trên máy chủ đích."
                      else:
                          return False, f"Không thể sao chép key: {output_after_final_pass}"
@@ -800,12 +792,12 @@ def run_ssh_copy_id(user, ip, password):
                 elif final_index_after_yes_pass == 0:
                     return False, f"Timeout sau khi gửi mật khẩu (sau xác nhận host). Output: {output_after_final_pass}"
                 else: # EOF sau mật khẩu
-                    if "Number of key(s) added: 1" in output_after_final_pass or "All keys were already added" in output_after_final_pass or ("Number of key(s) added: 0" in output_after_final_pass and ("already exists" in output_after_final_pass.lower() or "skipped" in output_after_final_pass.lower())):
+                    if "Number of key(s) added: 1" in output_after_final_pass or "All keys were already added" in output_after_final_pass or ("Number of key(s) added: 0" in output_after_final_pass and ("already exists" in output_after_final_pass.lower() or "skipped" in output_after_final_pass.lower() or "not added" in output_after_final_pass.lower())):
                         return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
                     return False, f"Không thể sao chép key: {output_after_final_pass}"
             
             elif sub_index == 4: # EOF after sending 'yes' - command finished immediately after accepting host key
-                if "All keys were skipped because they already exist on the remote system" in output_after_yes or "already exists" in output_after_yes.lower() or ("Number of key(s) added: 0" in output_after_yes):
+                if "All keys were skipped because they already exist on the remote system" in output_after_yes or "already exists" in output_after_yes.lower() or "Number of key(s) added: 0" in output_after_yes or "not added" in output_after_yes.lower():
                     return True, "SSH key đã tồn tại trên máy chủ đích (sau xác nhận host, kết thúc sớm)."
                 return False, f"Không thể sao chép key (sau xác nhận host, EOF sớm): {output_after_yes}"
 
@@ -818,7 +810,7 @@ def run_ssh_copy_id(user, ip, password):
 
         elif index == 10: # pexpect.EOF (initial match - lệnh kết thúc đột ngột)
             # Kiểm tra xem output trước đó có chứa thông báo thành công/đã tồn tại không
-            if "All keys were skipped because they already exist on the remote system" in full_output_before_match or "already exists" in full_output_before_match.lower() or "Number of key(s) added: 0" in full_output_before_match:
+            if "All keys were skipped because they already exist on the remote system" in full_output_before_match or "already exists" in full_output_before_match.lower() or "Number of key(s) added: 0" in full_output_before_match or "not added" in full_output_before_match.lower():
                 return True, "SSH key đã tồn tại trên máy chủ đích (kết thúc sớm)."
             return False, f"ssh-copy-id kết thúc đột ngột. Output: {full_output_before_match}"
 
@@ -826,9 +818,17 @@ def run_ssh_copy_id(user, ip, password):
             return False, f"Phản hồi không mong muốn từ ssh-copy-id. Output: {full_output_before_match}"
 
     except pexpect.exceptions.ExceptionPexpect as e:
-        return False, f"Lỗi Pexpect khi chạy ssh-copy-id: {e}. Child output before error: {child.before.strip() if 'child' in locals() else 'N/A'}"
+        # Trong trường hợp lỗi Pexpect, child.before vẫn có thể chứa output hữu ích
+        return False, f"Lỗi Pexpect khi chạy ssh-copy-id: {e}. Output đã nhận: {child.before.strip() if 'child' in locals() else 'N/A'}"
     except Exception as e:
-        return False, f"Lỗi không mong muốn khi chạy ssh-copy-id: {e}"
+        # Nếu có lỗi Exception chung, nó có thể không liên quan trực tiếp đến pexpect,
+        # và child có thể không được định nghĩa hoặc có trạng thái không mong muốn.
+        # Đảm bảo child được định nghĩa trước khi truy cập child.before
+        error_output = "N/A"
+        if 'child' in locals() and hasattr(child, 'before') and child.before is not None:
+             error_output = child.before.strip()
+        return False, f"Lỗi không mong muốn khi chạy ssh-copy-id: {e}. Output đã nhận: {error_output}"
+
 # Helper function to generate SSH keys
 def generate_ssh_keys():
     """
