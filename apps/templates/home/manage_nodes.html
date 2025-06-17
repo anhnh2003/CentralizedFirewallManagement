@@ -41,7 +41,7 @@
         <thead class="thead-light">
           <tr>
             <th>ID</th>
-            <th>Hostname</th>
+            <th>Node's name</th>
             <th>IP Address</th>
             <th>SSH User</th>
             <th>Managers</th>
@@ -97,7 +97,7 @@
           </div>
           <div class="modal-body">
             <div class="form-group">
-              <label for="edit_hostname">Hostname</label>
+              <label for="edit_hostname">Node's name</label>
               <input type="text" class="form-control" id="edit_hostname" name="hostname" required>
             </div>
             <div class="form-group">
@@ -247,7 +247,7 @@
           <span class="close-btn" onclick="this.closest('form').remove()">&times;</span> {# NEW/RESTORED: Close button #}
           <h5>Node ${i+1}</h5>
           <div class="form-group">
-            <label for="hostname_${i}">Hostname</label>
+            <label for="hostname_${i}">Node's name</label>
             <input type="text" class="form-control"
                    id="hostname_${i}" name="hostname_${i}" required>
           </div>

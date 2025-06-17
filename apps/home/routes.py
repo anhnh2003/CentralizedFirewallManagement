@@ -683,48 +683,47 @@ def update_user(user_id):
 import pexpect 
 def run_ssh_copy_id(user, ip, password):
     """
-    Thực thi lệnh ssh-copy-id với mật khẩu sử dụng pexpect.
-    Trả về (True, "Thông báo thành công") hoặc (False, "Thông báo lỗi").
+    Executes the ssh-copy-id command with a password using pexpect.
+    Returns (True, "Success message") or (False, "Error message").
     """
     command = f"ssh-copy-id {user}@{ip}"
     try:
         child = pexpect.spawn(command, encoding='utf-8', timeout=60)
 
         index = child.expect([
-            "All keys were already added",                     # 0: Key đã tồn tại (thông báo rõ ràng)
-            "Number of key(s) added:        1",               # 1: Thành công (key được thêm)
-            "Number of key(s) added:        0",               # 2: Key không được thêm, có thể do đã tồn tại
-            f"{user}@{ip}'s password:",                       # 3: Mẫu mật khẩu chính xác
-            "password:",                                      # 4: Mẫu mật khẩu phổ biến
-            "Password:",                                      # 5: Mẫu mật khẩu phổ biến khác
+            "All keys were already added",                     # 0: Key already exists (clear message)
+            "Number of key(s) added:        1",               # 1: Success (key added)
+            "Number of key(s) added:        0",               # 2: Key not added, possibly due to already existing
+            f"{user}@{ip}'s password:",                       # 3: Exact password prompt
+            "password:",                                      # 4: Common password prompt
+            "Password:",                                      # 5: Another common password prompt
             r"Are you sure you want to continue connecting \(yes/no\)\?", # 6: Host key prompt
-            "Permission denied",                              # 7: Lỗi xác thực
-            "password authentication failed",                 # 8: Lỗi xác thực
+            "Permission denied",                              # 7: Authentication error
+            "password authentication failed",                 # 8: Authentication error
             pexpect.TIMEOUT,                                  # 9: Timeout
-            pexpect.EOF                                       # 10: Kết thúc lệnh (xử lý cuối cùng)
+            pexpect.EOF                                       # 10: Command finished (handle last)
         ])
 
-        # Lấy toàn bộ output trước khi khớp để kiểm tra sau này
+        # Get all output before the match for later inspection
         full_output_before_match = child.before.strip()
         
-        # Loại bỏ dòng gây lỗi: full_output_after_match = child.after.strip()
-        # Thay vào đó, chúng ta sẽ chỉ kiểm tra child.before ở các điểm cần thiết.
+        # We will only check child.before at the necessary points.
 
-        # --- Xử lý các trường hợp ---
+        # --- Handle cases ---
 
-        if index == 0: # "All keys were already added" (Rõ ràng là thành công)
-            return True, "SSH key đã tồn tại trên máy chủ đích."
+        if index == 0: # "All keys were already added" (Clearly a success)
+            return True, "SSH key already exists on the target server."
         
-        elif index == 1: # "Number of key(s) added: 1" (Thành công)
-            return True, "SSH key đã được sao chép thành công."
+        elif index == 1: # "Number of key(s) added: 1" (Success)
+            return True, "SSH key copied successfully."
         
         elif index == 2: # "Number of key(s) added: 0"
             if "All keys were skipped because they already exist on the remote system" in full_output_before_match or "already exists" in full_output_before_match.lower() or "not added" in full_output_before_match.lower():
-                return True, "SSH key đã tồn tại trên máy chủ đích."
+                return True, "SSH key already exists on the target server."
             else:
-                return False, f"ssh-copy-id không thêm key nào: {full_output_before_match}"
+                return False, f"ssh-copy-id added no keys: {full_output_before_match}"
 
-        elif index in [3, 4, 5]: # Match prompt mật khẩu
+        elif index in [3, 4, 5]: # Match password prompt
             child.sendline(password)
             final_index = child.expect([
                 pexpect.TIMEOUT,
@@ -739,22 +738,22 @@ def run_ssh_copy_id(user, ip, password):
             output_after_password = child.before.strip()
 
             if final_index in [1, 2]:
-                return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
+                return True, "SSH key copied successfully or already exists."
             elif final_index == 3:
                 if "already exists" in output_after_password.lower() or "skipped" in output_after_password.lower() or "not added" in output_after_password.lower():
-                    return True, "SSH key đã tồn tại trên máy chủ đích (sau nhập mật khẩu)."
+                    return True, "SSH key already exists on the target server (after password entry)."
                 else:
-                    return False, f"Không thể sao chép key: {output_after_password}"
+                    return False, f"Could not copy key: {output_after_password}"
             elif final_index in [4, 5]:
-                return False, f"Xác thực mật khẩu không thành công hoặc bị từ chối: {output_after_password}"
+                return False, f"Password authentication failed or denied: {output_after_password}"
             elif final_index == 0:
-                return False, f"Timeout sau khi gửi mật khẩu. Output: {output_after_password}"
+                return False, f"Timeout after sending password. Output: {output_after_password}"
             else: # EOF - command finished, check its output
                 if "Number of key(s) added: 1" in output_after_password or "All keys were already added" in output_after_password or ("Number of key(s) added: 0" in output_after_password and ("already exists" in output_after_password.lower() or "skipped" in output_after_password.lower() or "not added" in output_after_password.lower())):
-                    return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
-                return False, f"Không thể sao chép key: {output_after_password}"
+                    return True, "SSH key copied successfully or already exists."
+                return False, f"Could not copy key: {output_after_password}"
         
-        elif index == 6: # Host key not known (Nếu prompt này xuất hiện)
+        elif index == 6: # Host key not known (If this prompt appears)
             child.sendline("yes")
             sub_index = child.expect([
                 pexpect.TIMEOUT,
@@ -767,7 +766,7 @@ def run_ssh_copy_id(user, ip, password):
             output_after_yes = child.before.strip()
 
             if sub_index == 0:
-                return False, f"Timeout sau khi xác nhận khóa host SSH. Output cuối: {output_after_yes}"
+                return False, f"Timeout after confirming SSH host key. Final output: {output_after_yes}"
             elif sub_index in [1, 2, 3]: # Got password prompt
                 child.sendline(password)
                 final_index_after_yes_pass = child.expect([
@@ -781,110 +780,111 @@ def run_ssh_copy_id(user, ip, password):
                 ])
                 output_after_final_pass = child.before.strip()
                 if final_index_after_yes_pass in [1, 2]:
-                    return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
+                    return True, "SSH key copied successfully or already exists."
                 elif final_index_after_yes_pass == 3:
                      if "already exists" in output_after_final_pass.lower() or "skipped" in output_after_final_pass.lower() or "not added" in output_after_final_pass.lower():
-                         return True, "SSH key đã tồn tại trên máy chủ đích."
+                         return True, "SSH key already exists on the target server."
                      else:
-                         return False, f"Không thể sao chép key: {output_after_final_pass}"
+                         return False, f"Could not copy key: {output_after_final_pass}"
                 elif final_index_after_yes_pass in [4, 5]:
-                    return False, f"Xác thực mật khẩu không thành công hoặc bị từ chối: {output_after_final_pass}"
+                    return False, f"Password authentication failed or denied: {output_after_final_pass}"
                 elif final_index_after_yes_pass == 0:
-                    return False, f"Timeout sau khi gửi mật khẩu (sau xác nhận host). Output: {output_after_final_pass}"
-                else: # EOF sau mật khẩu
+                    return False, f"Timeout after sending password (after host confirmation). Output: {output_after_final_pass}"
+                else: # EOF after password
                     if "Number of key(s) added: 1" in output_after_final_pass or "All keys were already added" in output_after_final_pass or ("Number of key(s) added: 0" in output_after_final_pass and ("already exists" in output_after_final_pass.lower() or "skipped" in output_after_final_pass.lower() or "not added" in output_after_final_pass.lower())):
-                        return True, "SSH key đã được sao chép thành công hoặc đã tồn tại."
-                    return False, f"Không thể sao chép key: {output_after_final_pass}"
+                        return True, "SSH key copied successfully or already exists."
+                    return False, f"Could not copy key: {output_after_final_pass}"
             
             elif sub_index == 4: # EOF after sending 'yes' - command finished immediately after accepting host key
                 if "All keys were skipped because they already exist on the remote system" in output_after_yes or "already exists" in output_after_yes.lower() or "Number of key(s) added: 0" in output_after_yes or "not added" in output_after_yes.lower():
-                    return True, "SSH key đã tồn tại trên máy chủ đích (sau xác nhận host, kết thúc sớm)."
-                return False, f"Không thể sao chép key (sau xác nhận host, EOF sớm): {output_after_yes}"
+                    return True, "SSH key already exists on the target server (after host confirmation, early EOF)."
+                return False, f"Could not copy key (after host confirmation, early EOF): {output_after_yes}"
 
 
         elif index in [7, 8]: # Permission denied / Auth failed (initial match)
-            return False, f"Quyền bị từ chối hoặc xác thực thất bại. Vui lòng kiểm tra tên người dùng và mật khẩu. Output: {full_output_before_match}"
+            return False, f"Permission denied or authentication failed. Please check username and password. Output: {full_output_before_match}"
         
         elif index == 9: # pexpect.TIMEOUT (initial match)
-            return False, f"Timeout khi chờ phản hồi. Output: {full_output_before_match}"
+            return False, f"Timeout while waiting for response. Output: {full_output_before_match}"
 
-        elif index == 10: # pexpect.EOF (initial match - lệnh kết thúc đột ngột)
-            # Kiểm tra xem output trước đó có chứa thông báo thành công/đã tồn tại không
+        elif index == 10: # pexpect.EOF (initial match - command terminated unexpectedly)
+            # Check if previous output contains success/already exists message
             if "All keys were skipped because they already exist on the remote system" in full_output_before_match or "already exists" in full_output_before_match.lower() or "Number of key(s) added: 0" in full_output_before_match or "not added" in full_output_before_match.lower():
-                return True, "SSH key đã tồn tại trên máy chủ đích (kết thúc sớm)."
-            return False, f"ssh-copy-id kết thúc đột ngột. Output: {full_output_before_match}"
+                return True, "SSH key already exists on the target server (early termination)."
+            return False, f"ssh-copy-id terminated unexpectedly. Output: {full_output_before_match}"
 
         else: # Fallback for unexpected matches
-            return False, f"Phản hồi không mong muốn từ ssh-copy-id. Output: {full_output_before_match}"
+            return False, f"Unexpected response from ssh-copy-id. Output: {full_output_before_match}"
 
     except pexpect.exceptions.ExceptionPexpect as e:
-        # Trong trường hợp lỗi Pexpect, child.before vẫn có thể chứa output hữu ích
-        return False, f"Lỗi Pexpect khi chạy ssh-copy-id: {e}. Output đã nhận: {child.before.strip() if 'child' in locals() else 'N/A'}"
+        # In case of a Pexpect error, child.before might still contain useful output
+        return False, f"Pexpect error running ssh-copy-id: {e}. Output received: {child.before.strip() if 'child' in locals() else 'N/A'}"
     except Exception as e:
-        # Nếu có lỗi Exception chung, nó có thể không liên quan trực tiếp đến pexpect,
-        # và child có thể không được định nghĩa hoặc có trạng thái không mong muốn.
-        # Đảm bảo child được định nghĩa trước khi truy cập child.before
+        # If a general Exception occurs, it might not be directly related to pexpect,
+        # and 'child' might not be defined or in an unexpected state.
+        # Ensure 'child' is defined before accessing child.before
         error_output = "N/A"
         if 'child' in locals() and hasattr(child, 'before') and child.before is not None:
              error_output = child.before.strip()
-        return False, f"Lỗi không mong muốn khi chạy ssh-copy-id: {e}. Output đã nhận: {error_output}"
+        return False, f"An unexpected error occurred running ssh-copy-id: {e}. Output received: {error_output}"
 
 # Helper function to generate SSH keys
 def generate_ssh_keys():
     """
-    Tạo cặp khóa SSH private và public (~/.ssh/id_rsa và ~/.ssh/id_rsa.pub).
-    Trả về (True, "Thông báo thành công", public_key_path) hoặc (False, "Thông báo lỗi", None).
+    Generates an SSH key pair (~/.ssh/id_rsa and ~/.ssh/id_rsa.pub).
+    Returns (True, "Success message", public_key_path) or (False, "Error message", None).
     """
     ssh_dir = os.path.expanduser("~/.ssh")
     private_key_path = os.path.join(ssh_dir, "id_rsa")
     public_key_path = os.path.join(ssh_dir, "id_rsa.pub")
 
     if os.path.exists(private_key_path) and os.path.exists(public_key_path):
-        return True, "SSH keys đã tồn tại.", public_key_path
+        return True, "SSH keys already exist.", public_key_path
 
     os.makedirs(ssh_dir, exist_ok=True)
 
     try:
-        # Tạo SSH keys không có passphrase cho mục đích tự động hóa
+        # Generate SSH keys without a passphrase for automation purposes
         result = subprocess.run(
             ["ssh-keygen", "-t", "rsa", "-b", "4096", "-f", private_key_path, "-N", ""],
             capture_output=True,
             text=True,
-            check=True # Raise exception cho mã thoát khác 0
+            check=True # Raise exception for non-zero exit code
         )
-        os.chmod(private_key_path, stat.S_IRUSR) # Đặt quyền 0400 cho private key
-        return True, f"SSH keys đã được tạo thành công: {public_key_path}", public_key_path
+        os.chmod(private_key_path, stat.S_IRUSR) # Set 0400 permissions for private key
+        return True, f"SSH keys successfully generated: {public_key_path}", public_key_path
     except subprocess.CalledProcessError as e:
-        # TRẢ VỀ 3 GIÁ TRỊ Ở ĐÂY, THÊM 'None' CHO public_key_path
-        return False, f"Không thể tạo SSH keys: {e.stderr.strip()}", None
+        # RETURN 3 VALUES HERE, ADD 'None' for public_key_path
+        return False, f"Failed to generate SSH keys: {e.stderr.strip()}", None
     except Exception as e:
-        # TRẢ VỀ 3 GIÁ TRỊ Ở ĐÂY, THÊM 'None' CHO public_key_path
-        return False, f"Một lỗi không mong muốn đã xảy ra trong quá trình tạo khóa: {e}", None
+        # RETURN 3 VALUES HERE, ADD 'None' for public_key_path
+        return False, f"An unexpected error occurred during key generation: {e}", None
+
 @blueprint.route('/manage_nodes', methods=['GET', 'POST'])
 @login_required
 @role_required('admin')
 def manage_nodes():
     if request.method == 'POST':
         if current_user.role != 'admin':
-            flash("Bạn không có quyền thực hiện thao tác này.", 'danger')
+            flash("You do not have permission to perform this action.", 'danger')
             return redirect(url_for('home_blueprint.manage_nodes'))
 
         key_gen_success, key_gen_message, local_ssh_public_key_path = generate_ssh_keys()
         if not key_gen_success:
-            flash(f"Lỗi thiết lập SSH key cục bộ: {key_gen_message}. Không thể thêm/cập nhật node.", 'danger')
+            flash(f"Error setting up local SSH key: {key_gen_message}. Cannot add/update node.", 'danger')
             return redirect(url_for('home_blueprint.manage_nodes'))
         else:
             flash(key_gen_message, 'info')
 
         if not local_ssh_public_key_path or not os.path.exists(local_ssh_public_key_path):
-            flash("Không tìm thấy public SSH key cục bộ. Không thể tiếp tục.", 'danger')
+            flash("Local public SSH key not found. Cannot proceed.", 'danger')
             return redirect(url_for('home_blueprint.manage_nodes'))
 
         try:
             with open(local_ssh_public_key_path, 'r') as f:
-                public_key_content_for_db = f.read().strip()
+                public_key_content_for_db = f.read().strip() # Variable name kept as per original logic, though not stored in DB
         except Exception as e:
-            flash(f"Lỗi khi đọc public SSH key: {e}", 'danger')
+            flash(f"Error reading local public SSH key: {e}", 'danger')
             return redirect(url_for('home_blueprint.manage_nodes'))
 
         num_forms = len([key for key in request.form.keys() if key.startswith('hostname_')])
@@ -900,42 +900,42 @@ def manage_nodes():
             common_users = set(managers_for_node) & set(viewers_for_node)
             if common_users:
                 common_usernames = [u.username for u in Users.query.filter(Users.id.in_(list(common_users))).all()]
-                flash(f"Node '{hostname}': Người dùng '{', '.join(common_usernames)}' không thể vừa là người quản lý vừa là người xem cho node này.", 'danger')
+                flash(f"Node '{hostname}': Users '{', '.join(common_usernames)}' cannot be both a manager and a viewer for this node.", 'danger')
                 continue
 
             if Nodes.query.filter_by(hostname=hostname).first():
-                flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
+                flash(f"Hostname '{hostname}' already exists.", 'danger')
                 continue
             if Nodes.query.filter_by(ip_address=ip_address).first():
-                flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
+                flash(f"IP '{ip_address}' already exists.", 'danger')
                 continue
 
-            # --- Logic Sao chép SSH Key Đơn giản hơn ---
-            ssh_copy_id_succeeded = True # Mặc định coi là thành công
+            # --- Simplified SSH Key Copy Logic ---
+            ssh_copy_id_succeeded = True # Assume success by default
             if password:
-                flash(f"Đang cố gắng sao chép SSH key đến {ssh_user}@{ip_address}...", 'info')
+                flash(f"Attempting to copy SSH key to {ssh_user}@{ip_address}...", 'info')
                 success, message = run_ssh_copy_id(ssh_user, ip_address, password)
 
-                # Kiểm tra thông báo thành công hoặc thông báo key đã tồn tại
-                # Giả sử run_ssh_copy_id trả về thông báo cụ thể cho trường hợp này
+                # Check for success messages or key already exists messages
                 if not success:
-                    # Kiểm tra xem lỗi có phải do key đã tồn tại hay không
-                    # Thêm các chuỗi bạn muốn chấp nhận là "thành công" vào đây
-                    # ví dụ: "All keys were already added", "already exists"
+                    # Check if the error is due to the key already existing
                     if "All keys were already added" in message or "already exists" in message.lower() or "Number of key(s) added: 0" in message:
-                        flash(f"SSH key đã tồn tại trên {ssh_user}@{ip_address}: {message}", 'warning')
-                        ssh_copy_id_succeeded = True # Vẫn coi là thành công để tiếp tục
+                        flash(f"SSH key already exists on {ssh_user}@{ip_address}: {message}", 'warning')
+                        ssh_copy_id_succeeded = True # Still consider it a success to proceed
                     else:
-                        flash(f"Không thể sao chép SSH key đến {ssh_user}@{ip_address}: {message}", 'danger')
-                        ssh_copy_id_succeeded = False # Lỗi nghiêm trọng, không thêm node
+                        flash(f"Could not copy SSH key to {ssh_user}@{ip_address}: {message}", 'danger')
+                        ssh_copy_id_succeeded = False # Serious error, do not add node
+                else: # if success is True, flash the success message from run_ssh_copy_id
+                    flash(f"SSH key operation for {ssh_user}@{ip_address}: {message}", 'success') # Added success message here
+
             else:
-                flash(f"Không có mật khẩu được cung cấp để thiết lập SSH key cho {hostname}. Giả sử key đã được thiết lập hoặc sẽ được thực hiện thủ công.", 'warning')
-                # Nếu không có mật khẩu, chúng ta vẫn coi là thành công và tiếp tục
+                flash(f"No password provided to set up SSH key for {hostname}. Assuming key is already set up or will be done manually.", 'warning')
+                # If no password, we still consider it a success and proceed
             
             if not ssh_copy_id_succeeded:
-                continue # Nếu ssh-copy-id thất bại nghiêm trọng, bỏ qua node này
+                continue # If ssh-copy-id failed critically, skip this node
 
-            # --- Logic thêm node vẫn giữ nguyên ---
+            # --- Node addition logic remains unchanged ---
             node = Nodes(hostname=hostname,
                          ip_address=ip_address,
                          ssh_user=ssh_user)
@@ -948,7 +948,7 @@ def manage_nodes():
                 db.session.add(UserNodes(user_id=uid, node_id=node.id, role='viewer'))
             db.session.commit()
 
-            flash(f"Đã tạo Node '{hostname}'.", 'success')
+            flash(f"Node '{hostname}' created successfully.", 'success')
 
         return redirect(url_for('home_blueprint.manage_nodes'))
 
