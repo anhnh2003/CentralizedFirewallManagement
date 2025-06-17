@@ -14,3 +14,4 @@ Flask-Minify==0.37
 matplotlib==3.10.0
 mysqlclient
 passlib==1.7.4
+pexpect
