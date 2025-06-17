@@ -759,51 +759,49 @@ def generate_ssh_keys():
     except Exception as e:
         return False, f"Một lỗi không mong muốn đã xảy ra trong quá trình tạo khóa: {e}"
 
-
 @blueprint.route('/manage_nodes', methods=['GET', 'POST'])
 @login_required
-@role_required('admin', 'user') # Đảm bảo bạn đã định nghĩa role_required decorator
+@role_required('admin')
 def manage_nodes():
-    # --- Always query users and nodes for rendering the page ---
-    # This ensures that `users` is always available for `allUsers` JS array
-    # and `nodes` for the table, regardless of GET or POST success/failure that leads to render.
     if request.method == 'POST':
-        # KIỂM TRA QUYỀN HẠN: CHỈ ADMIN MỚI ĐƯỢC THÊM NODE
         if current_user.role != 'admin':
-            flash("Bạn không có quyền thêm node.", 'danger')
+            flash("Bạn không có quyền thực hiện thao tác này.", 'danger')
             return redirect(url_for('home_blueprint.manage_nodes'))
-        # --- Kiểm tra và Tạo SSH Keys nếu chưa tồn tại ---
-        key_gen_success, key_gen_message = generate_ssh_keys()
+
+        key_gen_success, key_gen_message, local_ssh_public_key_path = generate_ssh_keys()
         if not key_gen_success:
             flash(f"Lỗi thiết lập SSH key cục bộ: {key_gen_message}. Không thể thêm/cập nhật node.", 'danger')
             return redirect(url_for('home_blueprint.manage_nodes'))
         else:
-            flash(key_gen_message, 'info') # Thông báo về việc tạo/tồn tại khóa
+            flash(key_gen_message, 'info')
 
-        local_ssh_public_key_path = os.path.expanduser("~/.ssh/id_rsa.pub")
+        if not local_ssh_public_key_path or not os.path.exists(local_ssh_public_key_path):
+            flash("Không tìm thấy public SSH key cục bộ. Không thể tiếp tục.", 'danger')
+            return redirect(url_for('home_blueprint.manage_nodes'))
 
-        # Đếm số lượng form thêm
+        try:
+            with open(local_ssh_public_key_path, 'r') as f:
+                public_key_content_for_db = f.read().strip()
+        except Exception as e:
+            flash(f"Lỗi khi đọc public SSH key: {e}", 'danger')
+            return redirect(url_for('home_blueprint.manage_nodes'))
+
         num_forms = len([key for key in request.form.keys() if key.startswith('hostname_')])
         for i in range(num_forms):
             hostname = request.form.get(f'hostname_{i}').strip()
             ip_address = request.form.get(f'ip_address_{i}').strip()
             ssh_user = request.form.get(f'ssh_user_{i}').strip()
-            password = request.form.get(f'password_{i}', '').strip() # Lấy mật khẩu từ trường 'password'
+            password = request.form.get(f'password_{i}', '').strip()
 
-            # Lấy người quản lý và người xem đã chọn cho node này
-            # Lưu ý: Tên trong HTML là managers_{i} và viewers_{i}
             managers_for_node = list(map(int, request.form.getlist(f'managers_{i}')))
             viewers_for_node = list(map(int, request.form.getlist(f'viewers_{i}')))
 
-            # Backend Check: Node không thể vừa là người quản lý vừa là người xem bởi cùng một người dùng
             common_users = set(managers_for_node) & set(viewers_for_node)
             if common_users:
-                # Lấy tên người dùng để thông báo lỗi rõ ràng hơn
                 common_usernames = [u.username for u in Users.query.filter(Users.id.in_(list(common_users))).all()]
                 flash(f"Node '{hostname}': Người dùng '{', '.join(common_usernames)}' không thể vừa là người quản lý vừa là người xem cho node này.", 'danger')
-                continue # Bỏ qua node này và tiếp tục với form tiếp theo
+                continue
 
-            # Kiểm tra trùng lặp hostname / ip
             if Nodes.query.filter_by(hostname=hostname).first():
                 flash(f"Hostname '{hostname}' đã tồn tại.", 'danger')
                 continue
@@ -811,34 +809,39 @@ def manage_nodes():
                 flash(f"IP '{ip_address}' đã tồn tại.", 'danger')
                 continue
 
-            # --- Logic Sao chép SSH Key ---
-            public_key_content = None # Sẽ lưu nội dung public key vào đây
-
-            # Chỉ thử ssh-copy-id nếu mật khẩu được cung cấp VÀ public key tồn tại cục bộ
-            if password and os.path.exists(local_ssh_public_key_path):
+            # --- Logic Sao chép SSH Key Đơn giản hơn ---
+            ssh_copy_id_succeeded = True # Mặc định coi là thành công
+            if password:
                 flash(f"Đang cố gắng sao chép SSH key đến {ssh_user}@{ip_address}...", 'info')
                 success, message = run_ssh_copy_id(ssh_user, ip_address, password)
-                if success:
-                    flash(f"SSH key đã được sao chép đến {ssh_user}@{ip_address}: {message}", 'success')
-                    with open(local_ssh_public_key_path, 'r') as f:
-                        public_key_content = f.read().strip() # Đọc nội dung public key
-                else:
-                    flash(f"Không thể sao chép SSH key đến {ssh_user}@{ip_address}: {message}", 'danger')
-                    # Nếu ssh-copy-id thất bại, không thêm node này
-                    continue
-            elif not password:
-                flash(f"Không có mật khẩu được cung cấp để thiết lập SSH key cho {hostname}. Giả sử key đã được thiết lập hoặc sẽ được thực hiện thủ công.", 'warning')
-            # Không cần kiểm tra os.path.exists(local_ssh_public_key_path) ở đây nữa vì đã kiểm tra ở đầu hàm POST
 
-            # Lưu node, trường ssh_key sẽ là nội dung public key hoặc None/rỗng
+                # Kiểm tra thông báo thành công hoặc thông báo key đã tồn tại
+                # Giả sử run_ssh_copy_id trả về thông báo cụ thể cho trường hợp này
+                if not success:
+                    # Kiểm tra xem lỗi có phải do key đã tồn tại hay không
+                    # Thêm các chuỗi bạn muốn chấp nhận là "thành công" vào đây
+                    # ví dụ: "All keys were already added", "already exists"
+                    if "All keys were already added" in message or "already exists" in message.lower() or "Number of key(s) added: 0" in message:
+                        flash(f"SSH key đã tồn tại trên {ssh_user}@{ip_address}: {message}", 'warning')
+                        ssh_copy_id_succeeded = True # Vẫn coi là thành công để tiếp tục
+                    else:
+                        flash(f"Không thể sao chép SSH key đến {ssh_user}@{ip_address}: {message}", 'danger')
+                        ssh_copy_id_succeeded = False # Lỗi nghiêm trọng, không thêm node
+            else:
+                flash(f"Không có mật khẩu được cung cấp để thiết lập SSH key cho {hostname}. Giả sử key đã được thiết lập hoặc sẽ được thực hiện thủ công.", 'warning')
+                # Nếu không có mật khẩu, chúng ta vẫn coi là thành công và tiếp tục
+            
+            if not ssh_copy_id_succeeded:
+                continue # Nếu ssh-copy-id thất bại nghiêm trọng, bỏ qua node này
+
+            # --- Logic thêm node vẫn giữ nguyên ---
             node = Nodes(hostname=hostname,
                          ip_address=ip_address,
                          ssh_user=ssh_user,
-                         ssh_key=public_key_content) # Lưu nội dung public key
+                         ssh_key=public_key_content_for_db)
             db.session.add(node)
-            db.session.commit() # Commit ở đây để lấy node.id
+            db.session.commit()
 
-            # Gán người quản lý và người xem cho node vừa tạo
             for uid in managers_for_node:
                 db.session.add(UserNodes(user_id=uid, node_id=node.id, role='manager'))
             for uid in viewers_for_node:
@@ -849,11 +852,10 @@ def manage_nodes():
 
         return redirect(url_for('home_blueprint.manage_nodes'))
 
-    # GET request: Tải nodes với eager loading cho user_nodes và user
     nodes = Nodes.query.options(
         joinedload(Nodes.user_nodes).joinedload(UserNodes.user)
     ).all()
-    users = Users.query.all() # Cần tất cả người dùng cho các form
+    users = Users.query.all()
     return render_template('home/manage_nodes.html', nodes=nodes, users=users)
 # Delete Node
 @blueprint.route('/delete_node/<int:node_id>', methods=['POST'])
