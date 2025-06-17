@@ -764,6 +764,13 @@ def generate_ssh_keys():
 @login_required
 @role_required('admin', 'user') # Đảm bảo bạn đã định nghĩa role_required decorator
 def manage_nodes():
+    # --- Always query users and nodes for rendering the page ---
+    # This ensures that `users` is always available for `allUsers` JS array
+    # and `nodes` for the table, regardless of GET or POST success/failure that leads to render.
+    nodes = Nodes.query.options(
+        joinedload(Nodes.user_nodes).joinedload(UserNodes.user)
+    ).all()
+    users = Users.query.all() # Get all users for checkbox forms
     if request.method == 'POST':
         # KIỂM TRA QUYỀN HẠN: CHỈ ADMIN MỚI ĐƯỢC THÊM NODE
         if current_user.role != 'admin':
