@@ -894,8 +894,7 @@ def manage_nodes():
             # --- Logic thêm node vẫn giữ nguyên ---
             node = Nodes(hostname=hostname,
                          ip_address=ip_address,
-                         ssh_user=ssh_user,
-                         ssh_key=public_key_content_for_db)
+                         ssh_user=ssh_user)
             db.session.add(node)
             db.session.commit()
 
