@@ -10,13 +10,30 @@
     .add-node-form {
       background: #f7f7f7;
       border-radius: 4px;
+      position: relative; /* NEW/RESTORED: For positioning the close button */
+    }
+    /* NEW/RESTORED: CSS for close button */
+    .add-node-form .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #aaa;
+      cursor: pointer;
+    }
+    .add-node-form .close-btn:hover {
+      color: #555;
     }
   </style>
 
   <div class="page-content">
     <h2 class="mb-4">Nodes Management</h2>
 
+    {# NEW/RESTORED: ONLY DISPLAY "ADD NODE" BUTTON IF USER IS ADMIN #}
+    {% if current_user.role == 'admin' %}
     <button id="addNodeBtn" type="button" class="btn btn-primary mb-3">Add Node</button>
+    {% endif %}
     <div id="addNodeFormsContainer"></div>
 
     <div class="table-responsive">
@@ -28,6 +45,7 @@
             <th>IP Address</th>
             <th>SSH User</th>
             <th>Managers</th>
+            <th>Viewers</th> {# NEW/RESTORED: Thêm cột Viewers #}
             <th>Actions</th>
           </tr>
         </thead>
@@ -39,11 +57,18 @@
             <td>{{ n.ip_address }}</td>
             <td>{{ n.ssh_user }}</td>
             <td>
-              {% for un in n.user_nodes %}
+              {% for un in n.user_nodes if un.role=='manager' %} {# NEW/RESTORED: Lọc theo role 'manager' #}
                 {{ un.user.username }}{% if not loop.last %}, {% endif %}
               {% endfor %}
             </td>
             <td>
+              {% for un in n.user_nodes if un.role=='viewer' %} {# NEW/RESTORED: Thêm vòng lặp cho Viewers #}
+                {{ un.user.username }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              {# NEW/RESTORED: ONLY DISPLAY ACTIONS IF USER IS ADMIN #}
+              {% if current_user.role == 'admin' %}
               <button class="btn btn-sm btn-warning editNodeBtn" data-id="{{ n.id }}">Edit</button>
               <form method="POST"
                     action="{{ url_for('home_blueprint.delete_node', node_id=n.id) }}"
@@ -51,6 +76,7 @@
                     onsubmit="return confirm('Delete Node {{ n.hostname }}?');">
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
               </form>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -82,18 +108,37 @@
               <label for="edit_ssh_user">SSH User</label>
               <input type="text" class="form-control" id="edit_ssh_user" name="ssh_user" required>
             </div>
+            {# NEW/RESTORED: Changed ssh_key to password as per previous discussions, and added a small text #}
             <div class="form-group">
-              <label for="edit_ssh_key">SSH Key</label>
-              <textarea class="form-control" id="edit_ssh_key" name="ssh_key" rows="3"></textarea>
+              <label for="edit_password">Password (for SSH Key setup)</label>
+              <textarea class="form-control" id="edit_password" name="password" rows="3"
+                        placeholder="Enter password for ssh-copy-id, or leave empty if using existing key."></textarea>
+              <small class="form-text text-muted">This password is only used for initial SSH Key setup and will not be stored.</small>
             </div>
+            
             <div class="form-group">
               <label>Managers</label>
               <div>
                 {% for u in users %}
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox"
-                         id="manager_{{ u.id }}" name="managers" value="{{ u.id }}">
-                  <label class="form-check-label" for="manager_{{ u.id }}">
+                  <input class="form-check-input node-manager-checkbox" type="checkbox" {# NEW/RESTORED: Added class for JS #}
+                                   id="edit_manager_{{ u.id }}" name="managers" value="{{ u.id }}"> {# NEW/RESTORED: Changed id prefix #}
+                  <label class="form-check-label" for="edit_manager_{{ u.id }}">
+                    {{ u.username }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {# NEW/RESTORED: Added Viewers section for Edit Modal #}
+            <div class="form-group">
+              <label>Viewers</label>
+              <div>
+                {% for u in users %}
+                <div class="form-check">
+                  <input class="form-check-input node-viewer-checkbox" type="checkbox" {# NEW/RESTORED: Added class for JS #}
+                                   id="edit_viewer_{{ u.id }}" name="viewers" value="{{ u.id }}"> {# NEW/RESTORED: Changed id prefix and name #}
+                  <label class="form-check-label" for="edit_viewer_{{ u.id }}">
                     {{ u.username }}
                   </label>
                 </div>
@@ -103,7 +148,7 @@
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary"
-                    data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
+                                   data-dismiss="modal" data-bs-dismiss="modal">Cancel</button>
             <button type="submit" class="btn btn-primary">Save Changes</button>
           </div>
         </form>
@@ -113,7 +158,35 @@
 
   <script>
     const getNodeDataUrlTpl   = "{{ url_for('home_blueprint.get_node_data',   node_id=0) }}";
-    const updateNodeUrlTpl    = "{{ url_for('home_blueprint.update_node',     node_id=0) }}";
+    const updateNodeUrlTpl    = "{{ url_for('home_blueprint.update_node',    node_id=0) }}";
+    const addNodeFormsContainer = document.getElementById('addNodeFormsContainer');
+    let addNodeCount = 0;
+
+    // NEW/RESTORED: Function to set up mutual exclusion for manager/viewer checkboxes
+    function setupNodeCheckboxListeners(formElement) {
+      const managedCheckboxes = formElement.querySelectorAll('.node-manager-checkbox');
+      const viewedCheckboxes = formElement.querySelectorAll('.node-viewer-checkbox');
+
+      managedCheckboxes.forEach(managerCheckbox => {
+        managerCheckbox.addEventListener('change', function() {
+          const userId = this.value;
+          const correspondingViewerCheckbox = formElement.querySelector(`[id$="_viewer_${userId}"]`);
+          if (this.checked && correspondingViewerCheckbox) {
+            correspondingViewerCheckbox.checked = false;
+          }
+        });
+      });
+
+      viewedCheckboxes.forEach(viewerCheckbox => {
+        viewerCheckbox.addEventListener('change', function() {
+          const userId = this.value;
+          const correspondingManagerCheckbox = formElement.querySelector(`[id$="_manager_${userId}"]`);
+          if (this.checked && correspondingManagerCheckbox) {
+            correspondingManagerCheckbox.checked = false;
+          }
+        });
+      });
+    }
 
     // Edit Node
     document.querySelectorAll('.editNodeBtn').forEach(btn => {
@@ -126,31 +199,52 @@
             form.action = updateNodeUrlTpl.replace('/0','/'+nid);
 
             document.getElementById('edit_hostname').value = data.hostname;
-            document.getElementById('edit_ip').value     = data.ip_address;
+            document.getElementById('edit_ip').value      = data.ip_address;
             document.getElementById('edit_ssh_user').value = data.ssh_user;
-            document.getElementById('edit_ssh_key').value  = data.ssh_key || '';
+            document.getElementById('edit_password').value = ''; // Password is not stored, clear it
 
-            // Reset & fill managers
-            document.querySelectorAll('#editNodeForm input[type="checkbox"]').forEach(ch=>ch.checked=false);
-            data.managers.forEach(uid => {
-              const ch = document.getElementById('manager_'+uid);
-              if (ch) ch.checked = true;
-            });
+            // NEW/RESTORED: Reset all manager/viewer checkboxes in the edit form
+            document.querySelectorAll('#editNodeForm .node-manager-checkbox').forEach(ch => ch.checked = false);
+            document.querySelectorAll('#editNodeForm .node-viewer-checkbox').forEach(ch => ch.checked = false);
 
-            $('#editNodeModal').modal('show');
+            // NEW/RESTORED: Populate managers
+            if (data.managers) {
+              data.managers.forEach(uid => {
+                const ch = document.getElementById('edit_manager_' + uid); // Note the 'edit_' prefix
+                if (ch) ch.checked = true;
+              });
+            }
+
+            // NEW/RESTORED: Populate viewers
+            if (data.viewers) {
+              data.viewers.forEach(uid => {
+                const ch = document.getElementById('edit_viewer_' + uid); // Note the 'edit_' prefix
+                if (ch) ch.checked = true;
+              });
+            }
+
+            // Handle Bootstrap 5 modal if you are using it (using data-bs-dismiss="modal")
+            // If you are using Bootstrap 4 with jQuery, $('#editNodeModal').modal('show'); is fine.
+            const editModal = new bootstrap.Modal(document.getElementById('editNodeModal'));
+            editModal.show();
+            
+            // NEW/RESTORED: Set up listeners for the edit modal form after content is loaded
+            setupNodeCheckboxListeners(form);
           })
-          .catch(console.error);
+          .catch(error => { // NEW/RESTORED: More robust error handling
+            console.error('Error fetching node data:', error);
+          });
       });
     });
 
-    // Dynamic Add Node
-    let addNodeCount = 0;
+    // Dynamic Add Node - Restore Viewers section
     document.getElementById('addNodeBtn').addEventListener('click', () => {
       const i = addNodeCount++;
       let html = `
         <form class="add-node-form border p-3 mb-3"
               method="POST"
               action="{{ url_for('home_blueprint.manage_nodes') }}">
+          <span class="close-btn" onclick="this.closest('form').remove()">&times;</span> {# NEW/RESTORED: Close button #}
           <h5>Node ${i+1}</h5>
           <div class="form-group">
             <label for="hostname_${i}">Hostname</label>
@@ -167,20 +261,39 @@
             <input type="text" class="form-control"
                    id="ssh_user_${i}" name="ssh_user_${i}" required>
           </div>
+          {# NEW/RESTORED: Changed ssh_key to password and added small text #}
           <div class="form-group">
-            <label for="ssh_key_${i}">SSH Key</label>
+            <label for="password_${i}">Password (for SSH Key setup)</label>
             <textarea class="form-control"
-                      id="ssh_key_${i}" name="ssh_key_${i}" rows="2"></textarea>
+                      id="password_${i}" name="password_${i}" rows="2"
+                      placeholder="Enter password for ssh-copy-id. This password will not be stored."></textarea>
+            <small class="form-text text-muted">This password is only used for initial SSH Key setup and will not be stored.</small>
           </div>
           <div class="form-group">
             <label>Managers</label>
             <div>
               {% for u in users %}
               <div class="form-check">
-                <input class="form-check-input" type="checkbox"
-                       id="add_${i}_manager_{{ u.id }}"
-                       name="managers_${i}" value="{{ u.id }}">
-                <label class="form-check-label" for="add_${i}_manager_{{ u.id }}">
+                <input class="form-check-input node-manager-checkbox" type="checkbox" {# NEW/RESTORED: Added class for JS #}
+                             id="add_node_${i}_manager_{{ u.id }}" {# NEW/RESTORED: Consistent ID prefix #}
+                             name="managers_${i}" value="{{ u.id }}">
+                <label class="form-check-label" for="add_node_${i}_manager_{{ u.id }}">
+                  {{ u.username }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {# NEW/RESTORED: Viewers section for Add Node form #}
+          <div class="form-group">
+            <label>Viewers</label>
+            <div>
+              {% for u in users %}
+              <div class="form-check">
+                <input class="form-check-input node-viewer-checkbox" type="checkbox" {# NEW/RESTORED: Added class for JS #}
+                             id="add_node_${i}_viewer_{{ u.id }}" {# NEW/RESTORED: Consistent ID prefix #}
+                             name="viewers_${i}" value="{{ u.id }}"> {# NEW/RESTORED: Changed name #}
+                <label class="form-check-label" for="add_node_${i}_viewer_{{ u.id }}">
                   {{ u.username }}
                 </label>
               </div>
@@ -189,7 +302,10 @@
           </div>
           <button type="submit" class="btn btn-success">Add</button>
         </form>`;
-      document.getElementById('addNodeFormsContainer').insertAdjacentHTML('beforeend', html);
+      addNodeFormsContainer.insertAdjacentHTML('beforeend', html);
+      // NEW/RESTORED: Set up listeners for the newly added form
+      const newForm = addNodeFormsContainer.lastElementChild;
+      setupNodeCheckboxListeners(newForm);
     });
   </script>
 {% endblock %}
