@@ -729,23 +729,19 @@ expect eof
 def generate_ssh_keys():
     """
     Tạo cặp khóa SSH private và public (~/.ssh/id_rsa và ~/.ssh/id_rsa.pub).
-    Trả về (True, "Thông báo thành công") hoặc (False, "Thông báo lỗi").
+    Trả về (True, "Thông báo thành công", public_key_path) hoặc (False, "Thông báo lỗi", None).
     """
     ssh_dir = os.path.expanduser("~/.ssh")
     private_key_path = os.path.join(ssh_dir, "id_rsa")
     public_key_path = os.path.join(ssh_dir, "id_rsa.pub")
 
     if os.path.exists(private_key_path) and os.path.exists(public_key_path):
-        return True, "SSH keys đã tồn tại."
+        return True, "SSH keys đã tồn tại.", public_key_path
 
-    os.makedirs(ssh_dir, exist_ok=True) # Đảm bảo thư mục ~/.ssh tồn tại
+    os.makedirs(ssh_dir, exist_ok=True)
 
     try:
         # Tạo SSH keys không có passphrase cho mục đích tự động hóa
-        # -t rsa: loại khóa
-        # -b 4096: độ dài khóa
-        # -f: tên file đầu ra
-        # -N "": không có passphrase
         result = subprocess.run(
             ["ssh-keygen", "-t", "rsa", "-b", "4096", "-f", private_key_path, "-N", ""],
             capture_output=True,
@@ -753,12 +749,13 @@ def generate_ssh_keys():
             check=True # Raise exception cho mã thoát khác 0
         )
         os.chmod(private_key_path, stat.S_IRUSR) # Đặt quyền 0400 cho private key
-        return True, f"SSH keys đã được tạo thành công: {private_key_path}, {public_key_path}"
+        return True, f"SSH keys đã được tạo thành công: {public_key_path}", public_key_path
     except subprocess.CalledProcessError as e:
-        return False, f"Không thể tạo SSH keys: {e.stderr.strip()}"
+        # TRẢ VỀ 3 GIÁ TRỊ Ở ĐÂY, THÊM 'None' CHO public_key_path
+        return False, f"Không thể tạo SSH keys: {e.stderr.strip()}", None
     except Exception as e:
-        return False, f"Một lỗi không mong muốn đã xảy ra trong quá trình tạo khóa: {e}"
-
+        # TRẢ VỀ 3 GIÁ TRỊ Ở ĐÂY, THÊM 'None' CHO public_key_path
+        return False, f"Một lỗi không mong muốn đã xảy ra trong quá trình tạo khóa: {e}", None
 @blueprint.route('/manage_nodes', methods=['GET', 'POST'])
 @login_required
 @role_required('admin')
