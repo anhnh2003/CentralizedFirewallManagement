@@ -447,7 +447,8 @@ def performance_charts():
             manager_node_ips.append(node.ip_address)
     
     # Lấy các tham số từ request (khi user submit form)
-    selected_ips = request.args.getlist('nodes') # 'nodes' là tên của checkbox group
+    selected_ips = request.args.getlist('nodes')
+    selected_ips = [ip.strip().rstrip('/') for ip in selected_ips] # <--- DÒNG QUAN TRỌNG
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
 
@@ -1202,4 +1203,5 @@ def delete_rule():
 
     if res_delete.returncode != 0:
         flash(f"Error deleting rule {rn} from chain {chain} on {node.hostname}: {res_delete.stderr}", 'danger')
+    flash("Successfully deleted rule")
     return redirect(url_for('home_blueprint.view_status'))
