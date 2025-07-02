@@ -19,17 +19,35 @@
     font-weight: bold;
     text-transform: capitalize;
   }
+  /* Add a small explanatory text style */
+  .chart-explanation {
+      font-size: 0.85em;
+      color: #6c757d; /* Muted text color */
+      margin-bottom: 15px; /* Space below explanation */
+  }
+
   /* Chartist custom styling (optional, you can override default Chartist.css) */
+  /* Colors for CPU, Disk, RAM */
   .ct-series-a .ct-line, .ct-series-a .ct-point {
-    stroke: #ff6384; /* Reddish for CPU/Listen */
+    stroke: #ff6384; /* Reddish for CPU */
   }
   .ct-series-b .ct-line, .ct-series-b .ct-point {
-    stroke: #36a2eb; /* Bluish for Disk/Established */
+    stroke: #36a2eb; /* Bluish for Disk */
   }
   .ct-series-c .ct-line, .ct-series-c .ct-point {
     stroke: #ffcd56; /* Yellowish for RAM */
   }
-  /* Add more series colors if needed for multiple metrics */
+
+  /* NEW COLORS FOR NETWORK CHART */
+  /* Sử dụng bộ chọn thuộc tính [id^="..."] để xử lý các ID có dấu chấm */
+  [id^="network-chart-"] .ct-series-a .ct-line,
+  [id^="network-chart-"] .ct-series-a .ct-point {
+    stroke: #28a745; /* Green for TCP Listen */
+  }
+  [id^="network-chart-"] .ct-series-b .ct-line,
+  [id^="network-chart-"] .ct-series-b .ct-point {
+    stroke: #dc3545; /* Red for TCP Established */
+  }
 
   /* Styles for the new form */
   .filter-form {
@@ -56,6 +74,24 @@
   }
   .node-checkbox-group div {
       white-space: nowrap;
+  }
+  .chart-legend {
+      margin-top: 10px;
+      font-size: 0.9em;
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+  }
+  .legend-item {
+      display: flex;
+      align-items: center;
+  }
+  .legend-color-box {
+      width: 15px;
+      height: 15px;
+      border-radius: 3px;
+      margin-right: 5px;
+      border: 1px solid #ccc; /* Add a slight border for visibility */
   }
 </style>
 
@@ -114,6 +150,7 @@
             <div class="card mb-4">
               <div class="card-header">CPU Usage</div>
               <div class="card-body">
+                <p class="chart-explanation">Shows the percentage of CPU utilized on the node. High CPU usage can indicate heavy workloads or potential issues.</p>
                 <div class="ct-chart ct-perfect-fourth" id="cpu-chart-{{ ip }}"></div>
               </div>
             </div>
@@ -124,6 +161,7 @@
             <div class="card mb-4">
               <div class="card-header">Disk Usage (ROOT_USAGE)</div>
               <div class="card-body">
+                <p class="chart-explanation">Displays the percentage of disk space used on the root partition. Nearing 100% can lead to system instability.</p>
                 <div class="ct-chart ct-perfect-fourth" id="disk-chart-{{ ip }}"></div>
               </div>
             </div>
@@ -132,8 +170,9 @@
           {# RAM Chart #}
           {% if chart_data[ip]['ram'] %}
             <div class="card mb-4">
-              <div class="card-header">RAM Usage (Used MB)</div>
+              <div class="card-header">RAM Usage</div>
               <div class="card-body">
+                <p class="chart-explanation">Shows the percentage of total RAM currently in use on the node. High RAM usage might indicate memory leaks or insufficient resources.</p>
                 <div class="ct-chart ct-perfect-fourth" id="ram-chart-{{ ip }}"></div>
               </div>
             </div>
@@ -144,6 +183,26 @@
             <div class="card mb-4">
               <div class="card-header">Network Connections (TCP Listen & Established)</div>
               <div class="card-body">
+                <p class="chart-explanation">
+                  Monitors the number of TCP connections in two key states:
+                  <br>
+                  <span style="color: #28a745; font-weight: bold;">TCP Listen</span>: Number of open ports waiting for incoming connections.
+                  <br>
+                  <span style="color: #dc3545; font-weight: bold;">TCP Established</span>: Number of active, established connections.
+                  <br><br>
+                  **DDoS Detection Insight:** An unusual increase in `TCP Listen` connections without a corresponding increase in `TCP Established` might suggest a SYN Flood DDoS attack, where an attacker sends SYN packets but never completes the handshake, exhausting server resources. A sudden, massive spike in `TCP Established` connections could indicate a connection flood attack, where many legitimate-looking connections overwhelm the server. Monitoring these metrics helps identify abnormal network behavior.
+                </p>
+                {# Legend for Network Chart #}
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <span class="legend-color-box" style="background-color: #28a745;"></span>
+                        TCP Listen
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color-box" style="background-color: #dc3545;"></span>
+                        TCP Established
+                    </div>
+                </div>
                 <div class="ct-chart ct-perfect-fourth" id="network-chart-{{ ip }}"></div>
               </div>
             </div>
@@ -176,9 +235,7 @@
     function createChartistLineChart(elementId, data, options) {
       const chartElement = document.getElementById(elementId);
       if (chartElement) {
-        // Chartist selectors use '.' for classes, need to escape it if ID contains dots
-        // This is important if your IP addresses contain dots and are used directly in IDs.
-        // Assuming IDs are simple here, but for robustness, it's good practice to escape.
+        // Correct way to escape dots in an ID for Chartist selector
         const chartSelector = `#${elementId.replace(/\./g, '\\.')}`;
         new Chartist.Line(chartSelector, data, options);
       } else {
@@ -196,16 +253,14 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = cpuChartData.labels.length;
-                // Display first and last labels for better context over time
                 if (index === 0 || index === totalLabels - 1) { 
                   return value;
                 }
-                return null; // Hide other labels to prevent clutter
+                return null;
               },
-              showGrid: true // Can hide grid lines if you don't want to
+              showGrid: true
             },
             axisY: {
               labelInterpolationFnc: function(value) { return value + '%'; },
@@ -228,7 +283,6 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = diskChartData.labels.length;
                 if (index === 0 || index === totalLabels - 1) {
@@ -259,7 +313,6 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = ramChartData.labels.length;
                 if (index === 0 || index === totalLabels - 1) {
@@ -270,10 +323,11 @@
               showGrid: true
             },
             axisY: {
-              labelInterpolationFnc: function(value) { return value + 'MB'; },
+              labelInterpolationFnc: function(value) { return value + '%'; }, /* Changed to % */
               scaleMinSpace: 20,
               onlyInteger: true,
-              low: 0
+              low: 0,
+              high: 100 /* Assuming percentage scale */
             }
           };
           createChartistLineChart(`ram-chart-${ip}`, ramChartData, ramOptions);
@@ -289,7 +343,6 @@
             fullWidth: true,
             chartPadding: { right: 20 },
             axisX: {
-              // ADJUST HERE: Display first and last labels
               labelInterpolationFnc: function(value, index) {
                 const totalLabels = networkChartData.labels.length;
                 if (index === 0 || index === totalLabels - 1) {
