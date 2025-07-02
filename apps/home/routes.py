@@ -262,76 +262,100 @@ import json
 @blueprint.route('/view_log')
 @login_required
 def view_log():
-    # Sử dụng dictionary để lưu trữ thông tin node_id và node_ip theo client_ip_dir
-    # user_allowed_nodes_info = { "ip_address": {"node_id": X, "node_ip": "Y"} }
     user_allowed_nodes_info = {}
-    
     node_entries = UserNodes.query.filter_by(user_id=current_user.id).all()
     for entry in node_entries:
         node = Nodes.query.get(entry.node_id)
         if node:
-            # Lưu trữ thông tin node vào dictionary
             user_allowed_nodes_info[node.ip_address] = {
                 'node_id': node.id,
                 'node_ip': node.ip_address
             }
+    
     base_log_dir = "/var/log/remote/"
     all_entries = []
 
+    logging.info(f"Đang tìm kiếm log trong thư mục: {base_log_dir}")
+
     if not os.path.exists(base_log_dir):
         flash(f"Thư mục log từ xa '{base_log_dir}' không tồn tại.", 'warning')
+        logging.warning(f"Thư mục '{base_log_dir}' không tồn tại.")
         return render_template('home/view_log.html', log_entries=[])
 
-    # Duyệt qua các thư mục con trong /var/log/remote (mỗi thư mục là một IP client)
-    for client_ip_dir in os.listdir(base_log_dir):
+    # Lấy danh sách các thư mục con trong base_log_dir
+    client_ip_dirs = []
+    try:
+        client_ip_dirs = os.listdir(base_log_dir)
+    except PermissionError as e:
+        flash(f"Lỗi quyền khi liệt kê thư mục '{base_log_dir}': {e}", 'error')
+        logging.error(f"Lỗi quyền khi liệt kê thư mục '{base_log_dir}': {e}")
+        return render_template('home/view_log.html', log_entries=[])
+    except Exception as e:
+        flash(f"Lỗi không xác định khi liệt kê thư mục '{base_log_dir}': {e}", 'error')
+        logging.error(f"Lỗi không xác định khi liệt kê thư mục '{base_log_dir}': {e}")
+        return render_template('home/view_log.html', log_entries=[])
+
+    logging.info(f"Tìm thấy các thư mục con: {client_ip_dirs}")
+
+    for client_ip_dir in client_ip_dirs:
         # Bỏ qua các IP không hợp lệ hoặc localhost
         if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
+            logging.info(f"Bỏ qua thư mục không hợp lệ: {client_ip_dir}")
             continue
 
         # Chỉ xử lý các IP mà người dùng hiện tại có quyền truy cập
         if client_ip_dir not in user_allowed_nodes_info:
+            logging.info(f"Bỏ qua thư mục '{client_ip_dir}' vì người dùng không có quyền.")
             continue
 
-        # Lấy thông tin node từ dictionary đã chuẩn bị sẵn
         current_node_info = user_allowed_nodes_info[client_ip_dir]
         node_id_for_log = current_node_info['node_id']
         node_ip_for_log = current_node_info['node_ip']
 
         iptables_log_path = os.path.join(base_log_dir, client_ip_dir, "iptables.log")
+        logging.info(f"Đang kiểm tra file log: {iptables_log_path}")
         
         if os.path.exists(iptables_log_path):
-
             try:
+                # Kiểm tra quyền của file trước khi mở (để debug)
+                file_stat = os.stat(iptables_log_path)
+                logging.info(f"Quyền của file {iptables_log_path}: {oct(file_stat.st_mode & 0o777)}")
+                logging.info(f"Owner Uid: {file_stat.st_uid}, Gid: {file_stat.st_gid}")
+                
                 with open(iptables_log_path, 'r') as f:
+                    lines_read = 0
                     for line in f:
-                        entry = parse_log_line(line)
-                        # Chỉ xử lý nếu parse_log_line trả về một dictionary không rỗng
+                        lines_read += 1
+                        # Loại bỏ ký tự xuống dòng ở cuối
+                        stripped_line = line.strip()
+                        if not stripped_line: # Bỏ qua dòng trống
+                            continue
+
+                        # Debug: In ra vài dòng đầu tiên để kiểm tra định dạng
+                        if lines_read < 10: # Chỉ in 10 dòng đầu
+                            logging.debug(f"Đọc dòng log: {stripped_line}")
+
+                        entry = parse_log_line(stripped_line) # Truyền dòng đã strip
+                        
                         if entry:
-                            # Thêm node_id và node_ip vào dictionary 'entry'
-                            # Lưu ý: thứ tự thêm vào dictionary không ảnh hưởng đến thứ tự hiển thị
-                            # trong template, nhưng bạn có thể kiểm soát nó bằng cách tạo một dict mới
-                            # hoặc sắp xếp lại các khóa nếu muốn.
-                            
-                            # Cách 1: Thêm trực tiếp vào dictionary đã parse
                             entry['node_id'] = node_id_for_log
                             entry['node_ip'] = node_ip_for_log
                             all_entries.append(entry)
+                        else:
+                            logging.warning(f"Không thể parse dòng log từ {iptables_log_path}: '{stripped_line}'")
+                    logging.info(f"Đã đọc {lines_read} dòng từ {iptables_log_path}. Tổng số entry hợp lệ: {len(all_entries)}")
 
-                            # Cách 2 (Nếu bạn muốn kiểm soát chính xác thứ tự các key trong dict):
-                            # Bạn có thể tạo một OrderedDict hoặc tạo dict mới theo thứ tự mong muốn
-                            # new_entry = {
-                            #     'timestamp': entry.get('timestamp', ''),
-                            #     'node_id': node_id_for_log,
-                            #     'node_ip': node_ip_for_log,
-                            #     'hostname': entry.get('hostname', ''),
-                            #     # ... thêm các trường khác theo thứ tự bạn muốn ...
-                            # }
-                            # all_entries.append(new_entry)
+            except PermissionError as e:
+                flash(f"Lỗi quyền khi đọc file log '{iptables_log_path}': {e}", 'error')
+                logging.error(f"Lỗi quyền khi đọc file log '{iptables_log_path}': {e}")
             except Exception as e:
-                flash(f"Lỗi khi đọc file log {iptables_log_path}: {e}", 'error')
+                flash(f"Lỗi không xác định khi đọc file log '{iptables_log_path}': {e}", 'error')
+                logging.error(f"Lỗi không xác định khi đọc file log '{iptables_log_path}': {e}")
         else:
             flash(f"File '{iptables_log_path}' không tồn tại.", 'info')
+            logging.info(f"File '{iptables_log_path}' không tồn tại.")
 
+    logging.info(f"Tổng số entries sẽ được hiển thị: {len(all_entries)}")
     return render_template('home/view_log.html', log_entries=all_entries)
 
 # --- Data Visualization from all accessible nodes ---
