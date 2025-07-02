@@ -1156,7 +1156,7 @@ def view_status():
         node = node_entry['object']
         status[node.id] = {}
         for chain in ['INPUT','OUTPUT','FORWARD']:
-            cmd = f"sudo iptables -L {chain} --line-numbers"
+            cmd = f"sudo iptables -L {chain} --line-numbers -n"
             res = run_ssh_on_node(node, cmd)
             if res.returncode == 0:
                 status[node.id][chain] = parse_iptables_output(res.stdout)
