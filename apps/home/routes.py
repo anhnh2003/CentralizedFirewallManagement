@@ -271,7 +271,7 @@ def parse_log_line(line):
         if 'timestamp_month' in data and 'timestamp_day' in data and 'timestamp_time' in data:
             timestamp_str_raw = f"{data['timestamp_month']} {data['timestamp_day']} {data['timestamp_time']} {current_year}"
             try:
-                data['timestamp'] = datetime.datetime.strptime(timestamp_str_raw, "%b %d %H:%M:%S %Y").isoformat()
+                data['timestamp'] = datetime.strptime(timestamp_str_raw, "%b %d %H:%M:%S %Y").isoformat()
             except ValueError as e:
                 logging.warning(f"Không thể parse timestamp '{timestamp_str_raw}' (Error: {e}) từ dòng: {line.strip()}")
                 data['timestamp'] = None # Đặt None nếu lỗi
