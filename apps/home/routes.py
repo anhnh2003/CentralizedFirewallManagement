@@ -220,55 +220,39 @@ def is_valid_rule_number(rule_number):
     except ValueError:
         return False
 def parse_log_line(line):
-    # Dòng log mẫu mà hàm hiện đang gặp khó khăn:
-    # 'Jul  2 10:08:44 lb2 kernel: [130765.065550] [IPTABLES] INPUT: IN=ens37 OUT= MAC=01:00:5e:00:00:12:00:0c:29:31:38:67:08:00 SRC=192.168.159.130 DST=224.0.0.18 LEN=40 TOS=0x00 PREC=0xC0 TTL=255 ID=17997 PROTO=112'
-
-    # Regex chính cho định dạng log IPTables của bạn
-    # Điều chỉnh:
-    # - MAC: Làm cho nó linh hoạt hơn để khớp với chuỗi MAC dài và có thể có nhiều phần.
-    # - PROTO: Đảm bảo khớp đến cuối dòng hoặc trước các trường tùy chọn khác.
-    # - Thêm `\s*` cho các khoảng trắng cuối các nhóm tùy chọn để xử lý dòng kết thúc sớm.
-    # - `(?P<detail>.*)?` sẽ bắt giữ phần còn lại.
-
     # Regex_1: Cho định dạng IPTables hiện tại bạn đang gặp phải
+    # Đã điều chỉnh phần timestamp và các khoảng trắng
     pattern_iptables = re.compile(
-        r'^(?P<timestamp>\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2})\s+'  # Jul  2 10:08:44
-        r'(?P<hostname>\S+)\s+'                             # lb2
-        r'kernel:\s+'                                       # "kernel: "
-        r'\[(?P<kernel_timestamp>\d+\.\d+)\]\s+'            # [130765.065550]
-        r'\[IPTABLES\]\s+'                                  # "[IPTABLES] "
-        r'(?P<chain>[A-Z]+):\s+'                            # INPUT:
-        r'IN=(?P<in_interface>\S*)\s+'                      # IN=ens37
-        r'OUT=(?P<out_interface>\S*)\s+'                    # OUT=
-        r'(?:MAC=(?P<mac>[A-Fa-f0-9: ]+)\s+)?'              # MAC=... (đã chỉnh sửa để linh hoạt hơn)
-        r'SRC=(?P<src_ip>\S+)\s+'                           # SRC=192.168.159.130
-        r'DST=(?P<dst_ip>\S+)\s+'                           # DST=224.0.0.18
-        r'LEN=(?P<length>\d+)\s+'                           # LEN=40
-        r'TOS=(?P<tos>\S+)\s+'                              # TOS=0x00
-        r'PREC=(?P<prec>\S+)\s+'                            # PREC=0xC0
-        r'TTL=(?P<ttl>\d+)\s+'                              # TTL=255
-        r'ID=(?P<id>\d+)\s+'                                # ID=17997
-        r'(?:DF\s+)?'                                       # DF (tùy chọn)
-        r'PROTO=(?P<protocol>\S+)\s*'                       # PROTO=112 (dùng \s* để cho phép kết thúc dòng)
-        r'(?:SPT=(?P<src_port>\d+)\s+DPT=(?P<dst_port>\d+)\s*)?' # SPT/DPT (tùy chọn)
-        r'(?:TYPE=(?P<type>\d+)\s+CODE=(?P<code>\d+)\s+ID=(?P<icmp_id>\d+)\s+SEQ=(?P<icmp_seq>\d+)\s*)?' # ICMP (tùy chọn)
-        r'(?:WINDOW=(?P<window>\d+)\s+RES=(?P<res>\S+)\s*)?' # TCP Window (tùy chọn)
-        r'(?P<detail>.*)?$'                                  # Các phần còn lại, khớp đến cuối dòng
+        r'^(?P<timestamp_month>\w{3})\s+(?P<timestamp_day>\d{1,2})\s+(?P<timestamp_time>\d{2}:\d{2}:\d{2})\s+' # Tách timestamp thành 3 phần và linh hoạt hơn với ngày
+        r'(?P<hostname>\S+)\s+'
+        r'kernel:\s+'
+        r'\[(?P<kernel_timestamp>\d+\.\d+)\]\s+'
+        r'\[IPTABLES\]\s+'
+        r'(?P<chain>[A-Z]+):\s+'
+        r'IN=(?P<in_interface>\S*)\s+'
+        r'OUT=(?P<out_interface>\S*)\s+'
+        r'(?:MAC=(?P<mac>[A-Fa-f0-9: ]+)\s+)?'
+        r'SRC=(?P<src_ip>\S+)\s+'
+        r'DST=(?P<dst_ip>\S+)\s+'
+        r'LEN=(?P<length>\d+)\s+'
+        r'TOS=(?P<tos>\S+)\s+'
+        r'PREC=(?P<prec>\S+)\s+'
+        r'TTL=(?P<ttl>\d+)\s+'
+        r'ID=(?P<id>\d+)\s+'
+        r'(?:DF\s+)?'
+        r'PROTO=(?P<protocol>\S+)\s*'
+        r'(?:SPT=(?P<src_port>\d+)\s+DPT=(?P<dst_port>\d+)\s*)?'
+        r'(?:TYPE=(?P<type>\d+)\s+CODE=(?P<code>\d+)\s+ID=(?P<icmp_id>\d+)\s+SEQ=(?P<icmp_seq>\d+)\s*)?'
+        r'(?:WINDOW=(?P<window>\d+)\s+RES=(?P<res>\S+)\s*)?'
+        r'(?P<detail>.*)?$'
     )
-    
+
     # --------------------------------------------------------------------------
     # THÊM CÁC REGEX KHÁC TẠI ĐÂY NẾU CÓ CÁC ĐỊNH DẠNG LOG CŨ KHÁC BIỆT RÕ RỆT
-    # Ví dụ:
-    # pattern_old_format = re.compile(
-    #     r'^(?P<timestamp_old>\S+\s+\d+\s+\d{2}:\d{2}:\d{2})\s+'
-    #     r'(?P<message>.*)$'
-    # )
     # --------------------------------------------------------------------------
 
-    # Danh sách các regex để thử. Thứ tự quan trọng: thử regex cụ thể nhất trước
     regex_patterns = [
         pattern_iptables,
-        # pattern_old_format, # Thêm vào đây nếu bạn có regex khác
     ]
 
     match = None
@@ -278,56 +262,52 @@ def parse_log_line(line):
         match = pattern.search(line)
         if match:
             data = match.groupdict()
-            # Nếu regex cũ không có các trường IPTables, chúng sẽ là None
-            # Bạn có thể đặt giá trị mặc định tại đây hoặc sau
-            break # Tìm thấy khớp, dừng lại
+            break
 
     if match:
-        # Xử lý Timestamp
-        # Log của bạn thiếu năm, lấy năm hiện tại
+        # Xử lý Timestamp: ghép lại từ các nhóm riêng biệt
         current_year = datetime.datetime.now().year
-        
-        # Kiểm tra xem nhóm 'timestamp' có tồn tại không (để tương thích với các regex cũ hơn)
-        if 'timestamp' in data and data['timestamp']:
-            timestamp_str_with_year = f"{data['timestamp']} {current_year}"
+        # Đảm bảo các nhóm timestamp tồn tại trước khi truy cập
+        if 'timestamp_month' in data and 'timestamp_day' in data and 'timestamp_time' in data:
+            timestamp_str_raw = f"{data['timestamp_month']} {data['timestamp_day']} {data['timestamp_time']} {current_year}"
             try:
-                data['timestamp'] = datetime.datetime.strptime(timestamp_str_with_year, "%b %d %H:%M:%S %Y").isoformat()
-            except ValueError:
-                logging.warning(f"Không thể parse timestamp '{timestamp_str_with_year}' từ dòng: {line.strip()}")
-                data['timestamp'] = line.split(' ')[0] + ' ' + line.split(' ')[1] + ' ' + line.split(' ')[2] # Giữ lại phần thời gian nếu parse lỗi
+                data['timestamp'] = datetime.datetime.strptime(timestamp_str_raw, "%b %d %H:%M:%S %Y").isoformat()
+            except ValueError as e:
+                logging.warning(f"Không thể parse timestamp '{timestamp_str_raw}' (Error: {e}) từ dòng: {line.strip()}")
+                data['timestamp'] = None # Đặt None nếu lỗi
         else:
-            data['timestamp'] = datetime.datetime.now().isoformat() # Fallback nếu không có timestamp
+            data['timestamp'] = datetime.datetime.now().isoformat() # Fallback
 
-        # Chuyển đổi các giá trị số sang kiểu số nguyên
-        # Chỉ chuyển đổi nếu trường tồn tại và không phải là None
+        # Các phần xử lý dữ liệu số và mặc định khác vẫn giữ nguyên
         for key in ['length', 'ttl', 'id', 'src_port', 'dst_port', 'type', 'code', 'icmp_id', 'icmp_seq', 'window']:
-            if data.get(key) is not None and data[key] != '': # Kiểm tra cả chuỗi rỗng
+            if data.get(key) is not None and data[key] != '':
                 try:
                     data[key] = int(data[key])
                 except ValueError:
                     logging.warning(f"Không thể chuyển đổi {key} '{data[key]}' thành số nguyên trong dòng: {line.strip()}")
-                    data[key] = None # Đặt lại là None nếu chuyển đổi lỗi
+                    data[key] = None
 
-        # Xử lý các giao diện rỗng, đặt mặc định 'N/A' hoặc None
         data['in_interface'] = data.get('in_interface') if data.get('in_interface') != '' else 'N/A'
         data['out_interface'] = data.get('out_interface') if data.get('out_interface') != '' else 'N/A'
         
-        # Đảm bảo các trường không bắt buộc nhưng quan trọng khác có giá trị mặc định nếu không khớp
         data['src_ip'] = data.get('src_ip', 'N/A')
         data['dst_ip'] = data.get('dst_ip', 'N/A')
         data['protocol'] = data.get('protocol', 'N/A')
         data['chain'] = data.get('chain', 'N/A')
         data['hostname'] = data.get('hostname', 'N/A')
-        data['mac'] = data.get('mac', 'N/A') # Đặt N/A nếu không có MAC
+        data['mac'] = data.get('mac', 'N/A')
 
-        # Giữ lại dòng gốc để debug hoặc hiển thị
-        data['full_log_line'] = line.strip() 
+        data['full_log_line'] = line.strip()
 
+        # Xóa các key tạm thời nếu bạn không muốn chúng trong kết quả cuối cùng
+        data.pop('timestamp_month', None)
+        data.pop('timestamp_day', None)
+        data.pop('timestamp_time', None)
+        
         return data
     else:
-        # Ghi log cảnh báo nếu không có regex nào khớp
         logging.warning(f"Không thể parse dòng log bằng bất kỳ regex nào: {line.strip()}")
-        return {} # Trả về dictionary rỗng nếu không khớp
+        return {}
 import json
 # --- View Logs from all nodes the user can access ---
 @blueprint.route('/view_log')
