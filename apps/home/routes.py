@@ -266,7 +266,7 @@ def parse_log_line(line):
 
     if match:
         # Xử lý Timestamp: ghép lại từ các nhóm riêng biệt
-        current_year = datetime.datetime.now().year
+        current_year = datetime.now().year
         # Đảm bảo các nhóm timestamp tồn tại trước khi truy cập
         if 'timestamp_month' in data and 'timestamp_day' in data and 'timestamp_time' in data:
             timestamp_str_raw = f"{data['timestamp_month']} {data['timestamp_day']} {data['timestamp_time']} {current_year}"
@@ -276,7 +276,7 @@ def parse_log_line(line):
                 logging.warning(f"Không thể parse timestamp '{timestamp_str_raw}' (Error: {e}) từ dòng: {line.strip()}")
                 data['timestamp'] = None # Đặt None nếu lỗi
         else:
-            data['timestamp'] = datetime.datetime.now().isoformat() # Fallback
+            data['timestamp'] = datetime.now().isoformat() # Fallback
 
         # Các phần xử lý dữ liệu số và mặc định khác vẫn giữ nguyên
         for key in ['length', 'ttl', 'id', 'src_port', 'dst_port', 'type', 'code', 'icmp_id', 'icmp_seq', 'window']:
