@@ -333,7 +333,6 @@ def view_log():
         logging.warning(f"Thư mục '{base_log_dir}' không tồn tại.")
         return render_template('home/view_log.html', log_entries=[])
 
-    # Lấy danh sách các thư mục con trong base_log_dir
     client_ip_dirs = []
     try:
         client_ip_dirs = os.listdir(base_log_dir)
@@ -348,13 +347,14 @@ def view_log():
 
     logging.info(f"Tìm thấy các thư mục con: {client_ip_dirs}")
 
+    # Giới hạn số dòng log cho mỗi file
+    MAX_LINES_PER_FILE = 5000 
+
     for client_ip_dir in client_ip_dirs:
-        # Bỏ qua các IP không hợp lệ hoặc localhost
         if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
             logging.info(f"Bỏ qua thư mục không hợp lệ: {client_ip_dir}")
             continue
 
-        # Chỉ xử lý các IP mà người dùng hiện tại có quyền truy cập
         if client_ip_dir not in user_allowed_nodes_info:
             logging.info(f"Bỏ qua thư mục '{client_ip_dir}' vì người dùng không có quyền.")
             continue
@@ -374,27 +374,31 @@ def view_log():
                 logging.info(f"Owner Uid: {file_stat.st_uid}, Gid: {file_stat.st_gid}")
                 
                 with open(iptables_log_path, 'r') as f:
-                    lines_read = 0
-                    for line in f:
-                        lines_read += 1
-                        # Loại bỏ ký tự xuống dòng ở cuối
+                    # Đọc tất cả các dòng vào bộ nhớ và sau đó lấy 5000 dòng cuối cùng
+                    # Đây là cách hiệu quả để lấy các dòng mới nhất
+                    all_lines_in_file = f.readlines()
+                    
+                    # Lấy MAX_LINES_PER_FILE dòng cuối cùng
+                    recent_lines = all_lines_in_file[-MAX_LINES_PER_FILE:]
+                    
+                    lines_processed_count = 0
+                    for line in recent_lines:
                         stripped_line = line.strip()
-                        if not stripped_line: # Bỏ qua dòng trống
+                        if not stripped_line:
                             continue
 
-                        # Debug: In ra vài dòng đầu tiên để kiểm tra định dạng
-                        if lines_read < 10: # Chỉ in 10 dòng đầu
-                            logging.debug(f"Đọc dòng log: {stripped_line}")
-
-                        entry = parse_log_line(stripped_line) # Truyền dòng đã strip
+                        entry = parse_log_line(stripped_line)
                         
                         if entry:
                             entry['node_id'] = node_id_for_log
                             entry['node_ip'] = node_ip_for_log
                             all_entries.append(entry)
                         else:
+                            # Log cảnh báo nếu một dòng cụ thể không thể parse
                             logging.warning(f"Không thể parse dòng log từ {iptables_log_path}: '{stripped_line}'")
-                    logging.info(f"Đã đọc {lines_read} dòng từ {iptables_log_path}. Tổng số entry hợp lệ: {len(all_entries)}")
+                        lines_processed_count += 1 # Đếm số dòng đã qua xử lý parse_log_line
+
+                logging.info(f"Đã xử lý {lines_processed_count} dòng từ {iptables_log_path}. Tổng số entry hợp lệ: {len(all_entries)}")
 
             except PermissionError as e:
                 flash(f"Lỗi quyền khi đọc file log '{iptables_log_path}': {e}", 'error')
@@ -406,8 +410,15 @@ def view_log():
             flash(f"File '{iptables_log_path}' không tồn tại.", 'info')
             logging.info(f"File '{iptables_log_path}' không tồn tại.")
 
+    # Sắp xếp các entry theo timestamp (tùy chọn, có thể tốn thời gian nếu số lượng lớn)
+    # Nếu timestamp là None, sẽ đặt nó ở cuối
+    all_entries.sort(key=lambda x: x.get('timestamp') or '9999-99-99T99:99:99', reverse=True)
+
+
     logging.info(f"Tổng số entries sẽ được hiển thị: {len(all_entries)}")
+    # Vì bạn không muốn phân trang, tất cả các entry sẽ được truyền cho template
     return render_template('home/view_log.html', log_entries=all_entries)
+
 
 # --- Data Visualization from all accessible nodes ---
 @blueprint.route('/data_visualization')
