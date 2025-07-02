@@ -474,7 +474,7 @@ def performance_charts():
     # Nếu không có nodes nào được chọn, mặc định chọn tất cả các nodes mà user quản lý
     if not selected_ips:
         selected_ips = manager_node_ips
-
+    print(f"DEBUG: Selected IPs after cleaning: {selected_ips}") # <-- Thêm dòng này
     base_log_dir = "/var/log/remote/"
     all_log_data = defaultdict(lambda: defaultdict(list)) # Structure: {ip: {cpu: [], disk: [], ...}}
 
@@ -495,24 +495,34 @@ def performance_charts():
     for client_ip_dir in os.listdir(base_log_dir):
         # Chỉ xử lý các nodes mà người dùng đã chọn
         if client_ip_dir not in selected_ips:
+            print(f"DEBUG: Skipping {client_ip_dir} - not selected.")
             continue
         
         # Bỏ qua 127.0.0.1 và các thư mục không phải IP
         if client_ip_dir == '127.0.0.1' or not re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', client_ip_dir):
+            print(f"DEBUG: Skipping {client_ip_dir} - not a valid IP or is localhost.")
             continue
 
         for log_type in log_types:
             log_path = os.path.join(base_log_dir, client_ip_dir, f"{log_type}.log")
+            print(f"DEBUG: Checking log_path: {log_path}") # <-- Thêm dòng này
             if os.path.exists(log_path):
                 try:
                     with open(log_path, 'r') as f:
-                        for line in f:
+                        for line_num, line in enumerate(f): # <-- Thêm enumerate để biết dòng nào
                             entry = parse_perf_log_line(line, log_type)
-                            if entry and start_date <= entry['timestamp'] <= end_date:
+                            if entry is None:
+                                print(f"DEBUG: Line {line_num+1} from {log_path} returned None from parse_perf_log_line.") # <-- Thêm dòng này
+                            elif not (start_date <= entry['timestamp'] <= end_date):
+                                print(f"DEBUG: Line {line_num+1} from {log_path} timestamp {entry['timestamp']} is out of range ({start_date} to {end_date}).") # <-- Thêm dòng này
+                            else:
                                 all_log_data[client_ip_dir][log_type].append(entry)
+                                # print(f"DEBUG: Added entry from {log_path} for {client_ip_dir} {log_type}.") # <-- Bỏ comment để xem chi tiết
                 except Exception as e:
-                    print(f"Error reading log file {log_path}: {e}")
-
+                    print(f"ERROR: Reading log file {log_path}: {e}") # <-- Sử dụng ERROR để dễ thấy hơn
+            else:
+                print(f"DEBUG: Log file not found: {log_path}") # <-- Thêm dòng này
+    print(f"\nDEBUG: Final all_log_data keys: {list(all_log_data.keys())}") # <-- Thêm dòng này
     # Process and aggregate data for Chartist.js
     chart_data_for_chartist = {}
     for ip, log_type_data in all_log_data.items():
